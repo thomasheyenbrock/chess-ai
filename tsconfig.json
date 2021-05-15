@@ -1,0 +1,7 @@
+{
+  "compilerOptions": {
+    "downlevelIteration": true,
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "strict": true
+  }
+}

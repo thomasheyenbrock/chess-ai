@@ -225,6 +225,7 @@ type ValidationResult = {
   isValid: boolean;
   removeCastling?: Castle[];
   enPassantSquare?: Bitboard;
+  isCapturingEnPassant?: boolean;
 };
 
 function validateKingMove(from: Bitboard, to: Bitboard): ValidationResult {
@@ -415,8 +416,29 @@ function validatePawnMove(from: Bitboard, to: Bitboard): ValidationResult {
     return { isValid: true, enPassantSquare: oneMoveForward };
   }
 
-  // TODO: take other pawns
-  // TODO: taking en passant
+  const leftForward = getLeftSquare(oneMoveForward);
+  const leftPiece = getPieceOnSquare(leftForward);
+  if (equals([leftForward, to])) {
+    if (leftPiece && !doesPieceBelongToPlayer(leftPiece, game.player)) {
+      return { isValid: true };
+    }
+    if (game.enPassantSquare && equals([leftForward, game.enPassantSquare])) {
+      return { isValid: true, isCapturingEnPassant: true };
+    }
+    return { isValid: false };
+  }
+
+  const rightForward = getRightSquare(oneMoveForward);
+  const rightPiece = getPieceOnSquare(rightForward);
+  if (equals([rightForward, to])) {
+    if (rightPiece && !doesPieceBelongToPlayer(rightPiece, game.player)) {
+      return { isValid: true };
+    }
+    if (game.enPassantSquare && equals([rightForward, game.enPassantSquare])) {
+      return { isValid: true, isCapturingEnPassant: true };
+    }
+    return { isValid: false };
+  }
 
   return { isValid: false };
 }
@@ -463,11 +485,12 @@ function move(from: Bitboard, to: Bitboard) {
     return;
   }
 
-  const { isValid, removeCastling, enPassantSquare } = validateMove(
-    movedPiece,
-    from,
-    to
-  );
+  const {
+    isValid,
+    removeCastling,
+    enPassantSquare = null,
+    isCapturingEnPassant = false,
+  } = validateMove(movedPiece, from, to);
   if (!isValid) {
     return;
   }
@@ -479,16 +502,15 @@ function move(from: Bitboard, to: Bitboard) {
     to,
     player: game.player,
     piece: movedPiece,
-    isCapture: Boolean(capturedPiece),
+    isCapture: Boolean(capturedPiece) || isCapturingEnPassant,
     // TODO: take record of pawn promotions
   });
-  game.player = game.player === Player.WHITE ? Player.BLACK : Player.WHITE;
   if (removeCastling) {
     removeCastling.forEach((castling) => {
       game.possibleCastles[castling] = false;
     });
   }
-  game.enPassantSquare = enPassantSquare || null;
+  game.enPassantSquare = enPassantSquare;
 
   game.position[movedPiece] = bitwiseOr([
     bitwiseAnd([game.position[movedPiece], bitwiseNot(from)]),
@@ -501,6 +523,17 @@ function move(from: Bitboard, to: Bitboard) {
       bitwiseNot(to),
     ]);
   }
+  if (isCapturingEnPassant) {
+    const isWhite = game.player === Player.WHITE;
+    const capturedPawnPiece = isWhite ? Piece.BLACK_PAWN : Piece.WHITE_PAWN;
+    const getSquareInDirection = isWhite ? getBottomSquare : getTopSquare;
+    game.position[capturedPawnPiece] = bitwiseAnd([
+      game.position[capturedPawnPiece],
+      bitwiseNot(getSquareInDirection(to)),
+    ]);
+  }
+
+  game.player = game.player === Player.WHITE ? Player.BLACK : Player.WHITE;
 
   // TODO: check for checkmate
   // TODO: check for a draw

@@ -1,9 +1,13 @@
 import {
   Bitboard,
+  bitwiseAnd,
+  bitwiseOr,
+  bitwiseXor,
   getBottomSquare,
   getLeftSquare,
   getRightSquare,
   getTopSquare,
+  isNull,
 } from "./bitboard";
 
 describe("getLeftSquare", () => {
@@ -73,6 +77,7 @@ describe("getLeftSquare", () => {
     ["rank 8, file C", [0x20000000, 0x00000000], [0x40000000, 0x00000000]],
     ["rank 8, file B", [0x40000000, 0x00000000], [0x80000000, 0x00000000]],
     ["rank 8, file A", [0x80000000, 0x00000000], [0x00000000, 0x00000000]],
+    ["everything", [0xffffffff, 0xffffffff], [0xfefefefe, 0xfefefefe]],
   ];
   it.each(cases)("%s", (_, input, output) => {
     expect(getLeftSquare(input)).toEqual(output);
@@ -146,6 +151,7 @@ describe("getRightSquare", () => {
     ["rank 8, file C", [0x20000000, 0x00000000], [0x10000000, 0x00000000]],
     ["rank 8, file B", [0x40000000, 0x00000000], [0x20000000, 0x00000000]],
     ["rank 8, file A", [0x80000000, 0x00000000], [0x40000000, 0x00000000]],
+    ["everything", [0xffffffff, 0xffffffff], [0x7f7f7f7f, 0x7f7f7f7f]],
   ];
   it.each(cases)("%s", (_, input, output) => {
     expect(getRightSquare(input)).toEqual(output);
@@ -219,6 +225,7 @@ describe("getTopSquare", () => {
     ["rank 8, file C", [0x20000000, 0x00000000], [0x00000000, 0x00000000]],
     ["rank 8, file B", [0x40000000, 0x00000000], [0x00000000, 0x00000000]],
     ["rank 8, file A", [0x80000000, 0x00000000], [0x00000000, 0x00000000]],
+    ["everything", [0xffffffff, 0xffffffff], [0xffffffff, 0xffffff00]],
   ];
   it.each(cases)("%s", (_, input, output) => {
     expect(getTopSquare(input)).toEqual(output);
@@ -292,8 +299,769 @@ describe("getBottomSquare", () => {
     ["rank 8, file C", [0x20000000, 0x00000000], [0x00200000, 0x00000000]],
     ["rank 8, file B", [0x40000000, 0x00000000], [0x00400000, 0x00000000]],
     ["rank 8, file A", [0x80000000, 0x00000000], [0x00800000, 0x00000000]],
+    ["everything", [0xffffffff, 0xffffffff], [0x00ffffff, 0xffffffff]],
   ];
   it.each(cases)("%s", (_, input, output) => {
     expect(getBottomSquare(input)).toEqual(output);
+  });
+});
+
+function getObservedSqaresToLeft(
+  allPieces: Bitboard,
+  enemyPieces: Bitboard,
+  observingPieces: Bitboard
+) {
+  let changeMask: Bitboard = [0xffffffff, 0xffffffff];
+  let toLeft = observingPieces;
+  let observedSquares = observingPieces;
+  let c = 0;
+  while (!isNull(toLeft) && !isNull(changeMask)) {
+    if (c++ > 100) {
+      throw new Error("infinite loop");
+    }
+
+    toLeft = getLeftSquare(toLeft);
+    changeMask = bitwiseAnd([
+      bitwiseXor([bitwiseAnd([toLeft, allPieces]), toLeft]),
+      getLeftSquare(changeMask),
+    ]);
+    observedSquares = bitwiseXor([observedSquares, changeMask]);
+  }
+  return bitwiseOr([
+    observingPieces,
+    observedSquares,
+    getLeftSquare(bitwiseAnd([getRightSquare(enemyPieces), observedSquares])),
+  ]);
+}
+
+describe("getObservedSqaresToLeft", () => {
+  describe("when there are no pieces to the left", () => {
+    it("should observe all squares", () => {
+      expect(
+        getObservedSqaresToLeft(
+          [
+            0b00000001_00000010_00000100_00001000,
+            0b00010000_00100000_01000000_10000000,
+          ],
+          [
+            0b00000000_00000000_00000000_00000000,
+            0b00000000_00000000_00000000_00000000,
+          ],
+          [
+            0b00000001_00000010_00000100_00001000,
+            0b00010000_00100000_01000000_10000000,
+          ]
+        )
+      ).toEqual([
+        0b11111111_11111110_11111100_11111000,
+        0b11110000_11100000_11000000_10000000,
+      ]);
+    });
+  });
+  describe("when there is one own piece to the left", () => {
+    it("should observe all squares up to the own piece", () => {
+      expect(
+        getObservedSqaresToLeft(
+          [
+            0b01000001_01000010_00100100_00101000,
+            0b01010000_01100000_11000000_10000000,
+          ],
+          [
+            0b00000000_00000000_00000000_00000000,
+            0b00000000_00000000_00000000_00000000,
+          ],
+          [
+            0b00000001_00000010_00000100_00001000,
+            0b00010000_00100000_01000000_10000000,
+          ]
+        )
+      ).toEqual([
+        0b00111111_00111110_00011100_00011000,
+        0b00110000_00100000_01000000_10000000,
+      ]);
+    });
+  });
+  describe("when there are multiple own piece to the left", () => {
+    it("should observe all squares up to the first own piece", () => {
+      expect(
+        getObservedSqaresToLeft(
+          [
+            0b01001001_01001010_00101100_00111000,
+            0b11010000_11100000_11000000_10000000,
+          ],
+          [
+            0b00000000_00000000_00000000_00000000,
+            0b00000000_00000000_00000000_00000000,
+          ],
+          [
+            0b00000001_00000010_00000100_00001000,
+            0b00010000_00100000_01000000_10000000,
+          ]
+        )
+      ).toEqual([
+        0b00000111_00000110_00000100_00001000,
+        0b00110000_00100000_01000000_10000000,
+      ]);
+    });
+  });
+  describe("when there is one enemy piece to the left", () => {
+    it("should observe all squares up to and including the enemy piece", () => {
+      expect(
+        getObservedSqaresToLeft(
+          [
+            0b01000001_01000010_00100100_00101000,
+            0b01010000_01100000_11000000_10000000,
+          ],
+          [
+            0b01000000_01000000_00100000_00100000,
+            0b01000000_01000000_10000000_00000000,
+          ],
+          [
+            0b00000001_00000010_00000100_00001000,
+            0b00010000_00100000_01000000_10000000,
+          ]
+        )
+      ).toEqual([
+        0b01111111_01111110_00111100_00111000,
+        0b01110000_01100000_11000000_10000000,
+      ]);
+    });
+  });
+  describe("when there are multiple enemy piece to the left", () => {
+    it("should observe all squares up to and including the first enemy piece", () => {
+      expect(
+        getObservedSqaresToLeft(
+          [
+            0b01001001_01001010_00101100_00111000,
+            0b11010000_11100000_11000000_10000000,
+          ],
+          [
+            0b01001000_01001000_00101000_00110000,
+            0b11000000_11000000_10000000_00000000,
+          ],
+          [
+            0b00000001_00000010_00000100_00001000,
+            0b00010000_00100000_01000000_10000000,
+          ]
+        )
+      ).toEqual([
+        0b00001111_00001110_00001100_00011000,
+        0b01110000_01100000_11000000_10000000,
+      ]);
+    });
+  });
+  describe("when there are own and enemy piece to the left", () => {
+    it("should observe all squares up to the first own piece", () => {
+      expect(
+        getObservedSqaresToLeft(
+          [
+            0b01001001_01001010_00101100_00111000,
+            0b11010000_11100000_11000000_10000000,
+          ],
+          [
+            0b01000000_01000000_00100000_00100000,
+            0b10000000_10000000_00000000_00000000,
+          ],
+          [
+            0b00000001_00000010_00000100_00001000,
+            0b00010000_00100000_01000000_10000000,
+          ]
+        )
+      ).toEqual([
+        0b00000111_00000110_00000100_00001000,
+        0b00110000_00100000_01000000_10000000,
+      ]);
+    });
+    it("should observe all squares up to and including the first enemy piece", () => {
+      expect(
+        getObservedSqaresToLeft(
+          [
+            0b01001001_01001010_00101100_00111000,
+            0b11010000_11100000_11000000_10000000,
+          ],
+          [
+            0b00001000_00001000_00001000_00010000,
+            0b01000000_01000000_10000000_00000000,
+          ],
+          [
+            0b00000001_00000010_00000100_00001000,
+            0b00010000_00100000_01000000_10000000,
+          ]
+        )
+      ).toEqual([
+        0b00001111_00001110_00001100_00011000,
+        0b01110000_01100000_11000000_10000000,
+      ]);
+    });
+  });
+});
+
+function getObservedSqaresToRight(
+  allPieces: Bitboard,
+  enemyPieces: Bitboard,
+  observingPieces: Bitboard
+) {
+  let changeMask: Bitboard = [0xffffffff, 0xffffffff];
+  let toRight = observingPieces;
+  let observedSquares = observingPieces;
+  let c = 0;
+  while (!isNull(toRight) && !isNull(changeMask)) {
+    if (c++ > 100) {
+      throw new Error("infinite loop");
+    }
+
+    toRight = getRightSquare(toRight);
+    changeMask = bitwiseAnd([
+      bitwiseXor([bitwiseAnd([toRight, allPieces]), toRight]),
+      getRightSquare(changeMask),
+    ]);
+    observedSquares = bitwiseXor([observedSquares, changeMask]);
+  }
+  return bitwiseOr([
+    observingPieces,
+    observedSquares,
+    getRightSquare(bitwiseAnd([getLeftSquare(enemyPieces), observedSquares])),
+  ]);
+}
+
+describe("getObservedSqaresToRight", () => {
+  describe("when there are no pieces to the right", () => {
+    it("should observe all squares", () => {
+      expect(
+        getObservedSqaresToRight(
+          [
+            0b00010000_00100000_01000000_10000000,
+            0b00000001_00000010_00000100_00001000,
+          ],
+          [
+            0b00000000_00000000_00000000_00000000,
+            0b00000000_00000000_00000000_00000000,
+          ],
+          [
+            0b00010000_00100000_01000000_10000000,
+            0b00000001_00000010_00000100_00001000,
+          ]
+        )
+      ).toEqual([
+        0b00011111_00111111_01111111_11111111,
+        0b00000001_00000011_00000111_00001111,
+      ]);
+    });
+  });
+  describe("when there is one own piece to the right", () => {
+    it("should observe all squares up to the own piece", () => {
+      expect(
+        getObservedSqaresToRight(
+          [
+            0b00010100_00100100_01000010_10000010,
+            0b00000001_00000011_00000110_00001010,
+          ],
+          [
+            0b00000000_00000000_00000000_00000000,
+            0b00000000_00000000_00000000_00000000,
+          ],
+          [
+            0b00010000_00100000_01000000_10000000,
+            0b00000001_00000010_00000100_00001000,
+          ]
+        )
+      ).toEqual([
+        0b00011000_00111000_01111100_11111100,
+        0b00000001_00000010_00000100_00001100,
+      ]);
+    });
+  });
+  describe("when there are multiple own piece to the right", () => {
+    it("should observe all squares up to the first own piece", () => {
+      expect(
+        getObservedSqaresToRight(
+          [
+            0b00011100_00110100_01010010_10010010,
+            0b00000001_00000011_00000111_00001011,
+          ],
+          [
+            0b00000000_00000000_00000000_00000000,
+            0b00000000_00000000_00000000_00000000,
+          ],
+          [
+            0b00010000_00100000_01000000_10000000,
+            0b00000001_00000010_00000100_00001000,
+          ]
+        )
+      ).toEqual([
+        0b00010000_00100000_01100000_11100000,
+        0b00000001_00000010_00000100_00001100,
+      ]);
+    });
+  });
+  describe("when there is one enemy piece to the right", () => {
+    it("should observe all squares up to and including the enemy piece", () => {
+      expect(
+        getObservedSqaresToRight(
+          [
+            0b00010100_00100100_01000010_10000010,
+            0b00000001_00000011_00000110_00001010,
+          ],
+          [
+            0b00000100_00000100_00000010_00000010,
+            0b00000000_00000001_00000010_00000010,
+          ],
+          [
+            0b00010000_00100000_01000000_10000000,
+            0b00000001_00000010_00000100_00001000,
+          ]
+        )
+      ).toEqual([
+        0b00011100_00111100_01111110_11111110,
+        0b00000001_00000011_00000110_00001110,
+      ]);
+    });
+  });
+  describe("when there are multiple enemy piece to the right", () => {
+    it("should observe all squares up to and including the first enemy piece", () => {
+      expect(
+        getObservedSqaresToRight(
+          [
+            0b00011100_00110100_01010010_10010010,
+            0b00000001_00000011_00000111_00001011,
+          ],
+          [
+            0b00001100_00010100_00010010_00010010,
+            0b00000000_00000001_00000011_00000011,
+          ],
+          [
+            0b00010000_00100000_01000000_10000000,
+            0b00000001_00000010_00000100_00001000,
+          ]
+        )
+      ).toEqual([
+        0b00011000_00110000_01110000_11110000,
+        0b00000001_00000011_00000110_00001110,
+      ]);
+    });
+  });
+  describe("when there are own and enemy piece to the right", () => {
+    it("should observe all squares up to the first own piece", () => {
+      expect(
+        getObservedSqaresToRight(
+          [
+            0b00011100_00110100_01010010_10010010,
+            0b00000001_00000011_00000111_00001011,
+          ],
+          [
+            0b00000100_00000100_00000010_00000010,
+            0b00000000_00000000_00000001_00000001,
+          ],
+          [
+            0b00010000_00100000_01000000_10000000,
+            0b00000001_00000010_00000100_00001000,
+          ]
+        )
+      ).toEqual([
+        0b00010000_00100000_01100000_11100000,
+        0b00000001_00000010_00000100_00001100,
+      ]);
+    });
+    it("should observe all squares up to and including the first enemy piece", () => {
+      expect(
+        getObservedSqaresToRight(
+          [
+            0b00011100_00110100_01010010_10010010,
+            0b00000001_00000011_00000111_00001011,
+          ],
+          [
+            0b00001000_00010000_00010000_00010000,
+            0b00000000_00000001_00000010_00000010,
+          ],
+          [
+            0b00010000_00100000_01000000_10000000,
+            0b00000001_00000010_00000100_00001000,
+          ]
+        )
+      ).toEqual([
+        0b00011000_00110000_01110000_11110000,
+        0b00000001_00000011_00000110_00001110,
+      ]);
+    });
+  });
+});
+
+function getObservedSqaresToTop(
+  allPieces: Bitboard,
+  enemyPieces: Bitboard,
+  observingPieces: Bitboard
+) {
+  let changeMask: Bitboard = [0xffffffff, 0xffffffff];
+  let toTop = observingPieces;
+  let observedSquares = observingPieces;
+  let c = 0;
+  while (!isNull(toTop) && !isNull(changeMask)) {
+    if (c++ > 100) {
+      throw new Error("infinite loop");
+    }
+
+    toTop = getTopSquare(toTop);
+    changeMask = bitwiseAnd([
+      bitwiseXor([bitwiseAnd([toTop, allPieces]), toTop]),
+      getTopSquare(changeMask),
+    ]);
+    observedSquares = bitwiseXor([observedSquares, changeMask]);
+  }
+  return bitwiseOr([
+    observingPieces,
+    observedSquares,
+    getTopSquare(bitwiseAnd([getBottomSquare(enemyPieces), observedSquares])),
+  ]);
+}
+
+describe("getObservedSqaresToTop", () => {
+  describe("when there are no pieces to the top", () => {
+    it("should observe all squares", () => {
+      expect(
+        getObservedSqaresToTop(
+          [
+            0b00000001_00000010_00000100_00001000,
+            0b00010000_00100000_01000000_10000000,
+          ],
+          [
+            0b00000000_00000000_00000000_00000000,
+            0b00000000_00000000_00000000_00000000,
+          ],
+          [
+            0b00000001_00000010_00000100_00001000,
+            0b00010000_00100000_01000000_10000000,
+          ]
+        )
+      ).toEqual([
+        0b11111111_11111110_11111100_11111000,
+        0b11110000_11100000_11000000_10000000,
+      ]);
+    });
+  });
+  describe("when there is one own piece to the top", () => {
+    it("should observe all squares up to the own piece", () => {
+      expect(
+        getObservedSqaresToTop(
+          [
+            0b00000011_11001110_00110100_00001000,
+            0b00010000_00100000_01000000_10000000,
+          ],
+          [
+            0b00000000_00000000_00000000_00000000,
+            0b00000000_00000000_00000000_00000000,
+          ],
+          [
+            0b00000001_00000010_00000100_00001000,
+            0b00010000_00100000_01000000_10000000,
+          ]
+        )
+      ).toEqual([
+        0b00000001_00000010_11001100_11111000,
+        0b11110000_11100000_11000000_10000000,
+      ]);
+    });
+  });
+  describe("when there are multiple own piece to the top", () => {
+    it("should observe all squares up to the first own piece", () => {
+      expect(
+        getObservedSqaresToTop(
+          [
+            0b00001111_11001110_00110100_00011000,
+            0b11110000_00100000_01000000_10000000,
+          ],
+          [
+            0b00000000_00000000_00000000_00000000,
+            0b00000000_00000000_00000000_00000000,
+          ],
+          [
+            0b00000001_00000010_00000100_00001000,
+            0b00010000_00100000_01000000_10000000,
+          ]
+        )
+      ).toEqual([
+        0b00000001_00000010_00001100_00001000,
+        0b00010000_11100000_11000000_10000000,
+      ]);
+    });
+  });
+  describe("when there is one enemy piece to the top", () => {
+    it("should observe all squares up to and including the enemy piece", () => {
+      expect(
+        getObservedSqaresToTop(
+          [
+            0b00000011_11001110_00110100_00001000,
+            0b00010000_00100000_01000000_10000000,
+          ],
+          [
+            0b00000010_11001100_00110000_00000000,
+            0b00000000_00000000_00000000_00000000,
+          ],
+          [
+            0b00000001_00000010_00000100_00001000,
+            0b00010000_00100000_01000000_10000000,
+          ]
+        )
+      ).toEqual([
+        0b00000011_11001110_11111100_11111000,
+        0b11110000_11100000_11000000_10000000,
+      ]);
+    });
+  });
+  describe("when there are multiple enemy piece to the top", () => {
+    it("should observe all squares up to and including the first enemy piece", () => {
+      expect(
+        getObservedSqaresToTop(
+          [
+            0b00001111_11001110_00110100_00011000,
+            0b11110000_00100000_01000000_10000000,
+          ],
+          [
+            0b00001110_11001100_00110000_00010000,
+            0b11100000_00000000_00000000_00000000,
+          ],
+          [
+            0b00000001_00000010_00000100_00001000,
+            0b00010000_00100000_01000000_10000000,
+          ]
+        )
+      ).toEqual([
+        0b00000011_00001110_00001100_00011000,
+        0b11110000_11100000_11000000_10000000,
+      ]);
+    });
+  });
+  describe("when there are own and enemy piece to the top", () => {
+    it("should observe all squares up to the first own piece", () => {
+      expect(
+        getObservedSqaresToTop(
+          [
+            0b00001111_11001110_00110100_00011000,
+            0b11110000_00100000_01000000_10000000,
+          ],
+          [
+            0b00001100_11000000_00110000_00000000,
+            0b00000000_00000000_00000000_00000000,
+          ],
+          [
+            0b00000001_00000010_00000100_00001000,
+            0b00010000_00100000_01000000_10000000,
+          ]
+        )
+      ).toEqual([
+        0b00000001_00000010_00001100_00001000,
+        0b00010000_11100000_11000000_10000000,
+      ]);
+    });
+    it("should observe all squares up to and including the first enemy piece", () => {
+      expect(
+        getObservedSqaresToTop(
+          [
+            0b00001111_11001110_00110100_00011000,
+            0b11110000_00100000_01000000_10000000,
+          ],
+          [
+            0b00000010_00001100_00000000_00010000,
+            0b11100000_00000000_00000000_00000000,
+          ],
+          [
+            0b00000001_00000010_00000100_00001000,
+            0b00010000_00100000_01000000_10000000,
+          ]
+        )
+      ).toEqual([
+        0b00000011_00001110_00001100_00011000,
+        0b11110000_11100000_11000000_10000000,
+      ]);
+    });
+  });
+});
+
+function getObservedSqaresToBottom(
+  allPieces: Bitboard,
+  enemyPieces: Bitboard,
+  observingPieces: Bitboard
+) {
+  let changeMask: Bitboard = [0xffffffff, 0xffffffff];
+  let toBottom = observingPieces;
+  let observedSquares = observingPieces;
+  let c = 0;
+  while (!isNull(toBottom) && !isNull(changeMask)) {
+    if (c++ > 100) {
+      throw new Error("infinite loop");
+    }
+
+    toBottom = getBottomSquare(toBottom);
+    changeMask = bitwiseAnd([
+      bitwiseXor([bitwiseAnd([toBottom, allPieces]), toBottom]),
+      getBottomSquare(changeMask),
+    ]);
+    observedSquares = bitwiseXor([observedSquares, changeMask]);
+  }
+  return bitwiseOr([
+    observingPieces,
+    observedSquares,
+    getBottomSquare(bitwiseAnd([getTopSquare(enemyPieces), observedSquares])),
+  ]);
+}
+
+describe("getObservedSqaresToBottom", () => {
+  describe("when there are no pieces to the bottom", () => {
+    it("should observe all squares", () => {
+      expect(
+        getObservedSqaresToBottom(
+          [
+            0b10000000_01000000_00100000_00010000,
+            0b00001000_00000100_00000010_00000001,
+          ],
+          [
+            0b00000000_00000000_00000000_00000000,
+            0b00000000_00000000_00000000_00000000,
+          ],
+          [
+            0b10000000_01000000_00100000_00010000,
+            0b00001000_00000100_00000010_00000001,
+          ]
+        )
+      ).toEqual([
+        0b10000000_11000000_11100000_11110000,
+        0b11111000_11111100_11111110_11111111,
+      ]);
+    });
+  });
+  describe("when there is one own piece to the bottom", () => {
+    it("should observe all squares up to the own piece", () => {
+      expect(
+        getObservedSqaresToBottom(
+          [
+            0b10000000_01000000_00100000_00010000,
+            0b00001000_00110100_11001110_00000011,
+          ],
+          [
+            0b00000000_00000000_00000000_00000000,
+            0b00000000_00000000_00000000_00000000,
+          ],
+          [
+            0b10000000_01000000_00100000_00010000,
+            0b00001000_00000100_00000010_00000001,
+          ]
+        )
+      ).toEqual([
+        0b10000000_11000000_11100000_11110000,
+        0b11111000_11001100_00000010_00000001,
+      ]);
+    });
+  });
+  describe("when there are multiple own piece to the bottom", () => {
+    it("should observe all squares up to the first own piece", () => {
+      expect(
+        getObservedSqaresToBottom(
+          [
+            0b10000000_01000000_00100000_11110000,
+            0b00011000_00110100_11001110_00001111,
+          ],
+          [
+            0b00000000_00000000_00000000_00000000,
+            0b00000000_00000000_00000000_00000000,
+          ],
+          [
+            0b10000000_01000000_00100000_00010000,
+            0b00001000_00000100_00000010_00000001,
+          ]
+        )
+      ).toEqual([
+        0b10000000_11000000_11100000_00010000,
+        0b00001000_00001100_00000010_00000001,
+      ]);
+    });
+  });
+  describe("when there is one enemy piece to the bottom", () => {
+    it("should observe all squares up to and including the enemy piece", () => {
+      expect(
+        getObservedSqaresToBottom(
+          [
+            0b10000000_01000000_00100000_00010000,
+            0b00001000_00110100_11001110_00000011,
+          ],
+          [
+            0b00000000_00000000_00000000_00000000,
+            0b00000000_00110000_11001100_00000010,
+          ],
+          [
+            0b10000000_01000000_00100000_00010000,
+            0b00001000_00000100_00000010_00000001,
+          ]
+        )
+      ).toEqual([
+        0b10000000_11000000_11100000_11110000,
+        0b11111000_11111100_11001110_00000011,
+      ]);
+    });
+  });
+  describe("when there are multiple enemy piece to the bottom", () => {
+    it("should observe all squares up to and including the first enemy piece", () => {
+      expect(
+        getObservedSqaresToBottom(
+          [
+            0b10000000_01000000_00100000_11110000,
+            0b00011000_00110100_11001110_00001111,
+          ],
+          [
+            0b00000000_00000000_00000000_11100000,
+            0b00010000_00110000_11001100_00001110,
+          ],
+          [
+            0b10000000_01000000_00100000_00010000,
+            0b00001000_00000100_00000010_00000001,
+          ]
+        )
+      ).toEqual([
+        0b10000000_11000000_11100000_11110000,
+        0b00011000_00001100_00001110_00000011,
+      ]);
+    });
+  });
+  describe("when there are own and enemy piece to the bottom", () => {
+    it("should observe all squares up to the first own piece", () => {
+      expect(
+        getObservedSqaresToBottom(
+          [
+            0b10000000_01000000_00100000_11110000,
+            0b00011000_00110100_11001110_00001111,
+          ],
+          [
+            0b00000000_00000000_00000000_00000000,
+            0b00000000_00110000_11000000_00001100,
+          ],
+          [
+            0b10000000_01000000_00100000_00010000,
+            0b00001000_00000100_00000010_00000001,
+          ]
+        )
+      ).toEqual([
+        0b10000000_11000000_11100000_00010000,
+        0b00001000_00001100_00000010_00000001,
+      ]);
+    });
+    it("should observe all squares up to and including the first enemy piece", () => {
+      expect(
+        getObservedSqaresToBottom(
+          [
+            0b10000000_01000000_00100000_11110000,
+            0b00011000_00110100_11001110_00001111,
+          ],
+          [
+            0b00000000_00000000_00000000_11100000,
+            0b00010000_00000000_00001100_00000010,
+          ],
+          [
+            0b10000000_01000000_00100000_00010000,
+            0b00001000_00000100_00000010_00000001,
+          ]
+        )
+      ).toEqual([
+        0b10000000_11000000_11100000_11110000,
+        0b00011000_00001100_00001110_00000011,
+      ]);
+    });
   });
 });

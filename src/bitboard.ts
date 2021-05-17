@@ -5,17 +5,35 @@ export function bitwiseNot(bitboard: Bitboard): Bitboard {
 }
 
 export function bitwiseAnd(bitboards: Bitboard[]): Bitboard {
-  return bitboards.reduce(
+  const and = bitboards.reduce(
     (first, second) => [first[0] & second[0], first[1] & second[1]],
     [0xffffffff, 0xffffffff]
   );
+  return [and[0] >>> 0, and[1] >>> 0];
 }
 
 export function bitwiseOr(bitboards: Bitboard[]): Bitboard {
-  return bitboards.reduce(
+  const or = bitboards.reduce(
     (first, second) => [first[0] | second[0], first[1] | second[1]],
     [0x00000000, 0x00000000]
   );
+  return [or[0] >>> 0, or[1] >>> 0];
+}
+
+export function bitwiseXor(bitboards: Bitboard[]): Bitboard {
+  const xor = bitboards.reduce(
+    (first, second) => [first[0] ^ second[0], first[1] ^ second[1]],
+    [0x00000000, 0x00000000]
+  );
+  return [xor[0] >>> 0, xor[1] >>> 0];
+}
+
+export function leftShift(bitboard: Bitboard, bits: number): Bitboard {
+  return [
+    (((bitboard[0] << bits) & 0xffffffff) | (bitboard[1] >>> (32 - bits))) >>>
+      0,
+    ((bitboard[1] << bits) & 0xffffffff) >>> 0,
+  ];
 }
 
 export function isNull(bitboard: Bitboard) {

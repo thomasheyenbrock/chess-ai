@@ -1,13 +1,14 @@
 import {
   Bitboard,
-  bitwiseAnd,
-  bitwiseOr,
-  bitwiseXor,
   getBottomSquare,
   getLeftSquare,
   getRightSquare,
   getTopSquare,
-  isNull,
+  getMoveableSqaresToLeft,
+  getMoveableSqaresToRight,
+  getMoveableSqaresToTop,
+  getMoveableSqaresToBottom,
+  getMoveableSqaresToTopLeft,
 } from "./bitboard";
 
 describe("getLeftSquare", () => {
@@ -306,762 +307,1559 @@ describe("getBottomSquare", () => {
   });
 });
 
-function getObservedSqaresToLeft(
-  allPieces: Bitboard,
-  enemyPieces: Bitboard,
-  observingPieces: Bitboard
-) {
-  let changeMask: Bitboard = [0xffffffff, 0xffffffff];
-  let toLeft = observingPieces;
-  let observedSquares = observingPieces;
-  let c = 0;
-  while (!isNull(toLeft) && !isNull(changeMask)) {
-    if (c++ > 100) {
-      throw new Error("infinite loop");
-    }
-
-    toLeft = getLeftSquare(toLeft);
-    changeMask = bitwiseAnd([
-      bitwiseXor([bitwiseAnd([toLeft, allPieces]), toLeft]),
-      getLeftSquare(changeMask),
-    ]);
-    observedSquares = bitwiseXor([observedSquares, changeMask]);
+function stringToBitboard(str: string): Bitboard {
+  const splitted = str
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (splitted.length !== 8) {
+    throw new Error("invalid board string");
   }
-  return bitwiseOr([
-    observingPieces,
-    observedSquares,
-    getLeftSquare(bitwiseAnd([getRightSquare(enemyPieces), observedSquares])),
-  ]);
+  splitted.forEach((line) => {
+    if (!line.match(/^[01]{8}$/)) {
+      throw new Error("invalid board string");
+    }
+  });
+  return [
+    parseInt(splitted.slice(0, 4).join(""), 2),
+    parseInt(splitted.slice(4, 8).join(""), 2),
+  ];
 }
 
-describe("getObservedSqaresToLeft", () => {
+describe("stringToBitboard", () => {
+  it("should transform a string into a bitboard", () => {
+    expect(
+      stringToBitboard(`
+        11111111
+        11111111
+        00000000
+        00000000
+        00000000
+        00000000
+        11111111
+        11111111
+      `)
+    ).toEqual([
+      0b11111111_11111111_00000000_00000000,
+      0b00000000_00000000_11111111_11111111,
+    ]);
+    expect(
+      stringToBitboard(`
+        10000000
+        01000000
+        00100000
+        00010000
+        00001000
+        00000100
+        00000010
+        00000001
+      `)
+    ).toEqual([
+      0b10000000_01000000_00100000_00010000,
+      0b00001000_00000100_00000010_00000001,
+    ]);
+    expect(
+      stringToBitboard(`
+        00000000
+        00000000
+        00000000
+        00000000
+        00000000
+        00000000
+        00000000
+        00000000
+      `)
+    ).toEqual([
+      0b00000000_00000000_00000000_00000000,
+      0b00000000_00000000_00000000_00000000,
+    ]);
+    expect(
+      stringToBitboard(`
+        11111111
+        11111111
+        11111111
+        11111111
+        11111111
+        11111111
+        11111111
+        11111111
+      `)
+    ).toEqual([
+      0b11111111_11111111_11111111_11111111,
+      0b11111111_11111111_11111111_11111111,
+    ]);
+  });
+});
+
+describe("getMoveableSqaresToLeft", () => {
   describe("when there are no pieces to the left", () => {
     it("should observe all squares", () => {
       expect(
-        getObservedSqaresToLeft(
-          [
-            0b00000001_00000010_00000100_00001000,
-            0b00010000_00100000_01000000_10000000,
-          ],
-          [
-            0b00000000_00000000_00000000_00000000,
-            0b00000000_00000000_00000000_00000000,
-          ],
-          [
-            0b00000001_00000010_00000100_00001000,
-            0b00010000_00100000_01000000_10000000,
-          ]
+        getMoveableSqaresToLeft(
+          stringToBitboard(`
+            00000001
+            00000010
+            00000100
+            00001000
+            00010000
+            00100000
+            01000000
+            10000000
+          `),
+          stringToBitboard(`
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+          `),
+          stringToBitboard(`
+            00000001
+            00000010
+            00000100
+            00001000
+            00010000
+            00100000
+            01000000
+            10000000
+          `)
         )
-      ).toEqual([
-        0b11111111_11111110_11111100_11111000,
-        0b11110000_11100000_11000000_10000000,
-      ]);
+      ).toEqual(
+        stringToBitboard(`
+          11111111
+          11111110
+          11111100
+          11111000
+          11110000
+          11100000
+          11000000
+          10000000
+        `)
+      );
     });
   });
   describe("when there is one own piece to the left", () => {
     it("should observe all squares up to the own piece", () => {
       expect(
-        getObservedSqaresToLeft(
-          [
-            0b01000001_01000010_00100100_00101000,
-            0b01010000_01100000_11000000_10000000,
-          ],
-          [
-            0b00000000_00000000_00000000_00000000,
-            0b00000000_00000000_00000000_00000000,
-          ],
-          [
-            0b00000001_00000010_00000100_00001000,
-            0b00010000_00100000_01000000_10000000,
-          ]
+        getMoveableSqaresToLeft(
+          stringToBitboard(`
+            01000001
+            01000010
+            00100100
+            00101000
+            01010000
+            01100000
+            11000000
+            10000000
+          `),
+          stringToBitboard(`
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+          `),
+          stringToBitboard(`
+            00000001
+            00000010
+            00000100
+            00001000
+            00010000
+            00100000
+            01000000
+            10000000
+          `)
         )
-      ).toEqual([
-        0b00111111_00111110_00011100_00011000,
-        0b00110000_00100000_01000000_10000000,
-      ]);
+      ).toEqual(
+        stringToBitboard(`
+          00111111
+          00111110
+          00011100
+          00011000
+          00110000
+          00100000
+          01000000
+          10000000
+        `)
+      );
     });
   });
   describe("when there are multiple own piece to the left", () => {
     it("should observe all squares up to the first own piece", () => {
       expect(
-        getObservedSqaresToLeft(
-          [
-            0b01001001_01001010_00101100_00111000,
-            0b11010000_11100000_11000000_10000000,
-          ],
-          [
-            0b00000000_00000000_00000000_00000000,
-            0b00000000_00000000_00000000_00000000,
-          ],
-          [
-            0b00000001_00000010_00000100_00001000,
-            0b00010000_00100000_01000000_10000000,
-          ]
+        getMoveableSqaresToLeft(
+          stringToBitboard(`
+            01001001
+            01001010
+            00101100
+            00111000
+            11010000
+            11100000
+            11000000
+            10000000
+          `),
+          stringToBitboard(`
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+          `),
+          stringToBitboard(`
+            00000001
+            00000010
+            00000100
+            00001000
+            00010000
+            00100000
+            01000000
+            10000000
+          `)
         )
-      ).toEqual([
-        0b00000111_00000110_00000100_00001000,
-        0b00110000_00100000_01000000_10000000,
-      ]);
+      ).toEqual(
+        stringToBitboard(`
+          00000111
+          00000110
+          00000100
+          00001000
+          00110000
+          00100000
+          01000000
+          10000000
+        `)
+      );
     });
   });
   describe("when there is one enemy piece to the left", () => {
     it("should observe all squares up to and including the enemy piece", () => {
       expect(
-        getObservedSqaresToLeft(
-          [
-            0b01000001_01000010_00100100_00101000,
-            0b01010000_01100000_11000000_10000000,
-          ],
-          [
-            0b01000000_01000000_00100000_00100000,
-            0b01000000_01000000_10000000_00000000,
-          ],
-          [
-            0b00000001_00000010_00000100_00001000,
-            0b00010000_00100000_01000000_10000000,
-          ]
+        getMoveableSqaresToLeft(
+          stringToBitboard(`
+            01000001
+            01000010
+            00100100
+            00101000
+            01010000
+            01100000
+            11000000
+            10000000
+          `),
+          stringToBitboard(`
+            01000000
+            01000000
+            00100000
+            00100000
+            01000000
+            01000000
+            10000000
+            00000000
+          `),
+          stringToBitboard(`
+            00000001
+            00000010
+            00000100
+            00001000
+            00010000
+            00100000
+            01000000
+            10000000
+          `)
         )
-      ).toEqual([
-        0b01111111_01111110_00111100_00111000,
-        0b01110000_01100000_11000000_10000000,
-      ]);
+      ).toEqual(
+        stringToBitboard(`
+          01111111
+          01111110
+          00111100
+          00111000
+          01110000
+          01100000
+          11000000
+          10000000
+        `)
+      );
     });
   });
   describe("when there are multiple enemy piece to the left", () => {
     it("should observe all squares up to and including the first enemy piece", () => {
       expect(
-        getObservedSqaresToLeft(
-          [
-            0b01001001_01001010_00101100_00111000,
-            0b11010000_11100000_11000000_10000000,
-          ],
-          [
-            0b01001000_01001000_00101000_00110000,
-            0b11000000_11000000_10000000_00000000,
-          ],
-          [
-            0b00000001_00000010_00000100_00001000,
-            0b00010000_00100000_01000000_10000000,
-          ]
+        getMoveableSqaresToLeft(
+          stringToBitboard(`
+            01001001
+            01001010
+            00101100
+            00111000
+            11010000
+            11100000
+            11000000
+            10000000
+          `),
+          stringToBitboard(`
+            01001000
+            01001000
+            00101000
+            00110000
+            11000000
+            11000000
+            10000000
+            00000000
+          `),
+          stringToBitboard(`
+            00000001
+            00000010
+            00000100
+            00001000
+            00010000
+            00100000
+            01000000
+            10000000
+          `)
         )
-      ).toEqual([
-        0b00001111_00001110_00001100_00011000,
-        0b01110000_01100000_11000000_10000000,
-      ]);
+      ).toEqual(
+        stringToBitboard(`
+          00001111
+          00001110
+          00001100
+          00011000
+          01110000
+          01100000
+          11000000
+          10000000
+        `)
+      );
     });
   });
   describe("when there are own and enemy piece to the left", () => {
     it("should observe all squares up to the first own piece", () => {
       expect(
-        getObservedSqaresToLeft(
-          [
-            0b01001001_01001010_00101100_00111000,
-            0b11010000_11100000_11000000_10000000,
-          ],
-          [
-            0b01000000_01000000_00100000_00100000,
-            0b10000000_10000000_00000000_00000000,
-          ],
-          [
-            0b00000001_00000010_00000100_00001000,
-            0b00010000_00100000_01000000_10000000,
-          ]
+        getMoveableSqaresToLeft(
+          stringToBitboard(`
+            01001001
+            01001010
+            00101100
+            00111000
+            11010000
+            11100000
+            11000000
+            10000000
+          `),
+          stringToBitboard(`
+            01000000
+            01000000
+            00100000
+            00100000
+            10000000
+            10000000
+            00000000
+            00000000
+          `),
+          stringToBitboard(`
+            00000001
+            00000010
+            00000100
+            00001000
+            00010000
+            00100000
+            01000000
+            10000000
+          `)
         )
-      ).toEqual([
-        0b00000111_00000110_00000100_00001000,
-        0b00110000_00100000_01000000_10000000,
-      ]);
+      ).toEqual(
+        stringToBitboard(`
+          00000111
+          00000110
+          00000100
+          00001000
+          00110000
+          00100000
+          01000000
+          10000000
+        `)
+      );
     });
     it("should observe all squares up to and including the first enemy piece", () => {
       expect(
-        getObservedSqaresToLeft(
-          [
-            0b01001001_01001010_00101100_00111000,
-            0b11010000_11100000_11000000_10000000,
-          ],
-          [
-            0b00001000_00001000_00001000_00010000,
-            0b01000000_01000000_10000000_00000000,
-          ],
-          [
-            0b00000001_00000010_00000100_00001000,
-            0b00010000_00100000_01000000_10000000,
-          ]
+        getMoveableSqaresToLeft(
+          stringToBitboard(`
+            01001001
+            01001010
+            00101100
+            00111000
+            11010000
+            11100000
+            11000000
+            10000000
+          `),
+          stringToBitboard(`
+            00001000
+            00001000
+            00001000
+            00010000
+            01000000
+            01000000
+            10000000
+            00000000
+          `),
+          stringToBitboard(`
+            00000001
+            00000010
+            00000100
+            00001000
+            00010000
+            00100000
+            01000000
+            10000000
+          `)
         )
-      ).toEqual([
-        0b00001111_00001110_00001100_00011000,
-        0b01110000_01100000_11000000_10000000,
-      ]);
+      ).toEqual(
+        stringToBitboard(`
+          00001111
+          00001110
+          00001100
+          00011000
+          01110000
+          01100000
+          11000000
+          10000000
+        `)
+      );
     });
   });
 });
 
-function getObservedSqaresToRight(
-  allPieces: Bitboard,
-  enemyPieces: Bitboard,
-  observingPieces: Bitboard
-) {
-  let changeMask: Bitboard = [0xffffffff, 0xffffffff];
-  let toRight = observingPieces;
-  let observedSquares = observingPieces;
-  let c = 0;
-  while (!isNull(toRight) && !isNull(changeMask)) {
-    if (c++ > 100) {
-      throw new Error("infinite loop");
-    }
-
-    toRight = getRightSquare(toRight);
-    changeMask = bitwiseAnd([
-      bitwiseXor([bitwiseAnd([toRight, allPieces]), toRight]),
-      getRightSquare(changeMask),
-    ]);
-    observedSquares = bitwiseXor([observedSquares, changeMask]);
-  }
-  return bitwiseOr([
-    observingPieces,
-    observedSquares,
-    getRightSquare(bitwiseAnd([getLeftSquare(enemyPieces), observedSquares])),
-  ]);
-}
-
-describe("getObservedSqaresToRight", () => {
+describe("getMoveableSqaresToRight", () => {
   describe("when there are no pieces to the right", () => {
     it("should observe all squares", () => {
       expect(
-        getObservedSqaresToRight(
-          [
-            0b00010000_00100000_01000000_10000000,
-            0b00000001_00000010_00000100_00001000,
-          ],
-          [
-            0b00000000_00000000_00000000_00000000,
-            0b00000000_00000000_00000000_00000000,
-          ],
-          [
-            0b00010000_00100000_01000000_10000000,
-            0b00000001_00000010_00000100_00001000,
-          ]
+        getMoveableSqaresToRight(
+          stringToBitboard(`
+            00010000
+            00100000
+            01000000
+            10000000
+            00000001
+            00000010
+            00000100
+            00001000
+          `),
+          stringToBitboard(`
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+          `),
+          stringToBitboard(`
+            00010000
+            00100000
+            01000000
+            10000000
+            00000001
+            00000010
+            00000100
+            00001000
+          `)
         )
-      ).toEqual([
-        0b00011111_00111111_01111111_11111111,
-        0b00000001_00000011_00000111_00001111,
-      ]);
+      ).toEqual(
+        stringToBitboard(`
+          00011111
+          00111111
+          01111111
+          11111111
+          00000001
+          00000011
+          00000111
+          00001111
+        `)
+      );
     });
   });
   describe("when there is one own piece to the right", () => {
     it("should observe all squares up to the own piece", () => {
       expect(
-        getObservedSqaresToRight(
-          [
-            0b00010100_00100100_01000010_10000010,
-            0b00000001_00000011_00000110_00001010,
-          ],
-          [
-            0b00000000_00000000_00000000_00000000,
-            0b00000000_00000000_00000000_00000000,
-          ],
-          [
-            0b00010000_00100000_01000000_10000000,
-            0b00000001_00000010_00000100_00001000,
-          ]
+        getMoveableSqaresToRight(
+          stringToBitboard(`
+            00010100
+            00100100
+            01000010
+            10000010
+            00000001
+            00000011
+            00000110
+            00001010
+          `),
+          stringToBitboard(`
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+          `),
+          stringToBitboard(`
+            00010000
+            00100000
+            01000000
+            10000000
+            00000001
+            00000010
+            00000100
+            00001000
+          `)
         )
-      ).toEqual([
-        0b00011000_00111000_01111100_11111100,
-        0b00000001_00000010_00000100_00001100,
-      ]);
+      ).toEqual(
+        stringToBitboard(`
+        00011000
+        00111000
+        01111100
+        11111100
+        00000001
+        00000010
+        00000100
+        00001100
+        `)
+      );
     });
   });
   describe("when there are multiple own piece to the right", () => {
     it("should observe all squares up to the first own piece", () => {
       expect(
-        getObservedSqaresToRight(
-          [
-            0b00011100_00110100_01010010_10010010,
-            0b00000001_00000011_00000111_00001011,
-          ],
-          [
-            0b00000000_00000000_00000000_00000000,
-            0b00000000_00000000_00000000_00000000,
-          ],
-          [
-            0b00010000_00100000_01000000_10000000,
-            0b00000001_00000010_00000100_00001000,
-          ]
+        getMoveableSqaresToRight(
+          stringToBitboard(`
+            00011100
+            00110100
+            01010010
+            10010010
+            00000001
+            00000011
+            00000111
+            00001011
+          `),
+          stringToBitboard(`
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+          `),
+          stringToBitboard(`
+            00010000
+            00100000
+            01000000
+            10000000
+            00000001
+            00000010
+            00000100
+            00001000
+          `)
         )
-      ).toEqual([
-        0b00010000_00100000_01100000_11100000,
-        0b00000001_00000010_00000100_00001100,
-      ]);
+      ).toEqual(
+        stringToBitboard(`
+          00010000
+          00100000
+          01100000
+          11100000
+          00000001
+          00000010
+          00000100
+          00001100
+        `)
+      );
     });
   });
   describe("when there is one enemy piece to the right", () => {
     it("should observe all squares up to and including the enemy piece", () => {
       expect(
-        getObservedSqaresToRight(
-          [
-            0b00010100_00100100_01000010_10000010,
-            0b00000001_00000011_00000110_00001010,
-          ],
-          [
-            0b00000100_00000100_00000010_00000010,
-            0b00000000_00000001_00000010_00000010,
-          ],
-          [
-            0b00010000_00100000_01000000_10000000,
-            0b00000001_00000010_00000100_00001000,
-          ]
+        getMoveableSqaresToRight(
+          stringToBitboard(`
+            00010100
+            00100100
+            01000010
+            10000010
+            00000001
+            00000011
+            00000110
+            00001010
+          `),
+          stringToBitboard(`
+            00000100
+            00000100
+            00000010
+            00000010
+            00000000
+            00000001
+            00000010
+            00000010
+          `),
+          stringToBitboard(`
+            00010000
+            00100000
+            01000000
+            10000000
+            00000001
+            00000010
+            00000100
+            00001000
+          `)
         )
-      ).toEqual([
-        0b00011100_00111100_01111110_11111110,
-        0b00000001_00000011_00000110_00001110,
-      ]);
+      ).toEqual(
+        stringToBitboard(`
+          00011100
+          00111100
+          01111110
+          11111110
+          00000001
+          00000011
+          00000110
+          00001110
+        `)
+      );
     });
   });
   describe("when there are multiple enemy piece to the right", () => {
     it("should observe all squares up to and including the first enemy piece", () => {
       expect(
-        getObservedSqaresToRight(
-          [
-            0b00011100_00110100_01010010_10010010,
-            0b00000001_00000011_00000111_00001011,
-          ],
-          [
-            0b00001100_00010100_00010010_00010010,
-            0b00000000_00000001_00000011_00000011,
-          ],
-          [
-            0b00010000_00100000_01000000_10000000,
-            0b00000001_00000010_00000100_00001000,
-          ]
+        getMoveableSqaresToRight(
+          stringToBitboard(`
+            00011100
+            00110100
+            01010010
+            10010010
+            00000001
+            00000011
+            00000111
+            00001011
+          `),
+          stringToBitboard(`
+            00001100
+            00010100
+            00010010
+            00010010
+            00000000
+            00000001
+            00000011
+            00000011
+          `),
+          stringToBitboard(`
+            00010000
+            00100000
+            01000000
+            10000000
+            00000001
+            00000010
+            00000100
+            00001000
+          `)
         )
-      ).toEqual([
-        0b00011000_00110000_01110000_11110000,
-        0b00000001_00000011_00000110_00001110,
-      ]);
+      ).toEqual(
+        stringToBitboard(`
+          00011000
+          00110000
+          01110000
+          11110000
+          00000001
+          00000011
+          00000110
+          00001110
+        `)
+      );
     });
   });
   describe("when there are own and enemy piece to the right", () => {
     it("should observe all squares up to the first own piece", () => {
       expect(
-        getObservedSqaresToRight(
-          [
-            0b00011100_00110100_01010010_10010010,
-            0b00000001_00000011_00000111_00001011,
-          ],
-          [
-            0b00000100_00000100_00000010_00000010,
-            0b00000000_00000000_00000001_00000001,
-          ],
-          [
-            0b00010000_00100000_01000000_10000000,
-            0b00000001_00000010_00000100_00001000,
-          ]
+        getMoveableSqaresToRight(
+          stringToBitboard(`
+            00011100
+            00110100
+            01010010
+            10010010
+            00000001
+            00000011
+            00000111
+            00001011
+          `),
+          stringToBitboard(`
+            00000100
+            00000100
+            00000010
+            00000010
+            00000000
+            00000000
+            00000001
+            00000001
+          `),
+          stringToBitboard(`
+            00010000
+            00100000
+            01000000
+            10000000
+            00000001
+            00000010
+            00000100
+            00001000
+          `)
         )
-      ).toEqual([
-        0b00010000_00100000_01100000_11100000,
-        0b00000001_00000010_00000100_00001100,
-      ]);
+      ).toEqual(
+        stringToBitboard(`
+          00010000
+          00100000
+          01100000
+          11100000
+          00000001
+          00000010
+          00000100
+          00001100
+        `)
+      );
     });
     it("should observe all squares up to and including the first enemy piece", () => {
       expect(
-        getObservedSqaresToRight(
-          [
-            0b00011100_00110100_01010010_10010010,
-            0b00000001_00000011_00000111_00001011,
-          ],
-          [
-            0b00001000_00010000_00010000_00010000,
-            0b00000000_00000001_00000010_00000010,
-          ],
-          [
-            0b00010000_00100000_01000000_10000000,
-            0b00000001_00000010_00000100_00001000,
-          ]
+        getMoveableSqaresToRight(
+          stringToBitboard(`
+            00011100
+            00110100
+            01010010
+            10010010
+            00000001
+            00000011
+            00000111
+            00001011
+          `),
+          stringToBitboard(`
+            00001000
+            00010000
+            00010000
+            00010000
+            00000000
+            00000001
+            00000010
+            00000010
+          `),
+          stringToBitboard(`
+            00010000
+            00100000
+            01000000
+            10000000
+            00000001
+            00000010
+            00000100
+            00001000
+          `)
         )
-      ).toEqual([
-        0b00011000_00110000_01110000_11110000,
-        0b00000001_00000011_00000110_00001110,
-      ]);
+      ).toEqual(
+        stringToBitboard(`
+          00011000
+          00110000
+          01110000
+          11110000
+          00000001
+          00000011
+          00000110
+          00001110
+        `)
+      );
     });
   });
 });
 
-function getObservedSqaresToTop(
-  allPieces: Bitboard,
-  enemyPieces: Bitboard,
-  observingPieces: Bitboard
-) {
-  let changeMask: Bitboard = [0xffffffff, 0xffffffff];
-  let toTop = observingPieces;
-  let observedSquares = observingPieces;
-  let c = 0;
-  while (!isNull(toTop) && !isNull(changeMask)) {
-    if (c++ > 100) {
-      throw new Error("infinite loop");
-    }
-
-    toTop = getTopSquare(toTop);
-    changeMask = bitwiseAnd([
-      bitwiseXor([bitwiseAnd([toTop, allPieces]), toTop]),
-      getTopSquare(changeMask),
-    ]);
-    observedSquares = bitwiseXor([observedSquares, changeMask]);
-  }
-  return bitwiseOr([
-    observingPieces,
-    observedSquares,
-    getTopSquare(bitwiseAnd([getBottomSquare(enemyPieces), observedSquares])),
-  ]);
-}
-
-describe("getObservedSqaresToTop", () => {
+describe("getMoveableSqaresToTop", () => {
   describe("when there are no pieces to the top", () => {
     it("should observe all squares", () => {
       expect(
-        getObservedSqaresToTop(
-          [
-            0b00000001_00000010_00000100_00001000,
-            0b00010000_00100000_01000000_10000000,
-          ],
-          [
-            0b00000000_00000000_00000000_00000000,
-            0b00000000_00000000_00000000_00000000,
-          ],
-          [
-            0b00000001_00000010_00000100_00001000,
-            0b00010000_00100000_01000000_10000000,
-          ]
+        getMoveableSqaresToTop(
+          stringToBitboard(`
+            00000001
+            00000010
+            00000100
+            00001000
+            00010000
+            00100000
+            01000000
+            10000000
+          `),
+          stringToBitboard(`
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+          `),
+          stringToBitboard(`
+            00000001
+            00000010
+            00000100
+            00001000
+            00010000
+            00100000
+            01000000
+            10000000
+          `)
         )
-      ).toEqual([
-        0b11111111_11111110_11111100_11111000,
-        0b11110000_11100000_11000000_10000000,
-      ]);
+      ).toEqual(
+        stringToBitboard(`
+          11111111
+          11111110
+          11111100
+          11111000
+          11110000
+          11100000
+          11000000
+          10000000
+        `)
+      );
     });
   });
   describe("when there is one own piece to the top", () => {
     it("should observe all squares up to the own piece", () => {
       expect(
-        getObservedSqaresToTop(
-          [
-            0b00000011_11001110_00110100_00001000,
-            0b00010000_00100000_01000000_10000000,
-          ],
-          [
-            0b00000000_00000000_00000000_00000000,
-            0b00000000_00000000_00000000_00000000,
-          ],
-          [
-            0b00000001_00000010_00000100_00001000,
-            0b00010000_00100000_01000000_10000000,
-          ]
+        getMoveableSqaresToTop(
+          stringToBitboard(`
+            00000011
+            11001110
+            00110100
+            00001000
+            00010000
+            00100000
+            01000000
+            10000000
+          `),
+          stringToBitboard(`
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+          `),
+          stringToBitboard(`
+            00000001
+            00000010
+            00000100
+            00001000
+            00010000
+            00100000
+            01000000
+            10000000
+          `)
         )
-      ).toEqual([
-        0b00000001_00000010_11001100_11111000,
-        0b11110000_11100000_11000000_10000000,
-      ]);
+      ).toEqual(
+        stringToBitboard(`
+          00000001
+          00000010
+          11001100
+          11111000
+          11110000
+          11100000
+          11000000
+          10000000
+        `)
+      );
     });
   });
   describe("when there are multiple own piece to the top", () => {
     it("should observe all squares up to the first own piece", () => {
       expect(
-        getObservedSqaresToTop(
-          [
-            0b00001111_11001110_00110100_00011000,
-            0b11110000_00100000_01000000_10000000,
-          ],
-          [
-            0b00000000_00000000_00000000_00000000,
-            0b00000000_00000000_00000000_00000000,
-          ],
-          [
-            0b00000001_00000010_00000100_00001000,
-            0b00010000_00100000_01000000_10000000,
-          ]
+        getMoveableSqaresToTop(
+          stringToBitboard(`
+            00001111
+            11001110
+            00110100
+            00011000
+            11110000
+            00100000
+            01000000
+            10000000
+          `),
+          stringToBitboard(`
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+          `),
+          stringToBitboard(`
+            00000001
+            00000010
+            00000100
+            00001000
+            00010000
+            00100000
+            01000000
+            10000000
+          `)
         )
-      ).toEqual([
-        0b00000001_00000010_00001100_00001000,
-        0b00010000_11100000_11000000_10000000,
-      ]);
+      ).toEqual(
+        stringToBitboard(`
+          00000001
+          00000010
+          00001100
+          00001000
+          00010000
+          11100000
+          11000000
+          10000000
+        `)
+      );
     });
   });
   describe("when there is one enemy piece to the top", () => {
     it("should observe all squares up to and including the enemy piece", () => {
       expect(
-        getObservedSqaresToTop(
-          [
-            0b00000011_11001110_00110100_00001000,
-            0b00010000_00100000_01000000_10000000,
-          ],
-          [
-            0b00000010_11001100_00110000_00000000,
-            0b00000000_00000000_00000000_00000000,
-          ],
-          [
-            0b00000001_00000010_00000100_00001000,
-            0b00010000_00100000_01000000_10000000,
-          ]
+        getMoveableSqaresToTop(
+          stringToBitboard(`
+            00000011
+            11001110
+            00110100
+            00001000
+            00010000
+            00100000
+            01000000
+            10000000
+          `),
+          stringToBitboard(`
+            00000010
+            11001100
+            00110000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+          `),
+          stringToBitboard(`
+            00000001
+            00000010
+            00000100
+            00001000
+            00010000
+            00100000
+            01000000
+            10000000
+          `)
         )
-      ).toEqual([
-        0b00000011_11001110_11111100_11111000,
-        0b11110000_11100000_11000000_10000000,
-      ]);
+      ).toEqual(
+        stringToBitboard(`
+        00000011
+        11001110
+        11111100
+        11111000
+        11110000
+        11100000
+        11000000
+        10000000
+        `)
+      );
     });
   });
   describe("when there are multiple enemy piece to the top", () => {
     it("should observe all squares up to and including the first enemy piece", () => {
       expect(
-        getObservedSqaresToTop(
-          [
-            0b00001111_11001110_00110100_00011000,
-            0b11110000_00100000_01000000_10000000,
-          ],
-          [
-            0b00001110_11001100_00110000_00010000,
-            0b11100000_00000000_00000000_00000000,
-          ],
-          [
-            0b00000001_00000010_00000100_00001000,
-            0b00010000_00100000_01000000_10000000,
-          ]
+        getMoveableSqaresToTop(
+          stringToBitboard(`
+            00001111
+            11001110
+            00110100
+            00011000
+            11110000
+            00100000
+            01000000
+            10000000
+          `),
+          stringToBitboard(`
+            00001110
+            11001100
+            00110000
+            00010000
+            11100000
+            00000000
+            00000000
+            00000000
+          `),
+          stringToBitboard(`
+            00000001
+            00000010
+            00000100
+            00001000
+            00010000
+            00100000
+            01000000
+            10000000
+          `)
         )
-      ).toEqual([
-        0b00000011_00001110_00001100_00011000,
-        0b11110000_11100000_11000000_10000000,
-      ]);
+      ).toEqual(
+        stringToBitboard(`
+          00000011
+          00001110
+          00001100
+          00011000
+          11110000
+          11100000
+          11000000
+          10000000
+        `)
+      );
     });
   });
   describe("when there are own and enemy piece to the top", () => {
     it("should observe all squares up to the first own piece", () => {
       expect(
-        getObservedSqaresToTop(
-          [
-            0b00001111_11001110_00110100_00011000,
-            0b11110000_00100000_01000000_10000000,
-          ],
-          [
-            0b00001100_11000000_00110000_00000000,
-            0b00000000_00000000_00000000_00000000,
-          ],
-          [
-            0b00000001_00000010_00000100_00001000,
-            0b00010000_00100000_01000000_10000000,
-          ]
+        getMoveableSqaresToTop(
+          stringToBitboard(`
+            00001111
+            11001110
+            00110100
+            00011000
+            11110000
+            00100000
+            01000000
+            10000000
+          `),
+          stringToBitboard(`
+            00001100
+            11000000
+            00110000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+          `),
+          stringToBitboard(`
+            00000001
+            00000010
+            00000100
+            00001000
+            00010000
+            00100000
+            01000000
+            10000000
+          `)
         )
-      ).toEqual([
-        0b00000001_00000010_00001100_00001000,
-        0b00010000_11100000_11000000_10000000,
-      ]);
+      ).toEqual(
+        stringToBitboard(`
+          00000001
+          00000010
+          00001100
+          00001000
+          00010000
+          11100000
+          11000000
+          10000000
+        `)
+      );
     });
     it("should observe all squares up to and including the first enemy piece", () => {
       expect(
-        getObservedSqaresToTop(
-          [
-            0b00001111_11001110_00110100_00011000,
-            0b11110000_00100000_01000000_10000000,
-          ],
-          [
-            0b00000010_00001100_00000000_00010000,
-            0b11100000_00000000_00000000_00000000,
-          ],
-          [
-            0b00000001_00000010_00000100_00001000,
-            0b00010000_00100000_01000000_10000000,
-          ]
+        getMoveableSqaresToTop(
+          stringToBitboard(`
+            00001111
+            11001110
+            00110100
+            00011000
+            11110000
+            00100000
+            01000000
+            10000000
+          `),
+          stringToBitboard(`
+            00000010
+            00001100
+            00000000
+            00010000
+            11100000
+            00000000
+            00000000
+            00000000
+          `),
+          stringToBitboard(`
+            00000001
+            00000010
+            00000100
+            00001000
+            00010000
+            00100000
+            01000000
+            10000000
+          `)
         )
-      ).toEqual([
-        0b00000011_00001110_00001100_00011000,
-        0b11110000_11100000_11000000_10000000,
-      ]);
+      ).toEqual(
+        stringToBitboard(`
+          00000011
+          00001110
+          00001100
+          00011000
+          11110000
+          11100000
+          11000000
+          10000000
+        `)
+      );
     });
   });
 });
 
-function getObservedSqaresToBottom(
-  allPieces: Bitboard,
-  enemyPieces: Bitboard,
-  observingPieces: Bitboard
-) {
-  let changeMask: Bitboard = [0xffffffff, 0xffffffff];
-  let toBottom = observingPieces;
-  let observedSquares = observingPieces;
-  let c = 0;
-  while (!isNull(toBottom) && !isNull(changeMask)) {
-    if (c++ > 100) {
-      throw new Error("infinite loop");
-    }
-
-    toBottom = getBottomSquare(toBottom);
-    changeMask = bitwiseAnd([
-      bitwiseXor([bitwiseAnd([toBottom, allPieces]), toBottom]),
-      getBottomSquare(changeMask),
-    ]);
-    observedSquares = bitwiseXor([observedSquares, changeMask]);
-  }
-  return bitwiseOr([
-    observingPieces,
-    observedSquares,
-    getBottomSquare(bitwiseAnd([getTopSquare(enemyPieces), observedSquares])),
-  ]);
-}
-
-describe("getObservedSqaresToBottom", () => {
+describe("getMoveableSqaresToBottom", () => {
   describe("when there are no pieces to the bottom", () => {
     it("should observe all squares", () => {
       expect(
-        getObservedSqaresToBottom(
-          [
-            0b10000000_01000000_00100000_00010000,
-            0b00001000_00000100_00000010_00000001,
-          ],
-          [
-            0b00000000_00000000_00000000_00000000,
-            0b00000000_00000000_00000000_00000000,
-          ],
-          [
-            0b10000000_01000000_00100000_00010000,
-            0b00001000_00000100_00000010_00000001,
-          ]
+        getMoveableSqaresToBottom(
+          stringToBitboard(`
+            10000000
+            01000000
+            00100000
+            00010000
+            00001000
+            00000100
+            00000010
+            00000001
+          `),
+          stringToBitboard(`
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+          `),
+          stringToBitboard(`
+            10000000
+            01000000
+            00100000
+            00010000
+            00001000
+            00000100
+            00000010
+            00000001
+          `)
         )
-      ).toEqual([
-        0b10000000_11000000_11100000_11110000,
-        0b11111000_11111100_11111110_11111111,
-      ]);
+      ).toEqual(
+        stringToBitboard(`
+        10000000
+        11000000
+        11100000
+        11110000
+        11111000
+        11111100
+        11111110
+        11111111
+        `)
+      );
     });
   });
   describe("when there is one own piece to the bottom", () => {
     it("should observe all squares up to the own piece", () => {
       expect(
-        getObservedSqaresToBottom(
-          [
-            0b10000000_01000000_00100000_00010000,
-            0b00001000_00110100_11001110_00000011,
-          ],
-          [
-            0b00000000_00000000_00000000_00000000,
-            0b00000000_00000000_00000000_00000000,
-          ],
-          [
-            0b10000000_01000000_00100000_00010000,
-            0b00001000_00000100_00000010_00000001,
-          ]
+        getMoveableSqaresToBottom(
+          stringToBitboard(`
+            10000000
+            01000000
+            00100000
+            00010000
+            00001000
+            00110100
+            11001110
+            00000011
+          `),
+          stringToBitboard(`
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+          `),
+          stringToBitboard(`
+            10000000
+            01000000
+            00100000
+            00010000
+            00001000
+            00000100
+            00000010
+            00000001
+          `)
         )
-      ).toEqual([
-        0b10000000_11000000_11100000_11110000,
-        0b11111000_11001100_00000010_00000001,
-      ]);
+      ).toEqual(
+        stringToBitboard(`
+          10000000
+          11000000
+          11100000
+          11110000
+          11111000
+          11001100
+          00000010
+          00000001
+        `)
+      );
     });
   });
   describe("when there are multiple own piece to the bottom", () => {
     it("should observe all squares up to the first own piece", () => {
       expect(
-        getObservedSqaresToBottom(
-          [
-            0b10000000_01000000_00100000_11110000,
-            0b00011000_00110100_11001110_00001111,
-          ],
-          [
-            0b00000000_00000000_00000000_00000000,
-            0b00000000_00000000_00000000_00000000,
-          ],
-          [
-            0b10000000_01000000_00100000_00010000,
-            0b00001000_00000100_00000010_00000001,
-          ]
+        getMoveableSqaresToBottom(
+          stringToBitboard(`
+            10000000
+            01000000
+            00100000
+            11110000
+            00011000
+            00110100
+            11001110
+            00001111
+          `),
+          stringToBitboard(`
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+          `),
+          stringToBitboard(`
+            10000000
+            01000000
+            00100000
+            00010000
+            00001000
+            00000100
+            00000010
+            00000001
+          `)
         )
-      ).toEqual([
-        0b10000000_11000000_11100000_00010000,
-        0b00001000_00001100_00000010_00000001,
-      ]);
+      ).toEqual(
+        stringToBitboard(`
+          10000000
+          11000000
+          11100000
+          00010000
+          00001000
+          00001100
+          00000010
+          00000001
+        `)
+      );
     });
   });
   describe("when there is one enemy piece to the bottom", () => {
     it("should observe all squares up to and including the enemy piece", () => {
       expect(
-        getObservedSqaresToBottom(
-          [
-            0b10000000_01000000_00100000_00010000,
-            0b00001000_00110100_11001110_00000011,
-          ],
-          [
-            0b00000000_00000000_00000000_00000000,
-            0b00000000_00110000_11001100_00000010,
-          ],
-          [
-            0b10000000_01000000_00100000_00010000,
-            0b00001000_00000100_00000010_00000001,
-          ]
+        getMoveableSqaresToBottom(
+          stringToBitboard(`
+            10000000
+            01000000
+            00100000
+            00010000
+            00001000
+            00110100
+            11001110
+            00000011
+          `),
+          stringToBitboard(`
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00110000
+            11001100
+            00000010
+          `),
+          stringToBitboard(`
+            10000000
+            01000000
+            00100000
+            00010000
+            00001000
+            00000100
+            00000010
+            00000001
+          `)
         )
-      ).toEqual([
-        0b10000000_11000000_11100000_11110000,
-        0b11111000_11111100_11001110_00000011,
-      ]);
+      ).toEqual(
+        stringToBitboard(`
+          10000000
+          11000000
+          11100000
+          11110000
+          11111000
+          11111100
+          11001110
+          00000011
+        `)
+      );
     });
   });
   describe("when there are multiple enemy piece to the bottom", () => {
     it("should observe all squares up to and including the first enemy piece", () => {
       expect(
-        getObservedSqaresToBottom(
-          [
-            0b10000000_01000000_00100000_11110000,
-            0b00011000_00110100_11001110_00001111,
-          ],
-          [
-            0b00000000_00000000_00000000_11100000,
-            0b00010000_00110000_11001100_00001110,
-          ],
-          [
-            0b10000000_01000000_00100000_00010000,
-            0b00001000_00000100_00000010_00000001,
-          ]
+        getMoveableSqaresToBottom(
+          stringToBitboard(`
+            10000000
+            01000000
+            00100000
+            11110000
+            00011000
+            00110100
+            11001110
+            00001111
+          `),
+          stringToBitboard(`
+            00000000
+            00000000
+            00000000
+            11100000
+            00010000
+            00110000
+            11001100
+            00001110
+          `),
+          stringToBitboard(`
+            10000000
+            01000000
+            00100000
+            00010000
+            00001000
+            00000100
+            00000010
+            00000001
+          `)
         )
-      ).toEqual([
-        0b10000000_11000000_11100000_11110000,
-        0b00011000_00001100_00001110_00000011,
-      ]);
+      ).toEqual(
+        stringToBitboard(`
+          10000000
+          11000000
+          11100000
+          11110000
+          00011000
+          00001100
+          00001110
+          00000011
+        `)
+      );
     });
   });
   describe("when there are own and enemy piece to the bottom", () => {
     it("should observe all squares up to the first own piece", () => {
       expect(
-        getObservedSqaresToBottom(
-          [
-            0b10000000_01000000_00100000_11110000,
-            0b00011000_00110100_11001110_00001111,
-          ],
-          [
-            0b00000000_00000000_00000000_00000000,
-            0b00000000_00110000_11000000_00001100,
-          ],
-          [
-            0b10000000_01000000_00100000_00010000,
-            0b00001000_00000100_00000010_00000001,
-          ]
+        getMoveableSqaresToBottom(
+          stringToBitboard(`
+            10000000
+            01000000
+            00100000
+            11110000
+            00011000
+            00110100
+            11001110
+            00001111
+          `),
+          stringToBitboard(`
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00110000
+            11000000
+            00001100
+          `),
+          stringToBitboard(`
+            10000000
+            01000000
+            00100000
+            00010000
+            00001000
+            00000100
+            00000010
+            00000001
+          `)
         )
-      ).toEqual([
-        0b10000000_11000000_11100000_00010000,
-        0b00001000_00001100_00000010_00000001,
-      ]);
+      ).toEqual(
+        stringToBitboard(`
+          10000000
+          11000000
+          11100000
+          00010000
+          00001000
+          00001100
+          00000010
+          00000001
+        `)
+      );
     });
     it("should observe all squares up to and including the first enemy piece", () => {
       expect(
-        getObservedSqaresToBottom(
-          [
-            0b10000000_01000000_00100000_11110000,
-            0b00011000_00110100_11001110_00001111,
-          ],
-          [
-            0b00000000_00000000_00000000_11100000,
-            0b00010000_00000000_00001100_00000010,
-          ],
-          [
-            0b10000000_01000000_00100000_00010000,
-            0b00001000_00000100_00000010_00000001,
-          ]
+        getMoveableSqaresToBottom(
+          stringToBitboard(`
+            10000000
+            01000000
+            00100000
+            11110000
+            00011000
+            00110100
+            11001110
+            00001111
+          `),
+          stringToBitboard(`
+            00000000
+            00000000
+            00000000
+            11100000
+            00010000
+            00000000
+            00001100
+            00000010
+          `),
+          stringToBitboard(`
+            10000000
+            01000000
+            00100000
+            00010000
+            00001000
+            00000100
+            00000010
+            00000001
+          `)
         )
-      ).toEqual([
-        0b10000000_11000000_11100000_11110000,
-        0b00011000_00001100_00001110_00000011,
-      ]);
+      ).toEqual(
+        stringToBitboard(`
+          10000000
+          11000000
+          11100000
+          11110000
+          00011000
+          00001100
+          00001110
+          00000011
+        `)
+      );
+    });
+  });
+});
+
+describe("getMoveableSqaresToTopLeft", () => {
+  describe("when there are no pieces to the top left", () => {
+    it("should observe all squares", () => {
+      expect(
+        getMoveableSqaresToTopLeft(
+          stringToBitboard(`
+            00000001
+            00000010
+            00000100
+            00001000
+            00010000
+            00100000
+            01000000
+            10000000
+          `),
+          stringToBitboard(`
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+          `),
+          stringToBitboard(`
+            00000001
+            00000010
+            00000100
+            00001000
+            00010000
+            00100000
+            01000000
+            10000000
+          `)
+        )
+      ).toEqual(
+        stringToBitboard(`
+          01010101
+          10101010
+          01010100
+          10101000
+          01010000
+          10100000
+          01000000
+          10000000
+        `)
+      );
+      expect(
+        getMoveableSqaresToTopLeft(
+          stringToBitboard(`
+            00000001
+            00000011
+            00000110
+            00001100
+            00011000
+            00110000
+            01100000
+            11000000
+          `),
+          stringToBitboard(`
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+            00000000
+          `),
+          stringToBitboard(`
+            00000001
+            00000011
+            00000110
+            00001100
+            00011000
+            00110000
+            01100000
+            11000000
+          `)
+        )
+      ).toEqual(
+        stringToBitboard(`
+          11111111
+          11111111
+          11111110
+          11111100
+          11111000
+          11110000
+          11100000
+          11000000
+        `)
+      );
     });
   });
 });

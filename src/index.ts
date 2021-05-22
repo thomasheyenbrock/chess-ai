@@ -1,7 +1,6 @@
 import {
   Bitboard,
   bitwiseAnd,
-  bitwiseNot,
   bitwiseOr,
   getBottomSquare,
   equals,
@@ -14,104 +13,14 @@ import {
   getSquaresOnDecreasingDiagonal,
   getSquaresOnIncreasingDiagonal,
 } from "./bitboard";
-
-const squares: Bitboard[][] = [
-  [
-    [0x80000000, 0x00000000],
-    [0x40000000, 0x00000000],
-    [0x20000000, 0x00000000],
-    [0x10000000, 0x00000000],
-    [0x08000000, 0x00000000],
-    [0x04000000, 0x00000000],
-    [0x02000000, 0x00000000],
-    [0x01000000, 0x00000000],
-  ],
-  [
-    [0x00800000, 0x00000000],
-    [0x00400000, 0x00000000],
-    [0x00200000, 0x00000000],
-    [0x00100000, 0x00000000],
-    [0x00080000, 0x00000000],
-    [0x00040000, 0x00000000],
-    [0x00020000, 0x00000000],
-    [0x00010000, 0x00000000],
-  ],
-  [
-    [0x00008000, 0x00000000],
-    [0x00004000, 0x00000000],
-    [0x00002000, 0x00000000],
-    [0x00001000, 0x00000000],
-    [0x00000800, 0x00000000],
-    [0x00000400, 0x00000000],
-    [0x00000200, 0x00000000],
-    [0x00000100, 0x00000000],
-  ],
-  [
-    [0x00000080, 0x00000000],
-    [0x00000040, 0x00000000],
-    [0x00000020, 0x00000000],
-    [0x00000010, 0x00000000],
-    [0x00000008, 0x00000000],
-    [0x00000004, 0x00000000],
-    [0x00000002, 0x00000000],
-    [0x00000001, 0x00000000],
-  ],
-  [
-    [0x00000000, 0x80000000],
-    [0x00000000, 0x40000000],
-    [0x00000000, 0x20000000],
-    [0x00000000, 0x10000000],
-    [0x00000000, 0x08000000],
-    [0x00000000, 0x04000000],
-    [0x00000000, 0x02000000],
-    [0x00000000, 0x01000000],
-  ],
-  [
-    [0x00000000, 0x00800000],
-    [0x00000000, 0x00400000],
-    [0x00000000, 0x00200000],
-    [0x00000000, 0x00100000],
-    [0x00000000, 0x00080000],
-    [0x00000000, 0x00040000],
-    [0x00000000, 0x00020000],
-    [0x00000000, 0x00010000],
-  ],
-  [
-    [0x00000000, 0x00008000],
-    [0x00000000, 0x00004000],
-    [0x00000000, 0x00002000],
-    [0x00000000, 0x00001000],
-    [0x00000000, 0x00000800],
-    [0x00000000, 0x00000400],
-    [0x00000000, 0x00000200],
-    [0x00000000, 0x00000100],
-  ],
-  [
-    [0x00000000, 0x00000080],
-    [0x00000000, 0x00000040],
-    [0x00000000, 0x00000020],
-    [0x00000000, 0x00000010],
-    [0x00000000, 0x00000008],
-    [0x00000000, 0x00000004],
-    [0x00000000, 0x00000002],
-    [0x00000000, 0x00000001],
-  ],
-];
-
-enum Piece {
-  WHITE_KING = "K",
-  WHITE_QUEEN = "Q",
-  WHITE_ROOK = "R",
-  WHITE_BISHOP = "B",
-  WHITE_KNIGHT = "N",
-  WHITE_PAWN = "P",
-  BLACK_KING = "k",
-  BLACK_QUEEN = "q",
-  BLACK_ROOK = "r",
-  BLACK_BISHOP = "b",
-  BLACK_KNIGHT = "n",
-  BLACK_PAWN = "p",
-}
+import {
+  Castle,
+  Game,
+  gameFromFen,
+  Piece,
+  Player,
+  squares,
+} from "./move-generator";
 
 const maxPieces: Record<Piece, number> = {
   [Piece.WHITE_KING]: 1,
@@ -126,66 +35,6 @@ const maxPieces: Record<Piece, number> = {
   [Piece.BLACK_BISHOP]: 10,
   [Piece.BLACK_KNIGHT]: 10,
   [Piece.BLACK_PAWN]: 8,
-};
-
-type Position = Record<Piece, Bitboard>;
-
-enum Player {
-  WHITE = "w",
-  BLACK = "b",
-}
-
-enum Castle {
-  WHITE_KINGSIDE = "K",
-  WHITE_QUEENSIDE = "Q",
-  BLACK_KINGSIDE = "k",
-  BLACK_QUEENSIDE = "q",
-}
-
-type Move = {
-  player: Player;
-  piece: Piece;
-  from: Bitboard;
-  to: Bitboard;
-  isCapture: boolean;
-};
-
-type Game = {
-  position: Position;
-  player: Player;
-  moves: Move[];
-  possibleCastles: Record<Castle, boolean>;
-  enPassantSquare: Bitboard | null;
-};
-
-const initialPosition: Position = {
-  K: [0x00000000, 0x00000008],
-  Q: [0x00000000, 0x00000010],
-  R: [0x00000000, 0x00000081],
-  B: [0x00000000, 0x00000024],
-  N: [0x00000000, 0x00000042],
-  P: [0x00000000, 0x0000ff00],
-  k: [0x08000000, 0x00000000],
-  q: [0x10000000, 0x00000000],
-  r: [0x81000000, 0x00000000],
-  b: [0x24000000, 0x00000000],
-  n: [0x42000000, 0x00000000],
-  p: [0x00ff0000, 0x00000000],
-};
-
-const initialPossibleCastles = {
-  [Castle.WHITE_KINGSIDE]: true,
-  [Castle.WHITE_QUEENSIDE]: true,
-  [Castle.BLACK_KINGSIDE]: true,
-  [Castle.BLACK_QUEENSIDE]: true,
-};
-
-const game: Game = {
-  position: initialPosition,
-  player: Player.WHITE,
-  moves: [],
-  possibleCastles: initialPossibleCastles,
-  enPassantSquare: null,
 };
 
 let selectedPiece: { element: HTMLElement | null; square: Bitboard | null } = {
@@ -466,127 +315,140 @@ function validateMove(piece: Piece, from: Bitboard, to: Bitboard) {
   }
 }
 
-function move(from: Bitboard, to: Bitboard) {
-  if (equals([from, to])) {
-    return;
-  }
+// function move(from: Bitboard, to: Bitboard) {
+//   if (equals([from, to])) {
+//     return;
+//   }
 
-  const movedPiece = getPieceOnSquare(from);
-  if (!movedPiece) {
-    return;
-  }
+//   const movedPiece = getPieceOnSquare(from);
+//   if (!movedPiece) {
+//     return;
+//   }
 
-  if (!doesPieceBelongToPlayer(movedPiece, game.player)) {
-    return;
-  }
+//   if (!doesPieceBelongToPlayer(movedPiece, game.player)) {
+//     return;
+//   }
 
-  const capturedPiece = getPieceOnSquare(to);
-  if (capturedPiece && doesPieceBelongToPlayer(capturedPiece, game.player)) {
-    return;
-  }
+//   const capturedPiece = getPieceOnSquare(to);
+//   if (capturedPiece && doesPieceBelongToPlayer(capturedPiece, game.player)) {
+//     return;
+//   }
 
-  const {
-    isValid,
-    removeCastling,
-    enPassantSquare = null,
-    isCapturingEnPassant = false,
-  } = validateMove(movedPiece, from, to);
-  if (!isValid) {
-    return;
-  }
+//   const {
+//     isValid,
+//     removeCastling,
+//     enPassantSquare = [0x00000000, 0x00000000],
+//     isCapturingEnPassant = false,
+//   } = validateMove(movedPiece, from, to);
+//   if (!isValid) {
+//     return;
+//   }
 
-  // TODO: a move is not valid if the player would be in chess afterwards
+//   game.moves.push({
+//     from,
+//     to,
+//     player: game.player,
+//     piece: movedPiece,
+//     isCapturing:
+//       capturedPiece ||
+//       (isCapturingEnPassant
+//         ? game.player === Player.WHITE
+//           ? Piece.BLACK_PAWN
+//           : Piece.WHITE_PAWN
+//         : null),
+//     // TODO: take record of pawn promotions
+//   });
+//   if (removeCastling) {
+//     removeCastling.forEach((castling) => {
+//       game.possibleCastles[castling] = false;
+//     });
+//   }
+//   game.enPassantSquare = enPassantSquare;
 
-  game.moves.push({
-    from,
-    to,
-    player: game.player,
-    piece: movedPiece,
-    isCapture: Boolean(capturedPiece) || isCapturingEnPassant,
-    // TODO: take record of pawn promotions
-  });
-  if (removeCastling) {
-    removeCastling.forEach((castling) => {
-      game.possibleCastles[castling] = false;
-    });
-  }
-  game.enPassantSquare = enPassantSquare;
+//   game.position[movedPiece] = bitwiseOr([
+//     bitwiseAnd([game.position[movedPiece], bitwiseNot(from)]),
+//     to,
+//   ]);
 
-  game.position[movedPiece] = bitwiseOr([
-    bitwiseAnd([game.position[movedPiece], bitwiseNot(from)]),
-    to,
-  ]);
+//   if (capturedPiece) {
+//     game.position[capturedPiece] = bitwiseAnd([
+//       game.position[capturedPiece],
+//       bitwiseNot(to),
+//     ]);
+//   }
+//   if (isCapturingEnPassant) {
+//     const isWhite = game.player === Player.WHITE;
+//     const capturedPawnPiece = isWhite ? Piece.BLACK_PAWN : Piece.WHITE_PAWN;
+//     const getSquareInDirection = isWhite ? getBottomSquare : getTopSquare;
+//     game.position[capturedPawnPiece] = bitwiseAnd([
+//       game.position[capturedPawnPiece],
+//       bitwiseNot(getSquareInDirection(to)),
+//     ]);
+//   }
 
-  if (capturedPiece) {
-    game.position[capturedPiece] = bitwiseAnd([
-      game.position[capturedPiece],
-      bitwiseNot(to),
-    ]);
-  }
-  if (isCapturingEnPassant) {
-    const isWhite = game.player === Player.WHITE;
-    const capturedPawnPiece = isWhite ? Piece.BLACK_PAWN : Piece.WHITE_PAWN;
-    const getSquareInDirection = isWhite ? getBottomSquare : getTopSquare;
-    game.position[capturedPawnPiece] = bitwiseAnd([
-      game.position[capturedPawnPiece],
-      bitwiseNot(getSquareInDirection(to)),
-    ]);
-  }
+//   game.player = game.player === Player.WHITE ? Player.BLACK : Player.WHITE;
 
-  game.player = game.player === Player.WHITE ? Player.BLACK : Player.WHITE;
+//   if (isInCheck(game.position, game.player, game.player === Player.WHITE)) {
+//     alert("check!");
+//   }
 
-  // TODO: check for checkmate
-  // TODO: check for a draw
+//   // TODO: check for checkmate
+//   // TODO: check for a draw
 
-  if (selectedPiece.element) {
-    selectedPiece.element.classList.remove("active");
-    selectedPiece.element = null;
-    selectedPiece.square = null;
-  }
-  drawBoard();
-}
+//   if (selectedPiece.element) {
+//     selectedPiece.element.classList.remove("active");
+//     selectedPiece.element = null;
+//     selectedPiece.square = null;
+//   }
+//   drawBoard();
+// }
 
-Object.values(Piece).forEach((pieceName) => {
-  for (let count = 1; count <= maxPieces[pieceName]; count++) {
-    const piece = document.getElementById(`${pieceName}${count}`)!;
-    piece.addEventListener("click", () => {
-      const [rankString, fileString] = piece.style.gridArea.split(" / ");
-      const rankIndex = parseInt(rankString) - 1;
-      const fileIndex = parseInt(fileString) - 1;
+// Object.values(Piece).forEach((pieceName) => {
+//   for (let count = 1; count <= maxPieces[pieceName]; count++) {
+//     const piece = document.getElementById(`${pieceName}${count}`)!;
+//     piece.addEventListener("click", () => {
+//       const [rankString, fileString] = piece.style.gridArea.split(" / ");
+//       const rankIndex = parseInt(rankString) - 1;
+//       const fileIndex = parseInt(fileString) - 1;
 
-      if (doesPieceBelongToPlayer(pieceName, game.player)) {
-        if (selectedPiece.element) {
-          selectedPiece.element.classList.remove("active");
-        }
-        if (selectedPiece.element === piece) {
-          selectedPiece.element = null;
-          selectedPiece.square = null;
-        } else {
-          piece.classList.add("active");
-          selectedPiece.element = piece;
-          selectedPiece.square = squares[rankIndex][fileIndex];
-        }
-        return;
-      }
+//       if (doesPieceBelongToPlayer(pieceName, game.player)) {
+//         if (selectedPiece.element) {
+//           selectedPiece.element.classList.remove("active");
+//         }
+//         if (selectedPiece.element === piece) {
+//           selectedPiece.element = null;
+//           selectedPiece.square = null;
+//         } else {
+//           piece.classList.add("active");
+//           selectedPiece.element = piece;
+//           selectedPiece.square = squares[rankIndex][fileIndex];
+//         }
+//         return;
+//       }
 
-      if (selectedPiece.square) {
-        move(selectedPiece.square, squares[rankIndex][fileIndex]);
-      }
-    });
-  }
-});
+//       if (selectedPiece.square) {
+//         move(selectedPiece.square, squares[rankIndex][fileIndex]);
+//       }
+//     });
+//   }
+// });
 
-for (const element of document.getElementsByClassName("square")) {
-  const rank = parseInt(element.className.match(/rank(\d+)/)![1]) - 1;
-  const file = parseInt(element.className.match(/file(\d+)/)![1]) - 1;
-  const square = squares[rank][file];
-  element.addEventListener("click", () => {
-    if (!selectedPiece.square) {
-      return;
-    }
-    move(selectedPiece.square, square);
-  });
-}
+// for (const element of document.getElementsByClassName("square")) {
+//   const rank = parseInt(element.className.match(/rank(\d+)/)![1]) - 1;
+//   const file = parseInt(element.className.match(/file(\d+)/)![1]) - 1;
+//   const square = squares[rank][file];
+//   element.addEventListener("click", () => {
+//     if (!selectedPiece.square) {
+//       return;
+//     }
+//     move(selectedPiece.square, square);
+//   });
+// }
+
+const game: Game = gameFromFen(
+  // "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+  "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/P1N2Q2/1PPBBPpP/R3K2R b KQkq -"
+);
 
 function drawBoard() {
   const counters: Record<Piece, number> = {

@@ -479,11 +479,7 @@ function getMoveableSquaresForPawn(
   };
 }
 
-function getCaptureSquares(
-  position: Position,
-  player: Player,
-  isWhite: boolean
-) {
+function getCaptureSquares(position: Position, isWhite: boolean) {
   const whitePieces = bitwiseOr([
     position[Piece.WHITE_KING],
     position[Piece.WHITE_QUEEN],
@@ -532,10 +528,10 @@ function getCaptureSquares(
   ]);
 }
 
-function isInCheck(position: Position, player: Player, isWhite: boolean) {
+function isInCheck(position: Position, isWhite: boolean) {
   return !isNull(
     bitwiseAnd([
-      getCaptureSquares(position, player, isWhite),
+      getCaptureSquares(position, isWhite),
       position[isWhite ? Piece.WHITE_KING : Piece.BLACK_KING],
     ])
   );
@@ -843,7 +839,7 @@ export function getLegalMoves(game: Game, depth = 1): number {
         false,
         null
       );
-      if (!isInCheck(updatedGame.position, game.player, isWhite)) {
+      if (!isInCheck(updatedGame.position, isWhite)) {
         moves.push(updatedGame);
       }
     }
@@ -859,7 +855,7 @@ export function getLegalMoves(game: Game, depth = 1): number {
         false,
         null
       );
-      if (!isInCheck(updatedGame.position, game.player, isWhite)) {
+      if (!isInCheck(updatedGame.position, isWhite)) {
         moves.push(updatedGame);
       }
     }
@@ -875,7 +871,7 @@ export function getLegalMoves(game: Game, depth = 1): number {
         true,
         null
       );
-      if (!isInCheck(updatedGame.position, game.player, isWhite)) {
+      if (!isInCheck(updatedGame.position, isWhite)) {
         moves.push(updatedGame);
       }
     }
@@ -891,9 +887,7 @@ export function getLegalMoves(game: Game, depth = 1): number {
         false,
         isWhite ? Piece.WHITE_QUEEN : Piece.BLACK_QUEEN
       );
-      if (
-        !isInCheck(updatedGameWithQueenPromotion.position, game.player, isWhite)
-      ) {
+      if (!isInCheck(updatedGameWithQueenPromotion.position, isWhite)) {
         moves.push(updatedGameWithQueenPromotion);
       }
 
@@ -908,9 +902,7 @@ export function getLegalMoves(game: Game, depth = 1): number {
         false,
         isWhite ? Piece.WHITE_ROOK : Piece.BLACK_ROOK
       );
-      if (
-        !isInCheck(updatedGameWithRookPromotion.position, game.player, isWhite)
-      ) {
+      if (!isInCheck(updatedGameWithRookPromotion.position, isWhite)) {
         moves.push(updatedGameWithRookPromotion);
       }
       const updatedGameWithBishopPromotion = movePiece(
@@ -924,13 +916,7 @@ export function getLegalMoves(game: Game, depth = 1): number {
         false,
         isWhite ? Piece.WHITE_BISHOP : Piece.BLACK_BISHOP
       );
-      if (
-        !isInCheck(
-          updatedGameWithBishopPromotion.position,
-          game.player,
-          isWhite
-        )
-      ) {
+      if (!isInCheck(updatedGameWithBishopPromotion.position, isWhite)) {
         moves.push(updatedGameWithBishopPromotion);
       }
       const updatedGameWithKnightPromotion = movePiece(
@@ -944,13 +930,7 @@ export function getLegalMoves(game: Game, depth = 1): number {
         false,
         isWhite ? Piece.WHITE_KNIGHT : Piece.BLACK_KNIGHT
       );
-      if (
-        !isInCheck(
-          updatedGameWithKnightPromotion.position,
-          game.player,
-          isWhite
-        )
-      ) {
+      if (!isInCheck(updatedGameWithKnightPromotion.position, isWhite)) {
         moves.push(updatedGameWithKnightPromotion);
       }
     }
@@ -974,7 +954,7 @@ export function getLegalMoves(game: Game, depth = 1): number {
         false,
         null
       );
-      if (!isInCheck(updatedGame.position, game.player, isWhite)) {
+      if (!isInCheck(updatedGame.position, isWhite)) {
         moves.push(updatedGame);
       }
     }
@@ -998,7 +978,7 @@ export function getLegalMoves(game: Game, depth = 1): number {
         false,
         null
       );
-      if (!isInCheck(updatedGame.position, game.player, isWhite)) {
+      if (!isInCheck(updatedGame.position, isWhite)) {
         moves.push(updatedGame);
       }
     }
@@ -1022,7 +1002,7 @@ export function getLegalMoves(game: Game, depth = 1): number {
         false,
         null
       );
-      if (!isInCheck(updatedGame.position, game.player, isWhite)) {
+      if (!isInCheck(updatedGame.position, isWhite)) {
         moves.push(updatedGame);
       }
     }
@@ -1046,7 +1026,7 @@ export function getLegalMoves(game: Game, depth = 1): number {
         false,
         null
       );
-      if (!isInCheck(updatedGame.position, game.player, isWhite)) {
+      if (!isInCheck(updatedGame.position, isWhite)) {
         moves.push(updatedGame);
       }
     }
@@ -1058,11 +1038,7 @@ export function getLegalMoves(game: Game, depth = 1): number {
     getMoveableSquaresForKing(
       allPieces,
       friendlyPieces,
-      getCaptureSquares(
-        game.position,
-        isWhite ? Player.BLACK : Player.WHITE,
-        isWhite
-      ),
+      getCaptureSquares(game.position, isWhite),
       king,
       isWhite,
       game.possibleCastles
@@ -1079,7 +1055,7 @@ export function getLegalMoves(game: Game, depth = 1): number {
       false,
       null
     );
-    if (!isInCheck(updatedGame.position, game.player, isWhite)) {
+    if (!isInCheck(updatedGame.position, isWhite)) {
       moves.push(updatedGame);
     }
   }
@@ -1095,7 +1071,7 @@ export function getLegalMoves(game: Game, depth = 1): number {
       false,
       null
     );
-    if (!isInCheck(updatedGame.position, game.player, isWhite)) {
+    if (!isInCheck(updatedGame.position, isWhite)) {
       moves.push(updatedGame);
     }
   }
@@ -1111,7 +1087,7 @@ export function getLegalMoves(game: Game, depth = 1): number {
       false,
       null
     );
-    if (!isInCheck(updatedGame.position, game.player, isWhite)) {
+    if (!isInCheck(updatedGame.position, isWhite)) {
       moves.push(updatedGame);
     }
   }

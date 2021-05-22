@@ -1092,17 +1092,19 @@ export function getLegalMoves(game: Game, depth = 1): number {
     }
   }
 
-  return moves.reduce((sum, game) => {
-    const next = getLegalMoves(game, depth - 1);
+  let sum = 0;
+  for (let i = 0; i < moves.length; i++) {
+    const next = getLegalMoves(moves[i], depth - 1);
     // if (depth === 2) {
     //   console.log(
-    //     squareToHumanNotation(game.moves[0].from) +
-    //       squareToHumanNotation(game.moves[0].to),
+    //     squareToHumanNotation(moves[i].moves[0].from) +
+    //       squareToHumanNotation(moves[i].moves[0].to),
     //     next
     //   );
     // }
-    return sum + next;
-  }, 0);
+    sum += next;
+  }
+  return sum;
 }
 
 const game: Game = gameFromFen(

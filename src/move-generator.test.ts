@@ -1,6 +1,6 @@
-import { gameFromFen, getLegalMoves } from "./move-generator";
+import { gameFromFen, countLegalMoves } from "./move-generator";
 
-describe("getLegalMoves", () => {
+describe("countLegalMoves", () => {
   describe.each([
     [
       "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
@@ -63,7 +63,7 @@ describe("getLegalMoves", () => {
       "should calculate the correct number of moves for depth %s",
       (depth, expectedNumberOfMoves) => {
         const game = gameFromFen(fen);
-        expect(getLegalMoves(game, depth)).toBe(expectedNumberOfMoves);
+        expect(countLegalMoves(game, depth)).toBe(expectedNumberOfMoves);
       }
     );
   });

@@ -788,9 +788,9 @@ function movePiece(
   };
 }
 
-export function getLegalMoves(game: Game, depth = 1): number {
+export function getLegalMoves(game: Game, depth: number = 1): Game[] {
   if (depth === 0) {
-    return 1;
+    return [game];
   }
 
   const isWhite = game.player === Player.WHITE;
@@ -815,7 +815,7 @@ export function getLegalMoves(game: Game, depth = 1): number {
   const friendlyPieces = isWhite ? whitePieces : blackPieces;
   const enemyPieces = isWhite ? blackPieces : whitePieces;
 
-  const moves: Game[] = [];
+  const possibleGames: Game[] = [];
 
   const pawnPiece = isWhite ? Piece.WHITE_PAWN : Piece.BLACK_PAWN;
   const pawns = split(game.position[pawnPiece]);
@@ -840,7 +840,7 @@ export function getLegalMoves(game: Game, depth = 1): number {
         null
       );
       if (!isInCheck(updatedGame.position, isWhite)) {
-        moves.push(updatedGame);
+        possibleGames.push(updatedGame);
       }
     }
     for (const to of split(double)) {
@@ -856,7 +856,7 @@ export function getLegalMoves(game: Game, depth = 1): number {
         null
       );
       if (!isInCheck(updatedGame.position, isWhite)) {
-        moves.push(updatedGame);
+        possibleGames.push(updatedGame);
       }
     }
     for (const to of split(enPassant)) {
@@ -872,7 +872,7 @@ export function getLegalMoves(game: Game, depth = 1): number {
         null
       );
       if (!isInCheck(updatedGame.position, isWhite)) {
-        moves.push(updatedGame);
+        possibleGames.push(updatedGame);
       }
     }
     for (const to of split(promotion)) {
@@ -888,7 +888,7 @@ export function getLegalMoves(game: Game, depth = 1): number {
         isWhite ? Piece.WHITE_QUEEN : Piece.BLACK_QUEEN
       );
       if (!isInCheck(updatedGameWithQueenPromotion.position, isWhite)) {
-        moves.push(updatedGameWithQueenPromotion);
+        possibleGames.push(updatedGameWithQueenPromotion);
       }
 
       const updatedGameWithRookPromotion = movePiece(
@@ -903,7 +903,7 @@ export function getLegalMoves(game: Game, depth = 1): number {
         isWhite ? Piece.WHITE_ROOK : Piece.BLACK_ROOK
       );
       if (!isInCheck(updatedGameWithRookPromotion.position, isWhite)) {
-        moves.push(updatedGameWithRookPromotion);
+        possibleGames.push(updatedGameWithRookPromotion);
       }
       const updatedGameWithBishopPromotion = movePiece(
         game,
@@ -917,7 +917,7 @@ export function getLegalMoves(game: Game, depth = 1): number {
         isWhite ? Piece.WHITE_BISHOP : Piece.BLACK_BISHOP
       );
       if (!isInCheck(updatedGameWithBishopPromotion.position, isWhite)) {
-        moves.push(updatedGameWithBishopPromotion);
+        possibleGames.push(updatedGameWithBishopPromotion);
       }
       const updatedGameWithKnightPromotion = movePiece(
         game,
@@ -931,7 +931,7 @@ export function getLegalMoves(game: Game, depth = 1): number {
         isWhite ? Piece.WHITE_KNIGHT : Piece.BLACK_KNIGHT
       );
       if (!isInCheck(updatedGameWithKnightPromotion.position, isWhite)) {
-        moves.push(updatedGameWithKnightPromotion);
+        possibleGames.push(updatedGameWithKnightPromotion);
       }
     }
   }
@@ -955,7 +955,7 @@ export function getLegalMoves(game: Game, depth = 1): number {
         null
       );
       if (!isInCheck(updatedGame.position, isWhite)) {
-        moves.push(updatedGame);
+        possibleGames.push(updatedGame);
       }
     }
   }
@@ -979,7 +979,7 @@ export function getLegalMoves(game: Game, depth = 1): number {
         null
       );
       if (!isInCheck(updatedGame.position, isWhite)) {
-        moves.push(updatedGame);
+        possibleGames.push(updatedGame);
       }
     }
   }
@@ -1003,7 +1003,7 @@ export function getLegalMoves(game: Game, depth = 1): number {
         null
       );
       if (!isInCheck(updatedGame.position, isWhite)) {
-        moves.push(updatedGame);
+        possibleGames.push(updatedGame);
       }
     }
   }
@@ -1027,7 +1027,7 @@ export function getLegalMoves(game: Game, depth = 1): number {
         null
       );
       if (!isInCheck(updatedGame.position, isWhite)) {
-        moves.push(updatedGame);
+        possibleGames.push(updatedGame);
       }
     }
   }
@@ -1056,7 +1056,7 @@ export function getLegalMoves(game: Game, depth = 1): number {
       null
     );
     if (!isInCheck(updatedGame.position, isWhite)) {
-      moves.push(updatedGame);
+      possibleGames.push(updatedGame);
     }
   }
   if (!isNull(kingsideCastles)) {
@@ -1072,7 +1072,7 @@ export function getLegalMoves(game: Game, depth = 1): number {
       null
     );
     if (!isInCheck(updatedGame.position, isWhite)) {
-      moves.push(updatedGame);
+      possibleGames.push(updatedGame);
     }
   }
   if (!isNull(queensideCastles)) {
@@ -1088,13 +1088,19 @@ export function getLegalMoves(game: Game, depth = 1): number {
       null
     );
     if (!isInCheck(updatedGame.position, isWhite)) {
-      moves.push(updatedGame);
+      possibleGames.push(updatedGame);
     }
   }
 
+  return possibleGames;
+}
+
+export function countLegalMoves(game: Game, depth: number = 1) {
+  const possibleGames = getLegalMoves(game);
+
   let sum = 0;
-  for (let i = 0; i < moves.length; i++) {
-    const next = getLegalMoves(moves[i], depth - 1);
+  for (let i = 0; i < possibleGames.length; i++) {
+    const next = getLegalMoves(possibleGames[i], depth - 1);
     // if (depth === 2) {
     //   console.log(
     //     squareToHumanNotation(moves[i].moves[0].from) +
@@ -1102,7 +1108,7 @@ export function getLegalMoves(game: Game, depth = 1): number {
     //     next
     //   );
     // }
-    sum += next;
+    sum += next.length;
   }
   return sum;
 }
@@ -1112,8 +1118,8 @@ const game: Game = gameFromFen(
   "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/P1N2Q2/1PPBBPpP/R3K2R b KQkq -"
 );
 
-// console.log(getLegalMoves(game, 1));
-// console.log(getLegalMoves(game, 2));
-// console.log(getLegalMoves(game, 3));
-// console.log(getLegalMoves(game, 4));
-// console.log(getLegalMoves(game, 5));
+// console.log(countLegalMoves(game, 1));
+// console.log(countLegalMoves(game, 2));
+// console.log(countLegalMoves(game, 3));
+// console.log(countLegalMoves(game, 4));
+// console.log(countLegalMoves(game, 5));

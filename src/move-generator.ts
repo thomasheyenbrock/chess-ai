@@ -155,7 +155,8 @@ type Move = {
 export type Game = {
   position: Position;
   player: Player;
-  moves: Move[];
+  pastMoves: Move[];
+  possibleMoves: Game[];
   possibleCastles: Record<Castle, boolean>;
   enPassantSquare: Bitboard;
 };
@@ -213,66 +214,6 @@ function squareToHumanNotation(square: Bitboard) {
     }
   }
   return "?";
-}
-
-export function gameFromFen(fen: string): Game {
-  const [
-    board,
-    player,
-    castles,
-    enPassantSquare,
-    fiftyMoveCounter,
-    totalMoveCounter,
-  ] = fen.split(" ");
-  const position: Position = {
-    K: [0x00000000, 0x00000000],
-    Q: [0x00000000, 0x00000000],
-    R: [0x00000000, 0x00000000],
-    B: [0x00000000, 0x00000000],
-    N: [0x00000000, 0x00000000],
-    P: [0x00000000, 0x00000000],
-    k: [0x00000000, 0x00000000],
-    q: [0x00000000, 0x00000000],
-    r: [0x00000000, 0x00000000],
-    b: [0x00000000, 0x00000000],
-    n: [0x00000000, 0x00000000],
-    p: [0x00000000, 0x00000000],
-  };
-  board.split("/").forEach((rank, rankIndex) => {
-    let fileIndex = 0;
-    while (rank !== "") {
-      const piece = rank[0] as Piece;
-      const emptySquares = parseInt(piece, 10);
-      if (Number.isFinite(emptySquares)) {
-        fileIndex += emptySquares;
-      } else {
-        position[piece] = bitwiseOr([
-          position[piece],
-          squares[rankIndex][fileIndex],
-        ]);
-        fileIndex += 1;
-      }
-      rank = rank.substr(1);
-    }
-  });
-  const [enPassantFile, enPassantRank] = enPassantSquare.split("");
-  return {
-    position,
-    player: player === "w" ? Player.WHITE : Player.BLACK,
-    moves: [],
-    possibleCastles: {
-      [Castle.WHITE_KINGSIDE]: castles.includes("K"),
-      [Castle.WHITE_QUEENSIDE]: castles.includes("Q"),
-      [Castle.BLACK_KINGSIDE]: castles.includes("k"),
-      [Castle.BLACK_QUEENSIDE]: castles.includes("q"),
-    },
-    enPassantSquare:
-      enPassantSquare === "-"
-        ? [0x00000000, 0x00000000]
-        : squares[mapRankToRankIndex[enPassantRank]][
-            mapFileToFileIndex[enPassantFile]
-          ],
-  };
 }
 
 function getMoveableSquaresForKing(
@@ -560,8 +501,8 @@ function movePiece(
       return {
         position: newPosition,
         player: Player.BLACK,
-        moves: [
-          ...game.moves,
+        pastMoves: [
+          ...game.pastMoves,
           {
             piece: Piece.WHITE_KING,
             player: Player.WHITE,
@@ -571,6 +512,7 @@ function movePiece(
             isPromotingTo: null,
           },
         ],
+        possibleMoves: [],
         possibleCastles: {
           [Castle.WHITE_KINGSIDE]: false,
           [Castle.WHITE_QUEENSIDE]: false,
@@ -589,8 +531,8 @@ function movePiece(
       return {
         position: newPosition,
         player: Player.BLACK,
-        moves: [
-          ...game.moves,
+        pastMoves: [
+          ...game.pastMoves,
           {
             piece: Piece.WHITE_KING,
             player: Player.WHITE,
@@ -600,6 +542,7 @@ function movePiece(
             isPromotingTo: null,
           },
         ],
+        possibleMoves: [],
         possibleCastles: {
           [Castle.WHITE_KINGSIDE]: false,
           [Castle.WHITE_QUEENSIDE]: false,
@@ -618,8 +561,8 @@ function movePiece(
       return {
         position: newPosition,
         player: Player.WHITE,
-        moves: [
-          ...game.moves,
+        pastMoves: [
+          ...game.pastMoves,
           {
             piece: Piece.BLACK_KING,
             player: Player.BLACK,
@@ -629,6 +572,7 @@ function movePiece(
             isPromotingTo: null,
           },
         ],
+        possibleMoves: [],
         possibleCastles: {
           [Castle.WHITE_KINGSIDE]: game.possibleCastles[Castle.WHITE_KINGSIDE],
           [Castle.WHITE_QUEENSIDE]:
@@ -647,8 +591,8 @@ function movePiece(
       return {
         position: newPosition,
         player: Player.WHITE,
-        moves: [
-          ...game.moves,
+        pastMoves: [
+          ...game.pastMoves,
           {
             piece: Piece.BLACK_KING,
             player: Player.BLACK,
@@ -658,6 +602,7 @@ function movePiece(
             isPromotingTo: null,
           },
         ],
+        possibleMoves: [],
         possibleCastles: {
           [Castle.WHITE_KINGSIDE]: game.possibleCastles[Castle.WHITE_KINGSIDE],
           [Castle.WHITE_QUEENSIDE]:
@@ -721,8 +666,8 @@ function movePiece(
   return {
     position: newPosition,
     player: isWhite ? Player.BLACK : Player.WHITE,
-    moves: [
-      ...game.moves,
+    pastMoves: [
+      ...game.pastMoves,
       {
         from,
         to,
@@ -738,6 +683,7 @@ function movePiece(
         isPromotingTo,
       },
     ],
+    possibleMoves: [],
     possibleCastles: {
       [Castle.WHITE_KINGSIDE]:
         game.possibleCastles[Castle.WHITE_KINGSIDE] &&
@@ -788,11 +734,7 @@ function movePiece(
   };
 }
 
-export function getLegalMoves(game: Game, depth: number = 1): Game[] {
-  if (depth === 0) {
-    return [game];
-  }
-
+export function getLegalMoves(game: Game): Game[] {
   const isWhite = game.player === Player.WHITE;
 
   const whitePieces = bitwiseOr([
@@ -1096,11 +1038,14 @@ export function getLegalMoves(game: Game, depth: number = 1): Game[] {
 }
 
 export function countLegalMoves(game: Game, depth: number = 1) {
-  const possibleGames = getLegalMoves(game);
+  if (depth === 0) {
+    return 1;
+  }
 
+  const possibleGames = getLegalMoves(game);
   let sum = 0;
   for (let i = 0; i < possibleGames.length; i++) {
-    const next = getLegalMoves(possibleGames[i], depth - 1);
+    const next = countLegalMoves(possibleGames[i], depth - 1);
     // if (depth === 2) {
     //   console.log(
     //     squareToHumanNotation(moves[i].moves[0].from) +
@@ -1108,9 +1053,73 @@ export function countLegalMoves(game: Game, depth: number = 1) {
     //     next
     //   );
     // }
-    sum += next.length;
+    sum += next;
   }
   return sum;
+}
+
+export function gameFromFen(fen: string): Game {
+  const [
+    board,
+    player,
+    castles,
+    enPassantSquare,
+    fiftyMoveCounter,
+    totalMoveCounter,
+  ] = fen.split(" ");
+  const position: Position = {
+    K: [0x00000000, 0x00000000],
+    Q: [0x00000000, 0x00000000],
+    R: [0x00000000, 0x00000000],
+    B: [0x00000000, 0x00000000],
+    N: [0x00000000, 0x00000000],
+    P: [0x00000000, 0x00000000],
+    k: [0x00000000, 0x00000000],
+    q: [0x00000000, 0x00000000],
+    r: [0x00000000, 0x00000000],
+    b: [0x00000000, 0x00000000],
+    n: [0x00000000, 0x00000000],
+    p: [0x00000000, 0x00000000],
+  };
+  board.split("/").forEach((rank, rankIndex) => {
+    let fileIndex = 0;
+    while (rank !== "") {
+      const piece = rank[0] as Piece;
+      const emptySquares = parseInt(piece, 10);
+      if (Number.isFinite(emptySquares)) {
+        fileIndex += emptySquares;
+      } else {
+        position[piece] = bitwiseOr([
+          position[piece],
+          squares[rankIndex][fileIndex],
+        ]);
+        fileIndex += 1;
+      }
+      rank = rank.substr(1);
+    }
+  });
+  const [enPassantFile, enPassantRank] = enPassantSquare.split("");
+  const game: Game = {
+    position,
+    player: player === "w" ? Player.WHITE : Player.BLACK,
+    pastMoves: [],
+    possibleMoves: [],
+    possibleCastles: {
+      [Castle.WHITE_KINGSIDE]: castles.includes("K"),
+      [Castle.WHITE_QUEENSIDE]: castles.includes("Q"),
+      [Castle.BLACK_KINGSIDE]: castles.includes("k"),
+      [Castle.BLACK_QUEENSIDE]: castles.includes("q"),
+    },
+    enPassantSquare:
+      enPassantSquare === "-"
+        ? [0x00000000, 0x00000000]
+        : squares[mapRankToRankIndex[enPassantRank]][
+            mapFileToFileIndex[enPassantFile]
+          ],
+  };
+
+  game.possibleMoves = getLegalMoves(game);
+  return game;
 }
 
 const game: Game = gameFromFen(

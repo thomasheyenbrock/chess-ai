@@ -5,26 +5,26 @@ export function bitwiseNot(bitboard: Bitboard): Bitboard {
 }
 
 export function bitwiseAnd(bitboards: Bitboard[]): Bitboard {
-  const and = bitboards.reduce(
-    (first, second) => [first[0] & second[0], first[1] & second[1]],
-    [0xffffffff, 0xffffffff]
-  );
+  let and = bitboards[0];
+  for (let i = 1; i < bitboards.length; i++) {
+    and = [and[0] & bitboards[i][0], and[1] & bitboards[i][1]];
+  }
   return [and[0] >>> 0, and[1] >>> 0];
 }
 
 export function bitwiseOr(bitboards: Bitboard[]): Bitboard {
-  const or = bitboards.reduce(
-    (first, second) => [first[0] | second[0], first[1] | second[1]],
-    [0x00000000, 0x00000000]
-  );
+  let or = bitboards[0];
+  for (let i = 1; i < bitboards.length; i++) {
+    or = [or[0] | bitboards[i][0], or[1] | bitboards[i][1]];
+  }
   return [or[0] >>> 0, or[1] >>> 0];
 }
 
 export function bitwiseXor(bitboards: Bitboard[]): Bitboard {
-  const xor = bitboards.reduce(
-    (first, second) => [first[0] ^ second[0], first[1] ^ second[1]],
-    [0x00000000, 0x00000000]
-  );
+  let xor = bitboards[0];
+  for (let i = 1; i < bitboards.length; i++) {
+    xor = [xor[0] ^ bitboards[i][0], xor[1] ^ bitboards[i][1]];
+  }
   return [xor[0] >>> 0, xor[1] >>> 0];
 }
 
@@ -33,10 +33,18 @@ export function isNull(bitboard: Bitboard) {
 }
 
 export function equals(bitboards: Bitboard[]) {
-  const [first, ...rest] = bitboards;
-  return rest.every(
-    (bitboard) => bitboard[0] === first[0] && bitboard[1] === first[1]
-  );
+  const firstBitboard = bitboards[0];
+  const first = firstBitboard[0];
+  const second = firstBitboard[1];
+  for (let i = 1; i < bitboards.length; i++) {
+    if (bitboards[i][0] !== first) {
+      return false;
+    }
+    if (bitboards[i][1] !== second) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function isGreaterThan(first: Bitboard, second: Bitboard) {

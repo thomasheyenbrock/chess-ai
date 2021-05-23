@@ -184,6 +184,7 @@ function getMoveableSquaresForKing(
   friendlyPieces: Bitboard,
   captureSquares: Bitboard,
   king: Bitboard,
+  enemyKing: Bitboard,
   isWhite: boolean,
   possibleCastles: Record<Castle, boolean>
 ): {
@@ -195,6 +196,23 @@ function getMoveableSquaresForKing(
   const bottom = getBottomSquare(king);
   const left = getLeftSquare(king);
   const right = getRightSquare(king);
+
+  const enemyKingTop = getTopSquare(enemyKing);
+  const enemyKingBottom = getBottomSquare(enemyKing);
+  const enemyKingLeft = getLeftSquare(enemyKing);
+  const enemyKingRight = getRightSquare(enemyKing);
+  const enemyKingSquares = bitwiseOr([
+    enemyKing,
+    enemyKingTop,
+    getRightSquare(enemyKingTop),
+    enemyKingRight,
+    getBottomSquare(enemyKingRight),
+    enemyKingBottom,
+    getLeftSquare(enemyKingBottom),
+    enemyKingLeft,
+    getTopSquare(enemyKingLeft),
+  ]);
+
   return {
     regular: bitwiseAnd([
       bitwiseOr([
@@ -208,6 +226,7 @@ function getMoveableSquaresForKing(
         getTopSquare(left),
       ]),
       bitwiseNot(friendlyPieces),
+      bitwiseNot(enemyKingSquares),
     ]),
     kingsideCastles:
       possibleCastles[
@@ -975,6 +994,7 @@ export function getLegalMoves(game: Game): Game[] {
       friendlyPieces,
       getCaptureSquares(game.position, isWhite),
       king,
+      game.position[isWhite ? Piece.BLACK_KING : Piece.WHITE_KING],
       isWhite,
       game.possibleCastles
     );

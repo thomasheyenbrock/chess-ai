@@ -20,6 +20,7 @@ import {
   isNull,
   split,
 } from "./bitboard";
+import { gameToString } from "./fen";
 
 export const squares: Bitboard[][] = [
   [
@@ -136,6 +137,12 @@ export enum Player {
   BLACK = "b",
 }
 
+export enum Result {
+  WHITE = "w",
+  BLACK = "b",
+  DRAW = "d",
+}
+
 export enum Castle {
   WHITE_KINGSIDE = "K",
   WHITE_QUEENSIDE = "Q",
@@ -159,7 +166,18 @@ export type Game = {
   possibleMoves: Game[];
   possibleCastles: Record<Castle, boolean>;
   enPassantSquare: Bitboard;
+  positionCounts: { [stringifiedGame: string]: number };
+  fiftyMoveCounter: number;
+  result: Result | null;
 };
+
+function incrementPositionCount(game: Game) {
+  const positionCounts = Object.assign({}, game.positionCounts);
+  const key = gameToString(game);
+  positionCounts[key] = (positionCounts[key] || 0) + 1;
+  game.positionCounts = positionCounts;
+  return game;
+}
 
 function getMoveableSquaresForKing(
   allPieces: Bitboard,
@@ -437,13 +455,13 @@ function movePiece(
   const newPosition = { ...game.position };
 
   switch (castle) {
-    case Castle.WHITE_KINGSIDE:
+    case Castle.WHITE_KINGSIDE: {
       newPosition[Piece.WHITE_KING] = [0x00000000, 0x00000002];
       newPosition[Piece.WHITE_ROOK] = bitwiseXor([
         newPosition[Piece.WHITE_ROOK],
         [0x00000000, 0x00000005],
       ]);
-      return {
+      const newGame: Game = {
         position: newPosition,
         player: Player.BLACK,
         pastMoves: [
@@ -466,14 +484,19 @@ function movePiece(
             game.possibleCastles[Castle.BLACK_QUEENSIDE],
         },
         enPassantSquare: [0x00000000, 0x00000000],
+        fiftyMoveCounter: game.fiftyMoveCounter + 1,
+        positionCounts: game.positionCounts,
+        result: null,
       };
-    case Castle.WHITE_QUEENSIDE:
+      return incrementPositionCount(newGame);
+    }
+    case Castle.WHITE_QUEENSIDE: {
       newPosition[Piece.WHITE_KING] = [0x00000000, 0x00000020];
       newPosition[Piece.WHITE_ROOK] = bitwiseXor([
         newPosition[Piece.WHITE_ROOK],
         [0x00000000, 0x00000090],
       ]);
-      return {
+      const newGame: Game = {
         position: newPosition,
         player: Player.BLACK,
         pastMoves: [
@@ -496,14 +519,19 @@ function movePiece(
             game.possibleCastles[Castle.BLACK_QUEENSIDE],
         },
         enPassantSquare: [0x00000000, 0x00000000],
+        fiftyMoveCounter: game.fiftyMoveCounter + 1,
+        positionCounts: game.positionCounts,
+        result: null,
       };
-    case Castle.BLACK_KINGSIDE:
+      return incrementPositionCount(newGame);
+    }
+    case Castle.BLACK_KINGSIDE: {
       newPosition[Piece.BLACK_KING] = [0x02000000, 0x00000000];
       newPosition[Piece.BLACK_ROOK] = bitwiseXor([
         newPosition[Piece.BLACK_ROOK],
         [0x05000000, 0x00000000],
       ]);
-      return {
+      const newGame: Game = {
         position: newPosition,
         player: Player.WHITE,
         pastMoves: [
@@ -526,14 +554,19 @@ function movePiece(
           [Castle.BLACK_QUEENSIDE]: false,
         },
         enPassantSquare: [0x00000000, 0x00000000],
+        fiftyMoveCounter: game.fiftyMoveCounter + 1,
+        positionCounts: game.positionCounts,
+        result: null,
       };
-    case Castle.BLACK_QUEENSIDE:
+      return incrementPositionCount(newGame);
+    }
+    case Castle.BLACK_QUEENSIDE: {
       newPosition[Piece.BLACK_KING] = [0x20000000, 0x00000000];
       newPosition[Piece.BLACK_ROOK] = bitwiseXor([
         newPosition[Piece.BLACK_ROOK],
         [0x90000000, 0x00000000],
       ]);
-      return {
+      const newGame: Game = {
         position: newPosition,
         player: Player.WHITE,
         pastMoves: [
@@ -556,7 +589,12 @@ function movePiece(
           [Castle.BLACK_QUEENSIDE]: false,
         },
         enPassantSquare: [0x00000000, 0x00000000],
+        fiftyMoveCounter: game.fiftyMoveCounter + 1,
+        positionCounts: game.positionCounts,
+        result: null,
       };
+      return incrementPositionCount(newGame);
+    }
   }
 
   const capturedPiece = isNull(
@@ -608,7 +646,7 @@ function movePiece(
     newPosition[pawnPiece] = bitwiseXor([newPosition[pawnPiece], to]);
   }
 
-  return {
+  const newGame: Game = {
     position: newPosition,
     player: isWhite ? Player.BLACK : Player.WHITE,
     pastMoves: [
@@ -676,7 +714,17 @@ function movePiece(
         ),
     },
     enPassantSquare,
+    fiftyMoveCounter:
+      movedPiece === Piece.WHITE_PAWN ||
+      movedPiece === Piece.BLACK_PAWN ||
+      capturedPiece ||
+      isCapturingEnPassant
+        ? 0
+        : game.fiftyMoveCounter + 1,
+    positionCounts: game.positionCounts,
+    result: null,
   };
+  return incrementPositionCount(newGame);
 }
 
 export function getLegalMoves(game: Game): Game[] {
@@ -980,6 +1028,120 @@ export function getLegalMoves(game: Game): Game[] {
   }
 
   return possibleGames;
+}
+
+function isDeadPosition(position: Position) {
+  const whiteQueens = split(position[Piece.WHITE_QUEEN]);
+  const whiteRooks = split(position[Piece.WHITE_ROOK]);
+  const whiteBishops = split(position[Piece.WHITE_BISHOP]);
+  const whiteKnights = split(position[Piece.WHITE_KNIGHT]);
+  const whitePawns = split(position[Piece.WHITE_PAWN]);
+  const blackQueens = split(position[Piece.BLACK_QUEEN]);
+  const blackRooks = split(position[Piece.BLACK_ROOK]);
+  const blackBishops = split(position[Piece.BLACK_BISHOP]);
+  const blackKnights = split(position[Piece.BLACK_KNIGHT]);
+  const blackPawns = split(position[Piece.BLACK_PAWN]);
+
+  const numberOfWhitePieces =
+    whiteQueens.length +
+    whiteRooks.length +
+    whiteBishops.length +
+    whiteKnights.length +
+    whitePawns.length;
+  const numberOfBlackPieces =
+    blackQueens.length +
+    blackRooks.length +
+    blackBishops.length +
+    blackKnights.length +
+    blackPawns.length;
+
+  // king against king
+  if (numberOfWhitePieces + numberOfBlackPieces === 0) {
+    return true;
+  }
+
+  // king against king and bishop
+  if (
+    numberOfWhitePieces === 0 &&
+    numberOfBlackPieces === 1 &&
+    blackBishops.length === 1
+  ) {
+    return true;
+  }
+  if (
+    numberOfBlackPieces === 0 &&
+    numberOfWhitePieces === 1 &&
+    whiteBishops.length === 1
+  ) {
+    return true;
+  }
+
+  // king against king and knight
+  if (
+    numberOfWhitePieces === 0 &&
+    numberOfBlackPieces === 1 &&
+    blackKnights.length === 1
+  ) {
+    return true;
+  }
+  if (
+    numberOfBlackPieces === 0 &&
+    numberOfWhitePieces === 1 &&
+    whiteKnights.length === 1
+  ) {
+    return true;
+  }
+
+  // king and bishop against king and bishop, with both bishops on squares of the same color
+  if (
+    numberOfWhitePieces === 1 &&
+    numberOfBlackPieces === 1 &&
+    whiteBishops.length === 1 &&
+    blackBishops.length === 1
+  ) {
+    const isWhiteBishopOnWhiteSquare = isNull(
+      bitwiseAnd([whiteBishops[0], [0xaa55aa55, 0xaa55aa55]])
+    );
+    const isBlackBishopOnWhiteSquare = isNull(
+      bitwiseAnd([blackBishops[0], [0xaa55aa55, 0xaa55aa55]])
+    );
+    return isWhiteBishopOnWhiteSquare === isBlackBishopOnWhiteSquare;
+  }
+
+  return false;
+}
+
+export function setGameResult(game: Game) {
+  game.possibleMoves = getLegalMoves(game);
+
+  if (game.possibleMoves.length === 0) {
+    const isWhite = game.player === Player.WHITE;
+    if (isInCheck(game.position, isWhite)) {
+      game.result = isWhite ? Result.BLACK : Result.WHITE;
+    } else {
+      game.result = Result.DRAW;
+    }
+    return game;
+  }
+
+  if (isDeadPosition(game.position)) {
+    game.result = Result.DRAW;
+    return game;
+  }
+
+  for (const key in game.positionCounts) {
+    if (game.positionCounts[key] >= 3) {
+      game.result = Result.DRAW;
+      return game;
+    }
+  }
+
+  if (game.fiftyMoveCounter >= 100) {
+    game.result = Result.DRAW;
+    return game;
+  }
+
+  return game;
 }
 
 export function countLegalMoves(game: Game, depth: number = 1) {

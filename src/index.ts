@@ -1,6 +1,6 @@
 import { Bitboard, equals } from "./bitboard";
 import { gameFromFen } from "./fen";
-import { Game, getLegalMoves, Piece, Player, squares } from "./move-generator";
+import { Piece, Player, setGameResult, squares } from "./move-generator";
 
 const maxPieces: Record<Piece, number> = {
   [Piece.WHITE_KING]: 1,
@@ -43,8 +43,7 @@ function move(from: Bitboard, to: Bitboard) {
   if (!legalMove) {
     return;
   }
-  game = legalMove;
-  game.possibleMoves = getLegalMoves(game);
+  game = setGameResult(legalMove);
 
   if (selectedPiece.element) {
     selectedPiece.element.classList.remove("active");
@@ -54,8 +53,9 @@ function move(from: Bitboard, to: Bitboard) {
 
   drawBoard();
 
-  // TODO: check for check
-  // TODO: check for result of a game (checkmate or draw)
+  if (game.result) {
+    alert("game is over, result: " + game.result);
+  }
 }
 
 Object.values(Piece).forEach((pieceName) => {
@@ -100,7 +100,7 @@ for (const element of document.getElementsByClassName("square")) {
   });
 }
 
-let game: Game = gameFromFen(
+let game = gameFromFen(
   "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 );
 

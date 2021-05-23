@@ -5,6 +5,7 @@ import {
   getLegalMoves,
   Piece,
   Player,
+  setGameResult,
   squares,
 } from "./move-generator";
 
@@ -88,8 +89,20 @@ export function gameFromFen(fen: string): Game {
         : squares[mapRankToRankIndex[enPassantRank]][
             mapFileToFileIndex[enPassantFile]
           ],
+    positionCounts: {},
+    fiftyMoveCounter: parseInt(fiftyMoveCounter, 10),
+    result: null,
   };
 
   game.possibleMoves = getLegalMoves(game);
-  return game;
+  return setGameResult(game);
+}
+
+export function gameToString(game: Game) {
+  return JSON.stringify({
+    position: game.position,
+    player: game.player,
+    possibleCastles: game.possibleCastles,
+    enPassantSquare: game.enPassantSquare,
+  });
 }

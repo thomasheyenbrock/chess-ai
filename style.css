@@ -1,10 +1,14 @@
 .board {
   height: 80vmin;
   width: 80vmin;
-  margin: 10vmin;
+  margin: 5vmin;
   display: grid;
   grid-template-rows: repeat(8, 1fr);
   grid-template-columns: repeat(8, 1fr);
+}
+
+.controls {
+  margin: 0 5vmin;
 }
 
 .white {

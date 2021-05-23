@@ -120,7 +120,7 @@ export enum Piece {
   BLACK_PAWN = "p",
 }
 
-type PromotionPiece =
+export type PromotionPiece =
   | Piece.WHITE_QUEEN
   | Piece.WHITE_ROOK
   | Piece.WHITE_BISHOP
@@ -138,9 +138,12 @@ export enum Player {
 }
 
 export enum Result {
-  WHITE = "w",
-  BLACK = "b",
-  DRAW = "d",
+  WHITE = "White wins",
+  BLACK = "Black wins",
+  STALEMATE = "Stalemate",
+  DEAD_POSITION = "Dead position",
+  REPITITION = "Third repitition of position",
+  FIFTY_MOVE_RULE = "Fifty moves without capture or pawn movement",
 }
 
 export enum Castle {
@@ -1139,25 +1142,25 @@ export function setGameResult(game: Game) {
     if (isInCheck(game.position, isWhite)) {
       game.result = isWhite ? Result.BLACK : Result.WHITE;
     } else {
-      game.result = Result.DRAW;
+      game.result = Result.STALEMATE;
     }
     return game;
   }
 
   if (isDeadPosition(game.position)) {
-    game.result = Result.DRAW;
+    game.result = Result.DEAD_POSITION;
     return game;
   }
 
   for (const key in game.positionCounts) {
     if (game.positionCounts[key] >= 3) {
-      game.result = Result.DRAW;
+      game.result = Result.REPITITION;
       return game;
     }
   }
 
   if (game.fiftyMoveCounter >= 100) {
-    game.result = Result.DRAW;
+    game.result = Result.FIFTY_MOVE_RULE;
     return game;
   }
 

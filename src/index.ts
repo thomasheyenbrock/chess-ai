@@ -1,6 +1,14 @@
 import { Bitboard, bitwiseAnd, equals, isNull } from "./bitboard";
+import * as engines from "./engines";
+import { PickMove } from "./engines/type";
 import { gameFromFen } from "./fen";
-import { Piece, Player, setGameResult, squares } from "./move-generator";
+import {
+  Piece,
+  Player,
+  PromotionPiece,
+  setGameResult,
+  squares,
+} from "./move-generator";
 
 const maxPieces: Record<Piece, number> = {
   [Piece.WHITE_KING]: 1,
@@ -17,7 +25,7 @@ const maxPieces: Record<Piece, number> = {
   [Piece.BLACK_PAWN]: 8,
 };
 
-const squareElements: HTMLElement[][] = [
+const squareElements = [
   [
     document.getElementById("a8")!,
     document.getElementById("b8")!,
@@ -100,6 +108,8 @@ const squareElements: HTMLElement[][] = [
   ],
 ];
 
+const result = document.getElementById("result")!;
+
 let selectedPiece: { element: HTMLElement | null; square: Bitboard | null } = {
   element: null,
   square: null,
@@ -154,10 +164,18 @@ function drawBoard() {
   });
 }
 
-function move(from: Bitboard, to: Bitboard) {
+function move(
+  from: Bitboard,
+  to: Bitboard,
+  isPromotingTo: PromotionPiece | null
+) {
   const legalMove = game.possibleMoves.find((possibleGame) => {
     const lastMove = possibleGame.pastMoves[possibleGame.pastMoves.length - 1];
-    return equals([from, lastMove.from]) && equals([to, lastMove.to]);
+    return (
+      equals([from, lastMove.from]) &&
+      equals([to, lastMove.to]) &&
+      isPromotingTo === lastMove.isPromotingTo
+    );
   });
   if (!legalMove) {
     return;
@@ -184,7 +202,7 @@ function move(from: Bitboard, to: Bitboard) {
   drawBoard();
 
   if (game.result) {
-    alert("game is over, result: " + game.result);
+    result.innerText = "The game is over: " + game.result;
   }
 }
 
@@ -223,7 +241,7 @@ Object.values(Piece).forEach((pieceName) => {
       }
 
       if (selectedPiece.square) {
-        move(selectedPiece.square, squares[rankIndex][fileIndex]);
+        move(selectedPiece.square, squares[rankIndex][fileIndex], null);
       }
     });
   }
@@ -261,6 +279,28 @@ for (const element of document.getElementsByClassName("square")) {
     if (game.result || !selectedPiece.square) {
       return;
     }
-    move(selectedPiece.square, square);
+    move(selectedPiece.square, square, null);
   });
 }
+
+function makeMove(pickMove: PickMove) {
+  if (game.result || game.possibleMoves.length === 0) {
+    return;
+  }
+  const randomGame = pickMove(game);
+  const lastMove = randomGame.pastMoves[randomGame.pastMoves.length - 1];
+  move(lastMove.from, lastMove.to, lastMove.isPromotingTo);
+  setTimeout(() => {
+    makeMove(pickMove);
+  }, 10);
+}
+
+document.getElementById("button-reset")!.addEventListener("click", () => {
+  game = gameFromFen(startingPositionFen);
+  result.innerText = "";
+  drawBoard();
+});
+
+document.getElementById("button-mack1")!.addEventListener("click", () => {
+  makeMove(engines.mack1);
+});

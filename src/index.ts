@@ -1,12 +1,6 @@
 import { Bitboard, equals } from "./bitboard";
-import {
-  Game,
-  gameFromFen,
-  getLegalMoves,
-  Piece,
-  Player,
-  squares,
-} from "./move-generator";
+import { gameFromFen } from "./fen";
+import { Game, getLegalMoves, Piece, Player, squares } from "./move-generator";
 
 const maxPieces: Record<Piece, number> = {
   [Piece.WHITE_KING]: 1,
@@ -60,7 +54,7 @@ function move(from: Bitboard, to: Bitboard) {
 
   drawBoard();
 
-  // TODO: check for chess
+  // TODO: check for check
   // TODO: check for result of a game (checkmate or draw)
 }
 

@@ -1,4 +1,5 @@
-import { gameFromFen, countLegalMoves } from "./move-generator";
+import { gameFromFen } from "./fen";
+import { countLegalMoves } from "./move-generator";
 
 describe("countLegalMoves", () => {
   describe.each([

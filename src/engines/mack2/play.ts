@@ -126,7 +126,7 @@ async function pickMove(game: Game, network: tf.LayersModel) {
   }
 
   const topGames = validGames
-    .filter((v) => v.score >= 0.9999 * max)
+    .filter((v) => v.score >= 0.95 * max)
     .sort((g1, g2) => g1.score - g2.score)
     .slice(0, 3);
 
@@ -146,11 +146,16 @@ async function playGame(white: tf.LayersModel, black: tf.LayersModel) {
 }
 
 async function main() {
+  const [, , generation] = process.argv;
+  if (!generation) {
+    throw new Error("generation missing");
+  }
+
   const pairings: Pairings = JSON.parse(
     await fs.promises.readFile(PAIRINGS_FILENAME, "utf8")
   );
   const networkIds = await fs.promises.readdir(
-    path.join(__dirname, "networks")
+    path.join(__dirname, `generation${generation}`)
   );
 
   const networks = await networkIds
@@ -159,7 +164,12 @@ async function main() {
       async (accPromise, id) => {
         const acc = await accPromise;
         acc[id] = await tf.loadLayersModel(
-          `file://${path.resolve(__dirname, "networks", id, "model.json")}`
+          `file://${path.resolve(
+            __dirname,
+            `generation${generation}`,
+            id,
+            "model.json"
+          )}`
         );
         return acc;
       },
@@ -169,13 +179,13 @@ async function main() {
   let missing = Object.entries(pairings).filter(([, result]) => !result);
 
   while (missing.length > 0) {
+    console.log(`${missing.length} games left`);
     const batch = missing.slice(0, CONCURRENT_GAMES);
 
     await Promise.all(
       batch.map(async ([id]) => {
         const [whiteId, blackId] = id.split("-");
         const result = await playGame(networks[whiteId], networks[blackId]);
-        console.log(whiteId, "vs", blackId, ":", result);
         pairings[id] = result;
       })
     );

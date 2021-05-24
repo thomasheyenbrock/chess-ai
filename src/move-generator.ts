@@ -19,8 +19,8 @@ import {
   getTopSquare,
   isNull,
   split,
-} from "./bitboard";
-import { gameToString } from "./fen";
+} from "./bitboard.ts";
+import { gameToString } from "./fen.ts";
 
 export const squares: Bitboard[][] = [
   [
@@ -159,6 +159,7 @@ type Move = {
   from: Bitboard;
   to: Bitboard;
   isCapturing: Piece | null;
+  isCastling: Castle | null;
   isPromotingTo: PromotionPiece | null;
 };
 
@@ -494,6 +495,7 @@ function movePiece(
             from: [0x00000000, 0x00000008],
             to: [0x00000000, 0x00000002],
             isCapturing: null,
+            isCastling: Castle.WHITE_KINGSIDE,
             isPromotingTo: null,
           },
         ],
@@ -529,6 +531,7 @@ function movePiece(
             from: [0x00000000, 0x00000008],
             to: [0x00000000, 0x00000020],
             isCapturing: null,
+            isCastling: Castle.WHITE_QUEENSIDE,
             isPromotingTo: null,
           },
         ],
@@ -564,6 +567,7 @@ function movePiece(
             from: [0x08000000, 0x00000000],
             to: [0x02000000, 0x00000000],
             isCapturing: null,
+            isCastling: Castle.BLACK_KINGSIDE,
             isPromotingTo: null,
           },
         ],
@@ -599,6 +603,7 @@ function movePiece(
             from: [0x08000000, 0x00000000],
             to: [0x20000000, 0x00000000],
             isCapturing: null,
+            isCastling: Castle.BLACK_QUEENSIDE,
             isPromotingTo: null,
           },
         ],
@@ -674,6 +679,7 @@ function movePiece(
     pastMoves: [
       ...game.pastMoves,
       {
+        piece: movedPiece,
         from,
         to,
         player: isWhite ? Player.WHITE : Player.BLACK,
@@ -684,7 +690,7 @@ function movePiece(
               ? Piece.BLACK_PAWN
               : Piece.WHITE_PAWN
             : null),
-        piece: movedPiece,
+        isCastling: null,
         isPromotingTo,
       },
     ],

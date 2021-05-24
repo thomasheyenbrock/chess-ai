@@ -1,4 +1,4 @@
-import { bitwiseOr } from "./bitboard";
+import { bitwiseOr } from "./bitboard.ts";
 import {
   Castle,
   Game,
@@ -7,7 +7,7 @@ import {
   Player,
   setGameResult,
   squares,
-} from "./move-generator";
+} from "./move-generator.ts";
 
 const mapRankToRankIndex: Record<string, number> = {
   1: 7,

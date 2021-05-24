@@ -19,8 +19,8 @@ import {
   getTopSquare,
   isNull,
   split,
-} from "./bitboard.ts";
-import { gameToString } from "./fen.ts";
+} from "./bitboard";
+import { gameToString } from "./fen";
 
 export const squares: Bitboard[][] = [
   [

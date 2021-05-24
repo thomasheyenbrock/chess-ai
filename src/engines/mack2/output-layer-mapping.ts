@@ -17,8 +17,8 @@ import {
   getRightSquare,
   getTopSquare,
   split,
-} from "../../bitboard.ts";
-import { Castle, Game, Piece, PromotionPiece } from "../../move-generator.ts";
+} from "../../bitboard";
+import { Castle, Game, Piece, PromotionPiece } from "../../move-generator";
 
 function getQueenMoves(from: Bitboard) {
   const moveableSquares = bitwiseAnd([

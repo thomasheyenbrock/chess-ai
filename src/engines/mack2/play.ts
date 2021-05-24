@@ -1,41 +1,18 @@
-/**
- * INPUT LAYER
- * - 1 bit for the current player (1 = white, 0 = black)
- * - 12 Bitboards (one for each piece) with 64 bits each
- * - 4 bits for each castling (1 = still possible, 0 = no longer possible)
- * - One bitboard with 64 bits showing the en passant square (if any)
- *   => 1 + 12 * 64 + 4 + 64 = 837 nodes
- *
- * OUTPUT LAYER
- *   => 1972 nodes (one for each possible move)
- *
- * HIDDEN LAYERS
- * - one hidden layer
- * - number of nodes is the arithmetic mean of input and output
- *   => (837 + 1972) / 2 = 1405 nodes
- */
-
-import { Bitboard, bitwiseAnd, isNull } from "../../bitboard.ts";
-import { gameFromFen } from "../../fen.ts";
-import {
-  createRandomMatrix,
-  createRandomVector,
-  Matrix,
-  step,
-  Vector,
-} from "../../matrix.ts";
+import * as tf from "@tensorflow/tfjs-node";
+import * as fs from "fs";
+import * as path from "path";
+import { Bitboard, bitwiseAnd, isNull } from "../../bitboard";
+import { gameFromFen } from "../../fen";
 import {
   Castle,
   Game,
   Piece,
   Player,
-  Result,
   setGameResult,
-} from "../../move-generator.ts";
-import {
-  findPossibleMove,
-  moveForOutputIndex,
-} from "./output-layer-mapping.ts";
+} from "../../move-generator";
+import { CONCURRENT_GAMES, PAIRINGS_FILENAME } from "./constants";
+import { findPossibleMove, moveForOutputIndex } from "./output-layer-mapping";
+import { Pairings } from "./types";
 
 function getActivationsFromBitboard(bitboard: Bitboard) {
   return [
@@ -106,61 +83,36 @@ function getActivationsFromBitboard(bitboard: Bitboard) {
   ];
 }
 
-const t = new TextEncoder();
-
-function printProgress(description: string, progress: number) {
-  Deno.stdout.writeSync(
-    t.encode(
-      "\r\x1b[K" +
-        description +
-        ": " +
-        Math.round(progress * 1000) / 10 +
-        "%" +
-        (progress >= 1 ? "\n" : "")
-    )
+async function pickMove(game: Game, network: tf.LayersModel) {
+  const input = tf.tensor(
+    [
+      // player
+      game.player === Player.WHITE ? 1 : 0,
+      // position
+      ...getActivationsFromBitboard(game.position[Piece.WHITE_KING]),
+      ...getActivationsFromBitboard(game.position[Piece.WHITE_QUEEN]),
+      ...getActivationsFromBitboard(game.position[Piece.WHITE_ROOK]),
+      ...getActivationsFromBitboard(game.position[Piece.WHITE_BISHOP]),
+      ...getActivationsFromBitboard(game.position[Piece.WHITE_KNIGHT]),
+      ...getActivationsFromBitboard(game.position[Piece.WHITE_PAWN]),
+      ...getActivationsFromBitboard(game.position[Piece.BLACK_KING]),
+      ...getActivationsFromBitboard(game.position[Piece.BLACK_QUEEN]),
+      ...getActivationsFromBitboard(game.position[Piece.BLACK_ROOK]),
+      ...getActivationsFromBitboard(game.position[Piece.BLACK_BISHOP]),
+      ...getActivationsFromBitboard(game.position[Piece.BLACK_KNIGHT]),
+      ...getActivationsFromBitboard(game.position[Piece.BLACK_PAWN]),
+      // castles
+      game.possibleCastles[Castle.WHITE_KINGSIDE] ? 1 : 0,
+      game.possibleCastles[Castle.WHITE_QUEENSIDE] ? 1 : 0,
+      game.possibleCastles[Castle.BLACK_KINGSIDE] ? 1 : 0,
+      game.possibleCastles[Castle.BLACK_QUEENSIDE] ? 1 : 0,
+      // en passant
+      ...getActivationsFromBitboard(game.enPassantSquare),
+    ],
+    [1, 837]
   );
-}
 
-type Network = { id: string; W1: Matrix; b1: Vector; W2: Matrix; b2: Vector };
-
-function generateRandomNetwork(id: string): Network {
-  return {
-    id,
-    W1: createRandomMatrix(1405, 837),
-    b1: createRandomVector(1405),
-    W2: createRandomMatrix(1972, 1405),
-    b2: createRandomVector(1972),
-  };
-}
-
-export function pickMove(game: Game, network: Network) {
-  const input = [
-    // player
-    game.player === Player.WHITE ? 1 : 0,
-    // position
-    ...getActivationsFromBitboard(game.position[Piece.WHITE_KING]),
-    ...getActivationsFromBitboard(game.position[Piece.WHITE_QUEEN]),
-    ...getActivationsFromBitboard(game.position[Piece.WHITE_ROOK]),
-    ...getActivationsFromBitboard(game.position[Piece.WHITE_BISHOP]),
-    ...getActivationsFromBitboard(game.position[Piece.WHITE_KNIGHT]),
-    ...getActivationsFromBitboard(game.position[Piece.WHITE_PAWN]),
-    ...getActivationsFromBitboard(game.position[Piece.BLACK_KING]),
-    ...getActivationsFromBitboard(game.position[Piece.BLACK_QUEEN]),
-    ...getActivationsFromBitboard(game.position[Piece.BLACK_ROOK]),
-    ...getActivationsFromBitboard(game.position[Piece.BLACK_BISHOP]),
-    ...getActivationsFromBitboard(game.position[Piece.BLACK_KNIGHT]),
-    ...getActivationsFromBitboard(game.position[Piece.BLACK_PAWN]),
-    // castles
-    game.possibleCastles[Castle.WHITE_KINGSIDE] ? 1 : 0,
-    game.possibleCastles[Castle.WHITE_QUEENSIDE] ? 1 : 0,
-    game.possibleCastles[Castle.BLACK_KINGSIDE] ? 1 : 0,
-    game.possibleCastles[Castle.BLACK_QUEENSIDE] ? 1 : 0,
-    // en passant
-    ...getActivationsFromBitboard(game.enPassantSquare),
-  ];
-
-  const hiddenLayer = step(input, network.W1, network.b1);
-  const output = step(hiddenLayer, network.W2, network.b2);
+  const output = await (network.predict(input) as tf.Tensor).data();
 
   let max = -Infinity;
   const validGames: { score: number; game: Game }[] = [];
@@ -181,75 +133,59 @@ export function pickMove(game: Game, network: Network) {
   return topGames[Math.floor(Math.random() * topGames.length)].game;
 }
 
-function playGame(white: Network, black: Network) {
+async function playGame(white: tf.LayersModel, black: tf.LayersModel) {
   let game = gameFromFen(
     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
   );
   while (!game.result) {
-    const p = pickMove(game, game.player === Player.WHITE ? white : black);
-    game = setGameResult(p);
+    game = setGameResult(
+      await pickMove(game, game.player === Player.WHITE ? white : black)
+    );
   }
-  return game;
+  return game.result;
 }
 
-function playMatch(first: Network, second: Network) {
-  const scores: { [networkId: string]: number } = {};
-  scores[first.id] = 0;
-  scores[second.id] = 0;
+async function main() {
+  const pairings: Pairings = JSON.parse(
+    await fs.promises.readFile(PAIRINGS_FILENAME, "utf8")
+  );
+  const networkIds = await fs.promises.readdir(
+    path.join(__dirname, "networks")
+  );
 
-  for (let i = 0; i < 6; i++) {
-    printProgress(`Match ${first.id} vs ${second.id}`, (2 * i) / 12);
-    switch (playGame(first, second).result) {
-      case Result.WHITE:
-        scores[first.id] += 1;
-        break;
-      case Result.BLACK:
-        scores[second.id] += 1;
-        break;
-      case null:
-        throw new Error("game without result");
-      default:
-        scores[first.id] += 0.5;
-        scores[second.id] += 0.5;
-        break;
-    }
+  const networks = await networkIds
+    .filter((id) => id !== "pairings.json")
+    .reduce<Promise<{ [id: string]: tf.LayersModel }>>(
+      async (accPromise, id) => {
+        const acc = await accPromise;
+        acc[id] = await tf.loadLayersModel(
+          `file://${path.resolve(__dirname, "networks", id, "model.json")}`
+        );
+        return acc;
+      },
+      Promise.resolve({})
+    );
 
-    printProgress(`Match ${first.id} vs ${second.id}`, (2 * i + 1) / 12);
-    switch (playGame(second, first).result) {
-      case Result.WHITE:
-        scores[second.id] += 1;
-        break;
-      case Result.BLACK:
-        scores[first.id] += 1;
-        break;
-      case null:
-        throw new Error("game without result");
-      default:
-        scores[first.id] += 0.5;
-        scores[second.id] += 0.5;
-        break;
-    }
-  }
-  printProgress(`Match ${first.id} vs ${second.id}`, 1);
+  let missing = Object.entries(pairings).filter(([, result]) => !result);
 
-  return scores;
-}
+  while (missing.length > 0) {
+    const batch = missing.slice(0, CONCURRENT_GAMES);
 
-const NUMBER_OF_NETWORKS = 10;
-const networks: Network[] = [];
+    await Promise.all(
+      batch.map(async ([id]) => {
+        const [whiteId, blackId] = id.split("-");
+        const result = await playGame(networks[whiteId], networks[blackId]);
+        console.log(whiteId, "vs", blackId, ":", result);
+        pairings[id] = result;
+      })
+    );
 
-for (let i = 0; i < NUMBER_OF_NETWORKS; i++) {
-  printProgress("Generating random networks", i / NUMBER_OF_NETWORKS);
-  networks.push(generateRandomNetwork(i.toString()));
-}
-printProgress("Generating random networks", 1);
-
-const scores: { [networkId: string]: number } = {};
-for (let i = 0; i < networks.length - 1; i++) {
-  for (let j = i + 1; j < networks.length; j++) {
-    const matchResult = playMatch(networks[i], networks[j]);
-    Object.assign(scores, matchResult);
+    await fs.promises.writeFile(PAIRINGS_FILENAME, JSON.stringify(pairings));
+    missing = Object.entries(pairings).filter(([, result]) => !result);
   }
 }
 
-console.log(scores);
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

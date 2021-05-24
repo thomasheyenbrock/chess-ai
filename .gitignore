@@ -1,3 +1,7 @@
 node_modules
-script.js
-script.js.map
+*.js
+*.js.map
+
+model.json
+weights.bin
+pairings.json

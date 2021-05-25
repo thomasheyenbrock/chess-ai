@@ -2,12 +2,7 @@ import * as tf from "@tensorflow/tfjs-node";
 import * as fs from "fs";
 import * as path from "path";
 import { Result } from "../../move-generator";
-import {
-  NUMBER_OF_NETWORKS,
-  PAIRINGS_FILENAME,
-  REPRODUCTION,
-  SURVIVORS,
-} from "./constants";
+import { NUMBER_OF_NETWORKS, REPRODUCTION, SURVIVORS } from "./constants";
 import { Pairings } from "./types";
 
 async function generateRandomNetwork() {
@@ -38,41 +33,49 @@ async function main() {
   await fs.promises.mkdir(base);
 
   if (generation > 1) {
-    const pairings: Pairings = JSON.parse(
-      await fs.promises.readFile(
-        path.join(__dirname, `generation${generation - 1}`, "pairings.json"),
-        "utf8"
-      )
+    const pairingFiles = await fs.promises.readdir(
+      path.join(__dirname, `generation${generation - 1}`)
     );
-    const scores = Object.entries(pairings).reduce<Score>(
-      (acc, [pairingId, result]) => {
-        const [white, black] = pairingId.split("-");
-        acc[white] = acc[white] || 0;
-        acc[black] = acc[black] || 0;
-        switch (result) {
-          case null:
-            throw new Error(`no result for pairing ${pairingId}`);
-          case Result.WHITE:
-            acc[white] += 10;
-            break;
-          case Result.BLACK:
-            acc[black] += 10;
-            break;
-          case Result.STALEMATE:
-          case Result.DEAD_POSITION:
-            acc[white] += 5;
-            acc[black] += 5;
-            break;
-          case Result.REPITITION:
-          case Result.FIFTY_MOVE_RULE:
-            acc[white] += 1;
-            acc[black] += 1;
-            break;
-        }
-        return acc;
-      },
-      {}
+    const pairings: Pairings[] = await Promise.all(
+      pairingFiles
+        .filter((filename) => filename.match(/^pairings.*\.json$/))
+        .map(async (filename) =>
+          JSON.parse(
+            await fs.promises.readFile(
+              path.join(__dirname, `generation${generation - 1}`, filename),
+              "utf8"
+            )
+          )
+        )
     );
+    const scores = Object.entries(
+      pairings.reduce<Pairings>((acc, pairing) => ({ ...acc, ...pairing }), {})
+    ).reduce<Score>((acc, [pairingId, result]) => {
+      const [white, black] = pairingId.split("-");
+      acc[white] = acc[white] || 0;
+      acc[black] = acc[black] || 0;
+      switch (result) {
+        case null:
+          throw new Error(`no result for pairing ${pairingId}`);
+        case Result.WHITE:
+          acc[white] += 10;
+          break;
+        case Result.BLACK:
+          acc[black] += 10;
+          break;
+        case Result.STALEMATE:
+        case Result.DEAD_POSITION:
+          acc[white] += 5;
+          acc[black] += 5;
+          break;
+        case Result.REPITITION:
+        case Result.FIFTY_MOVE_RULE:
+          acc[white] += 1;
+          acc[black] += 1;
+          break;
+      }
+      return acc;
+    }, {});
     const survivorIds = Object.entries(scores)
       .sort(([, a], [, b]) => b - a)
       .slice(0, SURVIVORS)
@@ -121,15 +124,32 @@ async function main() {
   }
   console.log("Generating random networks", 1);
 
-  const pairings: Pairings = {};
+  const pairings: Pairings[] = [{}];
   for (let i = 0; i < networkIds.length - 1; i++) {
     for (let j = i + 1; j < networkIds.length; j++) {
-      pairings[`${networkIds[i]}-${networkIds[j]}`] = null;
-      pairings[`${networkIds[j]}-${networkIds[i]}`] = null;
+      if (
+        Object.keys(pairings[pairings.length - 1]).length >=
+        (networkIds.length ** 2 - networkIds.length) / 4
+      ) {
+        pairings.push({});
+      }
+      pairings[pairings.length - 1][`${networkIds[i]}-${networkIds[j]}`] = null;
+      pairings[pairings.length - 1][`${networkIds[j]}-${networkIds[i]}`] = null;
     }
   }
 
-  await fs.promises.writeFile(PAIRINGS_FILENAME, JSON.stringify(pairings));
+  await Promise.all(
+    pairings.map((p, i) =>
+      fs.promises.writeFile(
+        path.join(
+          __dirname,
+          `generation${process.argv[2]}`,
+          `pairings_${i}.json`
+        ),
+        JSON.stringify(p)
+      )
+    )
+  );
 }
 
 main().catch((error) => {

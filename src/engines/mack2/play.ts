@@ -10,7 +10,7 @@ import {
   Player,
   setGameResult,
 } from "../../move-generator";
-import { CONCURRENT_GAMES, PAIRINGS_FILENAME } from "./constants";
+import { CONCURRENT_GAMES } from "./constants";
 import { findPossibleMove, moveForOutputIndex } from "./output-layer-mapping";
 import { Pairings } from "./types";
 
@@ -146,20 +146,25 @@ async function playGame(white: tf.LayersModel, black: tf.LayersModel) {
 }
 
 async function main() {
-  const [, , generation] = process.argv;
+  const [, , generation, pairingBatch] = process.argv;
   if (!generation) {
     throw new Error("generation missing");
   }
 
+  const pairingsFilename = path.join(
+    __dirname,
+    `generation${generation}`,
+    `pairings_${pairingBatch}.json`
+  );
   const pairings: Pairings = JSON.parse(
-    await fs.promises.readFile(PAIRINGS_FILENAME, "utf8")
+    await fs.promises.readFile(pairingsFilename, "utf8")
   );
   const networkIds = await fs.promises.readdir(
     path.join(__dirname, `generation${generation}`)
   );
 
   const networks = await networkIds
-    .filter((id) => id !== "pairings.json")
+    .filter((id) => !id.match(/^pairings_\d+\.json$/))
     .reduce<Promise<{ [id: string]: tf.LayersModel }>>(
       async (accPromise, id) => {
         const acc = await accPromise;
@@ -190,7 +195,7 @@ async function main() {
       })
     );
 
-    await fs.promises.writeFile(PAIRINGS_FILENAME, JSON.stringify(pairings));
+    await fs.promises.writeFile(pairingsFilename, JSON.stringify(pairings));
     missing = Object.entries(pairings).filter(([, result]) => !result);
   }
 }

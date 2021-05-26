@@ -169,7 +169,7 @@ function move(
   to: Bitboard,
   isPromotingTo: PromotionPiece | null
 ) {
-  const legalMove = game.possibleMoves.find((possibleGame) => {
+  const legalMove = Object.values(game.possibleMoves).find((possibleGame) => {
     const lastMove = possibleGame.pastMoves[possibleGame.pastMoves.length - 1];
     return (
       equals([from, lastMove.from]) &&
@@ -284,7 +284,7 @@ for (const element of document.getElementsByClassName("square")) {
 }
 
 function makeMove(pickMove: PickMove) {
-  if (game.result || game.possibleMoves.length === 0) {
+  if (game.result || Object.keys(game.possibleMoves).length === 0) {
     return;
   }
   const randomGame = pickMove(game);

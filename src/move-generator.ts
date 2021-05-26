@@ -167,7 +167,7 @@ export type Game = {
   position: Position;
   player: Player;
   pastMoves: Move[];
-  possibleMoves: Game[];
+  possibleMoves: { [moveId: string]: Game };
   possibleCastles: Record<Castle, boolean>;
   enPassantSquare: Bitboard;
   positionCounts: { [stringifiedGame: string]: number };
@@ -456,12 +456,194 @@ function getCaptureSquares(position: Position, isWhite: boolean) {
 }
 
 function isInCheck(position: Position, isWhite: boolean) {
-  return !isNull(
-    bitwiseAnd([
-      getCaptureSquares(position, isWhite),
-      position[isWhite ? Piece.WHITE_KING : Piece.BLACK_KING],
-    ])
-  );
+  const king = position[isWhite ? Piece.WHITE_KING : Piece.BLACK_KING];
+
+  const enemyKnight =
+    position[isWhite ? Piece.BLACK_KNIGHT : Piece.WHITE_KNIGHT];
+  const top = getTopSquare(getTopSquare(king));
+  const bottom = getBottomSquare(getBottomSquare(king));
+  const left = getLeftSquare(getLeftSquare(king));
+  const right = getRightSquare(getRightSquare(king));
+  if (
+    !isNull(
+      bitwiseAnd([
+        bitwiseOr([
+          getLeftSquare(top),
+          getRightSquare(top),
+          getLeftSquare(bottom),
+          getRightSquare(bottom),
+          getTopSquare(left),
+          getBottomSquare(left),
+          getTopSquare(right),
+          getBottomSquare(right),
+        ]),
+        enemyKnight,
+      ])
+    )
+  ) {
+    // Checked by knight
+    return true;
+  }
+
+  const enemyPawn = position[isWhite ? Piece.BLACK_PAWN : Piece.WHITE_PAWN];
+  const inDirection = isWhite ? getTopSquare(king) : getBottomSquare(king);
+  if (
+    !isNull(
+      bitwiseAnd([
+        bitwiseOr([getLeftSquare(inDirection), getRightSquare(inDirection)]),
+        enemyPawn,
+      ])
+    )
+  ) {
+    // Checked by pawn
+    return true;
+  }
+
+  const allPieces = bitwiseOr([
+    position[Piece.WHITE_KING],
+    position[Piece.WHITE_QUEEN],
+    position[Piece.WHITE_ROOK],
+    position[Piece.WHITE_BISHOP],
+    position[Piece.WHITE_KNIGHT],
+    position[Piece.WHITE_PAWN],
+    position[Piece.BLACK_KING],
+    position[Piece.BLACK_QUEEN],
+    position[Piece.BLACK_ROOK],
+    position[Piece.BLACK_BISHOP],
+    position[Piece.BLACK_KNIGHT],
+    position[Piece.BLACK_PAWN],
+  ]);
+
+  const enemyQueenAndRook = isWhite
+    ? bitwiseOr([position[Piece.BLACK_QUEEN], position[Piece.BLACK_ROOK]])
+    : bitwiseOr([position[Piece.WHITE_QUEEN], position[Piece.WHITE_ROOK]]);
+
+  let currentTop = getTopSquare(king);
+  while (!isNull(currentTop)) {
+    if (!isNull(bitwiseAnd([currentTop, enemyQueenAndRook]))) {
+      // Checked on file by queen or rook
+      return true;
+    }
+    if (!isNull(bitwiseAnd([currentTop, allPieces]))) {
+      // Some other piece, so break the loop
+      break;
+    }
+
+    currentTop = getTopSquare(currentTop);
+  }
+
+  let currentBottom = getBottomSquare(king);
+  while (!isNull(currentBottom)) {
+    if (!isNull(bitwiseAnd([currentBottom, enemyQueenAndRook]))) {
+      // Checked on file by queen or rook
+      return true;
+    }
+    if (!isNull(bitwiseAnd([currentBottom, allPieces]))) {
+      // Some other piece, so break the loop
+      break;
+    }
+
+    currentBottom = getBottomSquare(currentBottom);
+  }
+
+  let currentLeft = getLeftSquare(king);
+  while (!isNull(currentLeft)) {
+    if (!isNull(bitwiseAnd([currentLeft, enemyQueenAndRook]))) {
+      // Checked on rank by queen or rook
+      return true;
+    }
+    if (!isNull(bitwiseAnd([currentLeft, allPieces]))) {
+      // Some other piece, so break the loop
+      break;
+    }
+
+    currentLeft = getLeftSquare(currentLeft);
+  }
+
+  let currentRight = getRightSquare(king);
+  while (!isNull(currentRight)) {
+    if (!isNull(bitwiseAnd([currentRight, enemyQueenAndRook]))) {
+      // Checked on rank by queen or rook
+      return true;
+    }
+    if (!isNull(bitwiseAnd([currentRight, allPieces]))) {
+      // Some other piece, so break the loop
+      break;
+    }
+
+    currentRight = getRightSquare(currentRight);
+  }
+
+  const enemyQueenAndBishop = isWhite
+    ? bitwiseOr([position[Piece.BLACK_QUEEN], position[Piece.BLACK_BISHOP]])
+    : bitwiseOr([position[Piece.WHITE_QUEEN], position[Piece.WHITE_BISHOP]]);
+
+  let currentTopLeft = getLeftSquare(getTopSquare(king));
+  while (!isNull(currentTopLeft)) {
+    if (!isNull(bitwiseAnd([currentTopLeft, enemyQueenAndBishop]))) {
+      // Checked on diagonal by queen or bishop
+      return true;
+    }
+    if (!isNull(bitwiseAnd([currentTopLeft, allPieces]))) {
+      // Some other piece, so break the loop
+      break;
+    }
+
+    currentTopLeft = getLeftSquare(getTopSquare(currentTopLeft));
+  }
+
+  let currentTopRight = getRightSquare(getTopSquare(king));
+  while (!isNull(currentTopRight)) {
+    if (!isNull(bitwiseAnd([currentTopRight, enemyQueenAndBishop]))) {
+      // Checked on diagonal by queen or bishop
+      return true;
+    }
+    if (!isNull(bitwiseAnd([currentTopRight, allPieces]))) {
+      // Some other piece, so break the loop
+      break;
+    }
+
+    currentTopRight = getRightSquare(getTopSquare(currentTopRight));
+  }
+
+  let currentBottomLeft = getLeftSquare(getBottomSquare(king));
+  while (!isNull(currentBottomLeft)) {
+    if (!isNull(bitwiseAnd([currentBottomLeft, enemyQueenAndBishop]))) {
+      // Checked on diagonal by queen or bishop
+      return true;
+    }
+    if (!isNull(bitwiseAnd([currentBottomLeft, allPieces]))) {
+      // Some other piece, so break the loop
+      break;
+    }
+
+    currentBottomLeft = getLeftSquare(getBottomSquare(currentBottomLeft));
+  }
+
+  let currentBottomRight = getRightSquare(getBottomSquare(king));
+  while (!isNull(currentBottomRight)) {
+    if (!isNull(bitwiseAnd([currentBottomRight, enemyQueenAndBishop]))) {
+      // Checked on diagonal by queen or bishop
+      return true;
+    }
+    if (!isNull(bitwiseAnd([currentBottomRight, allPieces]))) {
+      // Some other piece, so break the loop
+      break;
+    }
+
+    currentBottomRight = getRightSquare(getBottomSquare(currentBottomRight));
+  }
+
+  return false;
+}
+
+export function generateMoveId(
+  from: Bitboard,
+  to: Bitboard,
+  castle: Castle | null,
+  isPromotingTo: PromotionPiece | null
+) {
+  return [from[0], from[1], to[0], to[1], castle, isPromotingTo].join("-");
 }
 
 function movePiece(
@@ -474,7 +656,7 @@ function movePiece(
   castle: Castle | null,
   isCapturingEnPassant: boolean,
   isPromotingTo: PromotionPiece | null
-): Game {
+): { moveId: string; game: Game } {
   const newPosition = { ...game.position };
 
   switch (castle) {
@@ -499,7 +681,7 @@ function movePiece(
             isPromotingTo: null,
           },
         ],
-        possibleMoves: [],
+        possibleMoves: {},
         possibleCastles: {
           [Castle.WHITE_KINGSIDE]: false,
           [Castle.WHITE_QUEENSIDE]: false,
@@ -512,7 +694,15 @@ function movePiece(
         positionCounts: game.positionCounts,
         result: null,
       };
-      return incrementPositionCount(newGame);
+      return {
+        moveId: generateMoveId(
+          [0x00000000, 0x00000008],
+          [0x00000000, 0x00000002],
+          Castle.WHITE_KINGSIDE,
+          null
+        ),
+        game: incrementPositionCount(newGame),
+      };
     }
     case Castle.WHITE_QUEENSIDE: {
       newPosition[Piece.WHITE_KING] = [0x00000000, 0x00000020];
@@ -535,7 +725,7 @@ function movePiece(
             isPromotingTo: null,
           },
         ],
-        possibleMoves: [],
+        possibleMoves: {},
         possibleCastles: {
           [Castle.WHITE_KINGSIDE]: false,
           [Castle.WHITE_QUEENSIDE]: false,
@@ -548,7 +738,15 @@ function movePiece(
         positionCounts: game.positionCounts,
         result: null,
       };
-      return incrementPositionCount(newGame);
+      return {
+        moveId: generateMoveId(
+          [0x00000000, 0x00000008],
+          [0x00000000, 0x00000020],
+          Castle.WHITE_QUEENSIDE,
+          null
+        ),
+        game: incrementPositionCount(newGame),
+      };
     }
     case Castle.BLACK_KINGSIDE: {
       newPosition[Piece.BLACK_KING] = [0x02000000, 0x00000000];
@@ -571,7 +769,7 @@ function movePiece(
             isPromotingTo: null,
           },
         ],
-        possibleMoves: [],
+        possibleMoves: {},
         possibleCastles: {
           [Castle.WHITE_KINGSIDE]: game.possibleCastles[Castle.WHITE_KINGSIDE],
           [Castle.WHITE_QUEENSIDE]:
@@ -584,7 +782,15 @@ function movePiece(
         positionCounts: game.positionCounts,
         result: null,
       };
-      return incrementPositionCount(newGame);
+      return {
+        moveId: generateMoveId(
+          [0x08000000, 0x00000000],
+          [0x02000000, 0x00000000],
+          Castle.BLACK_KINGSIDE,
+          null
+        ),
+        game: incrementPositionCount(newGame),
+      };
     }
     case Castle.BLACK_QUEENSIDE: {
       newPosition[Piece.BLACK_KING] = [0x20000000, 0x00000000];
@@ -607,7 +813,7 @@ function movePiece(
             isPromotingTo: null,
           },
         ],
-        possibleMoves: [],
+        possibleMoves: {},
         possibleCastles: {
           [Castle.WHITE_KINGSIDE]: game.possibleCastles[Castle.WHITE_KINGSIDE],
           [Castle.WHITE_QUEENSIDE]:
@@ -620,7 +826,15 @@ function movePiece(
         positionCounts: game.positionCounts,
         result: null,
       };
-      return incrementPositionCount(newGame);
+      return {
+        moveId: generateMoveId(
+          [0x08000000, 0x00000000],
+          [0x20000000, 0x00000000],
+          Castle.BLACK_QUEENSIDE,
+          null
+        ),
+        game: incrementPositionCount(newGame),
+      };
     }
   }
 
@@ -694,7 +908,7 @@ function movePiece(
         isPromotingTo,
       },
     ],
-    possibleMoves: [],
+    possibleMoves: {},
     possibleCastles: {
       [Castle.WHITE_KINGSIDE]:
         game.possibleCastles[Castle.WHITE_KINGSIDE] &&
@@ -752,10 +966,13 @@ function movePiece(
     positionCounts: game.positionCounts,
     result: null,
   };
-  return incrementPositionCount(newGame);
+  return {
+    moveId: generateMoveId(from, to, null, isPromotingTo),
+    game: incrementPositionCount(newGame),
+  };
 }
 
-export function getLegalMoves(game: Game): Game[] {
+export function getLegalMoves(game: Game): { [moveId: string]: Game } {
   const isWhite = game.player === Player.WHITE;
 
   const whitePieces = bitwiseOr([
@@ -778,7 +995,7 @@ export function getLegalMoves(game: Game): Game[] {
   const friendlyPieces = isWhite ? whitePieces : blackPieces;
   const enemyPieces = isWhite ? blackPieces : whitePieces;
 
-  const possibleGames: Game[] = [];
+  const possibleGames: { [moveId: string]: Game } = {};
 
   const pawnPiece = isWhite ? Piece.WHITE_PAWN : Piece.BLACK_PAWN;
   const pawns = split(game.position[pawnPiece]);
@@ -791,7 +1008,7 @@ export function getLegalMoves(game: Game): Game[] {
       from
     );
     for (const to of split(single)) {
-      const updatedGame = movePiece(
+      const { game: updatedGame, moveId } = movePiece(
         game,
         pawnPiece,
         from,
@@ -803,11 +1020,11 @@ export function getLegalMoves(game: Game): Game[] {
         null
       );
       if (!isInCheck(updatedGame.position, isWhite)) {
-        possibleGames.push(updatedGame);
+        possibleGames[moveId] = updatedGame;
       }
     }
     for (const to of split(double)) {
-      const updatedGame = movePiece(
+      const { game: updatedGame, moveId } = movePiece(
         game,
         pawnPiece,
         from,
@@ -819,11 +1036,11 @@ export function getLegalMoves(game: Game): Game[] {
         null
       );
       if (!isInCheck(updatedGame.position, isWhite)) {
-        possibleGames.push(updatedGame);
+        possibleGames[moveId] = updatedGame;
       }
     }
     for (const to of split(enPassant)) {
-      const updatedGame = movePiece(
+      const { game: updatedGame, moveId } = movePiece(
         game,
         pawnPiece,
         from,
@@ -835,11 +1052,14 @@ export function getLegalMoves(game: Game): Game[] {
         null
       );
       if (!isInCheck(updatedGame.position, isWhite)) {
-        possibleGames.push(updatedGame);
+        possibleGames[moveId] = updatedGame;
       }
     }
     for (const to of split(promotion)) {
-      const updatedGameWithQueenPromotion = movePiece(
+      const {
+        game: updatedGameWithQueenPromotion,
+        moveId: moveIdWithQueenPromotion,
+      } = movePiece(
         game,
         pawnPiece,
         from,
@@ -851,10 +1071,13 @@ export function getLegalMoves(game: Game): Game[] {
         isWhite ? Piece.WHITE_QUEEN : Piece.BLACK_QUEEN
       );
       if (!isInCheck(updatedGameWithQueenPromotion.position, isWhite)) {
-        possibleGames.push(updatedGameWithQueenPromotion);
+        possibleGames[moveIdWithQueenPromotion] = updatedGameWithQueenPromotion;
       }
 
-      const updatedGameWithRookPromotion = movePiece(
+      const {
+        game: updatedGameWithRookPromotion,
+        moveId: moveIdWithRookPromotion,
+      } = movePiece(
         game,
         pawnPiece,
         from,
@@ -866,9 +1089,13 @@ export function getLegalMoves(game: Game): Game[] {
         isWhite ? Piece.WHITE_ROOK : Piece.BLACK_ROOK
       );
       if (!isInCheck(updatedGameWithRookPromotion.position, isWhite)) {
-        possibleGames.push(updatedGameWithRookPromotion);
+        possibleGames[moveIdWithRookPromotion] = updatedGameWithRookPromotion;
       }
-      const updatedGameWithBishopPromotion = movePiece(
+
+      const {
+        game: updatedGameWithBishopPromotion,
+        moveId: moveIdWithBishopPromotion,
+      } = movePiece(
         game,
         pawnPiece,
         from,
@@ -880,9 +1107,14 @@ export function getLegalMoves(game: Game): Game[] {
         isWhite ? Piece.WHITE_BISHOP : Piece.BLACK_BISHOP
       );
       if (!isInCheck(updatedGameWithBishopPromotion.position, isWhite)) {
-        possibleGames.push(updatedGameWithBishopPromotion);
+        possibleGames[moveIdWithBishopPromotion] =
+          updatedGameWithBishopPromotion;
       }
-      const updatedGameWithKnightPromotion = movePiece(
+
+      const {
+        game: updatedGameWithKnightPromotion,
+        moveId: moveIdWithKnightPromotion,
+      } = movePiece(
         game,
         pawnPiece,
         from,
@@ -894,7 +1126,8 @@ export function getLegalMoves(game: Game): Game[] {
         isWhite ? Piece.WHITE_KNIGHT : Piece.BLACK_KNIGHT
       );
       if (!isInCheck(updatedGameWithKnightPromotion.position, isWhite)) {
-        possibleGames.push(updatedGameWithKnightPromotion);
+        possibleGames[moveIdWithKnightPromotion] =
+          updatedGameWithKnightPromotion;
       }
     }
   }
@@ -906,7 +1139,7 @@ export function getLegalMoves(game: Game): Game[] {
       getMoveableSquaresForKnight(friendlyPieces, from)
     );
     for (const to of possibleMoves) {
-      const updatedGame = movePiece(
+      const { game: updatedGame, moveId } = movePiece(
         game,
         knightPiece,
         from,
@@ -918,7 +1151,7 @@ export function getLegalMoves(game: Game): Game[] {
         null
       );
       if (!isInCheck(updatedGame.position, isWhite)) {
-        possibleGames.push(updatedGame);
+        possibleGames[moveId] = updatedGame;
       }
     }
   }
@@ -930,7 +1163,7 @@ export function getLegalMoves(game: Game): Game[] {
       getMoveableSquaresForBishop(allPieces, enemyPieces, from)
     );
     for (const to of possibleMoves) {
-      const updatedGame = movePiece(
+      const { game: updatedGame, moveId } = movePiece(
         game,
         bishopPiece,
         from,
@@ -942,7 +1175,7 @@ export function getLegalMoves(game: Game): Game[] {
         null
       );
       if (!isInCheck(updatedGame.position, isWhite)) {
-        possibleGames.push(updatedGame);
+        possibleGames[moveId] = updatedGame;
       }
     }
   }
@@ -954,7 +1187,7 @@ export function getLegalMoves(game: Game): Game[] {
       getMoveableSquaresForRook(allPieces, enemyPieces, from)
     );
     for (const to of possibleMoves) {
-      const updatedGame = movePiece(
+      const { game: updatedGame, moveId } = movePiece(
         game,
         rookPiece,
         from,
@@ -966,7 +1199,7 @@ export function getLegalMoves(game: Game): Game[] {
         null
       );
       if (!isInCheck(updatedGame.position, isWhite)) {
-        possibleGames.push(updatedGame);
+        possibleGames[moveId] = updatedGame;
       }
     }
   }
@@ -978,7 +1211,7 @@ export function getLegalMoves(game: Game): Game[] {
       getMoveableSquaresForQueen(allPieces, enemyPieces, from)
     );
     for (const to of possibleMoves) {
-      const updatedGame = movePiece(
+      const { game: updatedGame, moveId } = movePiece(
         game,
         queenPiece,
         from,
@@ -990,7 +1223,7 @@ export function getLegalMoves(game: Game): Game[] {
         null
       );
       if (!isInCheck(updatedGame.position, isWhite)) {
-        possibleGames.push(updatedGame);
+        possibleGames[moveId] = updatedGame;
       }
     }
   }
@@ -1008,7 +1241,7 @@ export function getLegalMoves(game: Game): Game[] {
       game.possibleCastles
     );
   for (const to of split(regular)) {
-    const updatedGame = movePiece(
+    const { game: updatedGame, moveId } = movePiece(
       game,
       kingPiece,
       king,
@@ -1020,11 +1253,11 @@ export function getLegalMoves(game: Game): Game[] {
       null
     );
     if (!isInCheck(updatedGame.position, isWhite)) {
-      possibleGames.push(updatedGame);
+      possibleGames[moveId] = updatedGame;
     }
   }
   if (!isNull(kingsideCastles)) {
-    const updatedGame = movePiece(
+    const { game: updatedGame, moveId } = movePiece(
       game,
       kingPiece,
       king,
@@ -1035,12 +1268,11 @@ export function getLegalMoves(game: Game): Game[] {
       false,
       null
     );
-    if (!isInCheck(updatedGame.position, isWhite)) {
-      possibleGames.push(updatedGame);
-    }
+    // We already checked that it's not check
+    possibleGames[moveId] = updatedGame;
   }
   if (!isNull(queensideCastles)) {
-    const updatedGame = movePiece(
+    const { game: updatedGame, moveId } = movePiece(
       game,
       kingPiece,
       king,
@@ -1051,9 +1283,8 @@ export function getLegalMoves(game: Game): Game[] {
       false,
       null
     );
-    if (!isInCheck(updatedGame.position, isWhite)) {
-      possibleGames.push(updatedGame);
-    }
+    // We already checked that it's not check
+    possibleGames[moveId] = updatedGame;
   }
 
   return possibleGames;
@@ -1143,7 +1374,7 @@ function isDeadPosition(position: Position) {
 export function setGameResult(game: Game) {
   game.possibleMoves = getLegalMoves(game);
 
-  if (game.possibleMoves.length === 0) {
+  if (Object.keys(game.possibleMoves).length === 0) {
     const isWhite = game.player === Player.WHITE;
     if (isInCheck(game.position, isWhite)) {
       game.result = isWhite ? Result.BLACK : Result.WHITE;
@@ -1180,16 +1411,8 @@ export function countLegalMoves(game: Game, depth: number = 1) {
 
   const possibleGames = getLegalMoves(game);
   let sum = 0;
-  for (let i = 0; i < possibleGames.length; i++) {
-    const next = countLegalMoves(possibleGames[i], depth - 1);
-    // if (depth === 2) {
-    //   console.log(
-    //     squareToHumanNotation(moves[i].moves[0].from) +
-    //       squareToHumanNotation(moves[i].moves[0].to),
-    //     next
-    //   );
-    // }
-    sum += next;
+  for (const moveId in possibleGames) {
+    sum += countLegalMoves(possibleGames[moveId], depth - 1);
   }
   return sum;
 }

@@ -10,8 +10,7 @@ import {
   Player,
   setGameResult,
 } from "../../move-generator";
-import { CONCURRENT_GAMES } from "./constants";
-import { findPossibleMove, moveForOutputIndex } from "./output-layer-mapping";
+import { moveForOutputIndex } from "./output-layer-mapping";
 import { Pairings } from "./types";
 
 function getActivationsFromBitboard(bitboard: Bitboard) {
@@ -83,9 +82,19 @@ function getActivationsFromBitboard(bitboard: Bitboard) {
   ];
 }
 
-async function pickMove(game: Game, network: tf.LayersModel) {
+type GameWithPlayers = {
+  game: Game;
+  whiteId: string;
+  blackId: string;
+};
+
+type GamesPerNetwork = {
+  [networkId: string]: GameWithPlayers[];
+};
+
+function pickMoves(games: GameWithPlayers[], network: tf.LayersModel) {
   const input = tf.tensor(
-    [
+    games.map(({ game }) => [
       // player
       game.player === Player.WHITE ? 1 : 0,
       // position
@@ -108,41 +117,37 @@ async function pickMove(game: Game, network: tf.LayersModel) {
       game.possibleCastles[Castle.BLACK_QUEENSIDE] ? 1 : 0,
       // en passant
       ...getActivationsFromBitboard(game.enPassantSquare),
-    ],
-    [1, 837]
+    ])
   );
 
-  const output = await (network.predict(input) as tf.Tensor).data();
+  const outputs = (network.predict(input) as tf.Tensor).dataSync();
 
-  let max = -Infinity;
-  const validGames: { score: number; game: Game }[] = [];
-  for (let i = 0; i < output.length; i++) {
-    let possibleGame = findPossibleMove(game, moveForOutputIndex[i]);
-    if (possibleGame) {
-      const score = output[i];
-      validGames.push({ score, game: possibleGame });
-      max = Math.max(max, score);
+  return games.map(({ game, whiteId, blackId }, i) => {
+    const output = outputs.slice(i * 1972, (i + 1) * 1972);
+    let max = -Infinity;
+    const validGames: { score: number; game: Game }[] = [];
+    for (let i = 0; i < output.length; i++) {
+      let possibleGame = game.possibleMoves[moveForOutputIndex[i]];
+      if (possibleGame) {
+        const score = output[i];
+        validGames.push({ score, game: possibleGame });
+        max = Math.max(max, score);
+      }
     }
-  }
 
-  const topGames = validGames
-    .filter((v) => v.score >= 0.95 * max)
-    .sort((g1, g2) => g1.score - g2.score)
-    .slice(0, 3);
+    const topGames = validGames
+      .filter((v) => v.score >= 0.95 * max)
+      .sort((g1, g2) => g1.score - g2.score)
+      .slice(0, 3);
 
-  return topGames[Math.floor(Math.random() * topGames.length)].game;
-}
-
-async function playGame(white: tf.LayersModel, black: tf.LayersModel) {
-  let game = gameFromFen(
-    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-  );
-  while (!game.result) {
-    game = setGameResult(
-      await pickMove(game, game.player === Player.WHITE ? white : black)
-    );
-  }
-  return game.result;
+    return {
+      game: setGameResult(
+        topGames[Math.floor(Math.random() * topGames.length)].game
+      ),
+      whiteId,
+      blackId,
+    };
+  });
 }
 
 async function main() {
@@ -181,23 +186,54 @@ async function main() {
       Promise.resolve({})
     );
 
-  let missing = Object.entries(pairings).filter(([, result]) => !result);
+  let gamesPerNetwork = Object.keys(pairings).reduce<GamesPerNetwork>(
+    (acc, id) => {
+      const [whiteId, blackId] = id.split("-");
+      acc[whiteId] = acc[whiteId] || [];
+      acc[whiteId].push({
+        game: gameFromFen(
+          "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        ),
+        whiteId,
+        blackId,
+      });
+      return acc;
+    },
+    {}
+  );
 
-  while (missing.length > 0) {
-    console.log(`${missing.length} games left`);
-    const batch = missing.slice(0, CONCURRENT_GAMES);
-
-    await Promise.all(
-      batch.map(async ([id]) => {
-        const [whiteId, blackId] = id.split("-");
-        const result = await playGame(networks[whiteId], networks[blackId]);
-        pairings[id] = result;
-      })
+  let move = 0;
+  while (Object.keys(gamesPerNetwork).length > 0) {
+    console.log(
+      `Move ${++move}, ${
+        Object.keys(gamesPerNetwork).length
+      } networks still playing`
     );
-
-    await fs.promises.writeFile(pairingsFilename, JSON.stringify(pairings));
-    missing = Object.entries(pairings).filter(([, result]) => !result);
+    let newGamesPerNetwork: GamesPerNetwork = {};
+    for (const networkId in gamesPerNetwork) {
+      for (const gameWithPlayer of pickMoves(
+        gamesPerNetwork[networkId],
+        networks[networkId]
+      )) {
+        const result = gameWithPlayer.game.result;
+        if (result) {
+          pairings[`${gameWithPlayer.whiteId}-${gameWithPlayer.blackId}`] =
+            result;
+        } else {
+          const newNetworkId =
+            gameWithPlayer.game.player === Player.WHITE
+              ? gameWithPlayer.whiteId
+              : gameWithPlayer.blackId;
+          newGamesPerNetwork[newNetworkId] =
+            newGamesPerNetwork[newNetworkId] || [];
+          newGamesPerNetwork[newNetworkId].push(gameWithPlayer);
+        }
+      }
+    }
+    gamesPerNetwork = newGamesPerNetwork;
   }
+
+  await fs.promises.writeFile(pairingsFilename, JSON.stringify(pairings));
 }
 
 main().catch((error) => {

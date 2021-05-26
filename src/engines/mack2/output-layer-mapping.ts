@@ -3,7 +3,6 @@ import {
   bitwiseAnd,
   bitwiseNot,
   bitwiseOr,
-  equals,
   getBottomSquare,
   getLeftSquare,
   getMoveableSqaresToBottom,
@@ -18,7 +17,12 @@ import {
   getTopSquare,
   split,
 } from "../../bitboard";
-import { Castle, Game, Piece, PromotionPiece } from "../../move-generator";
+import {
+  Castle,
+  generateMoveId,
+  Piece,
+  PromotionPiece,
+} from "../../move-generator";
 
 function getQueenMoves(from: Bitboard) {
   const moveableSquares = bitwiseAnd([
@@ -105,116 +109,47 @@ const blackPromotionMoves: { from: Bitboard; to: Bitboard }[] = [
   { from: [0x00000000, 0x00008000], to: [0x00000000, 0x00000080] },
 ];
 
-type PartialMove = {
-  from: Bitboard;
-  to: Bitboard;
-  isCastling: Castle | null;
-  isPromotingTo: PromotionPiece | null;
-};
-
-export const moveForOutputIndex: PartialMove[] = [
+export const moveForOutputIndex = [
   ...split([0xffffffff, 0xffffffff]).flatMap((from) =>
-    getQueenMoves(from).map((to) => ({
-      from,
-      to,
-      isCastling: null,
-      isPromotingTo: null,
-    }))
+    getQueenMoves(from).map((to) => generateMoveId(from, to, null, null))
   ),
   ...split([0xffffffff, 0xffffffff]).flatMap((from) =>
-    getKnightMoves(from).map((to) => ({
-      from,
-      to,
-      isCastling: null,
-      isPromotingTo: null,
-    }))
+    getKnightMoves(from).map((to) => generateMoveId(from, to, null, null))
   ),
   ...whitePromotionMoves.flatMap(({ from, to }) => [
-    {
-      from,
-      to,
-      isCastling: null,
-      isPromotingTo: Piece.WHITE_QUEEN as PromotionPiece,
-    },
-    {
-      from,
-      to,
-      isCastling: null,
-      isPromotingTo: Piece.WHITE_ROOK as PromotionPiece,
-    },
-    {
-      from,
-      to,
-      isCastling: null,
-      isPromotingTo: Piece.WHITE_BISHOP as PromotionPiece,
-    },
-    {
-      from,
-      to,
-      isCastling: null,
-      isPromotingTo: Piece.WHITE_KNIGHT as PromotionPiece,
-    },
+    generateMoveId(from, to, null, Piece.WHITE_QUEEN as PromotionPiece),
+    generateMoveId(from, to, null, Piece.WHITE_ROOK as PromotionPiece),
+    generateMoveId(from, to, null, Piece.WHITE_BISHOP as PromotionPiece),
+    generateMoveId(from, to, null, Piece.WHITE_KNIGHT as PromotionPiece),
   ]),
   ...blackPromotionMoves.flatMap(({ from, to }) => [
-    {
-      from,
-      to,
-      isCastling: null,
-      isPromotingTo: Piece.BLACK_QUEEN as PromotionPiece,
-    },
-    {
-      from,
-      to,
-      isCastling: null,
-      isPromotingTo: Piece.BLACK_ROOK as PromotionPiece,
-    },
-    {
-      from,
-      to,
-      isCastling: null,
-      isPromotingTo: Piece.BLACK_BISHOP as PromotionPiece,
-    },
-    {
-      from,
-      to,
-      isCastling: null,
-      isPromotingTo: Piece.BLACK_KNIGHT as PromotionPiece,
-    },
+    generateMoveId(from, to, null, Piece.BLACK_QUEEN as PromotionPiece),
+    generateMoveId(from, to, null, Piece.BLACK_ROOK as PromotionPiece),
+    generateMoveId(from, to, null, Piece.BLACK_BISHOP as PromotionPiece),
+    generateMoveId(from, to, null, Piece.BLACK_KNIGHT as PromotionPiece),
   ]),
-  {
-    from: [0x00000000, 0x00000008],
-    to: [0x00000000, 0x00000002],
-    isCastling: Castle.WHITE_KINGSIDE,
-    isPromotingTo: null,
-  },
-  {
-    from: [0x00000000, 0x00000008],
-    to: [0x00000000, 0x00000020],
-    isCastling: Castle.WHITE_QUEENSIDE,
-    isPromotingTo: null,
-  },
-  {
-    from: [0x08000000, 0x00000000],
-    to: [0x02000000, 0x00000000],
-    isCastling: Castle.BLACK_KINGSIDE,
-    isPromotingTo: null,
-  },
-  {
-    from: [0x08000000, 0x00000000],
-    to: [0x20000000, 0x00000000],
-    isCastling: Castle.BLACK_QUEENSIDE,
-    isPromotingTo: null,
-  },
+  generateMoveId(
+    [0x00000000, 0x00000008],
+    [0x00000000, 0x00000002],
+    Castle.WHITE_KINGSIDE,
+    null
+  ),
+  generateMoveId(
+    [0x00000000, 0x00000008],
+    [0x00000000, 0x00000020],
+    Castle.WHITE_QUEENSIDE,
+    null
+  ),
+  generateMoveId(
+    [0x08000000, 0x00000000],
+    [0x02000000, 0x00000000],
+    Castle.BLACK_KINGSIDE,
+    null
+  ),
+  generateMoveId(
+    [0x08000000, 0x00000000],
+    [0x20000000, 0x00000000],
+    Castle.BLACK_QUEENSIDE,
+    null
+  ),
 ];
-
-export function findPossibleMove(game: Game, partialMove: PartialMove) {
-  return game.possibleMoves.find((game) => {
-    const lastMove = game.pastMoves[game.pastMoves.length - 1];
-    return (
-      equals([partialMove.from, lastMove.from]) &&
-      equals([partialMove.to, lastMove.to]) &&
-      lastMove.isCastling === partialMove.isCastling &&
-      lastMove.isPromotingTo === partialMove.isPromotingTo
-    );
-  });
-}

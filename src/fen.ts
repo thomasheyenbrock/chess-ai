@@ -75,7 +75,7 @@ export function gameFromFen(fen: string): Game {
   const game: Game = {
     position,
     player: player === "w" ? Player.WHITE : Player.BLACK,
-    pastMoves: [],
+    lastMove: null,
     possibleMoves: {},
     possibleCastles: {
       [Castle.WHITE_KINGSIDE]: castles.includes("K"),

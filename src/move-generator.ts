@@ -166,7 +166,7 @@ type Move = {
 export type Game = {
   position: Position;
   player: Player;
-  pastMoves: Move[];
+  lastMove: Move | null;
   possibleMoves: { [moveId: string]: Game };
   possibleCastles: Record<Castle, boolean>;
   enPassantSquare: Bitboard;
@@ -669,18 +669,15 @@ function movePiece(
       const newGame: Game = {
         position: newPosition,
         player: Player.BLACK,
-        pastMoves: [
-          ...game.pastMoves,
-          {
-            piece: Piece.WHITE_KING,
-            player: Player.WHITE,
-            from: [0x00000000, 0x00000008],
-            to: [0x00000000, 0x00000002],
-            isCapturing: null,
-            isCastling: Castle.WHITE_KINGSIDE,
-            isPromotingTo: null,
-          },
-        ],
+        lastMove: {
+          piece: Piece.WHITE_KING,
+          player: Player.WHITE,
+          from: [0x00000000, 0x00000008],
+          to: [0x00000000, 0x00000002],
+          isCapturing: null,
+          isCastling: Castle.WHITE_KINGSIDE,
+          isPromotingTo: null,
+        },
         possibleMoves: {},
         possibleCastles: {
           [Castle.WHITE_KINGSIDE]: false,
@@ -713,18 +710,15 @@ function movePiece(
       const newGame: Game = {
         position: newPosition,
         player: Player.BLACK,
-        pastMoves: [
-          ...game.pastMoves,
-          {
-            piece: Piece.WHITE_KING,
-            player: Player.WHITE,
-            from: [0x00000000, 0x00000008],
-            to: [0x00000000, 0x00000020],
-            isCapturing: null,
-            isCastling: Castle.WHITE_QUEENSIDE,
-            isPromotingTo: null,
-          },
-        ],
+        lastMove: {
+          piece: Piece.WHITE_KING,
+          player: Player.WHITE,
+          from: [0x00000000, 0x00000008],
+          to: [0x00000000, 0x00000020],
+          isCapturing: null,
+          isCastling: Castle.WHITE_QUEENSIDE,
+          isPromotingTo: null,
+        },
         possibleMoves: {},
         possibleCastles: {
           [Castle.WHITE_KINGSIDE]: false,
@@ -757,18 +751,15 @@ function movePiece(
       const newGame: Game = {
         position: newPosition,
         player: Player.WHITE,
-        pastMoves: [
-          ...game.pastMoves,
-          {
-            piece: Piece.BLACK_KING,
-            player: Player.BLACK,
-            from: [0x08000000, 0x00000000],
-            to: [0x02000000, 0x00000000],
-            isCapturing: null,
-            isCastling: Castle.BLACK_KINGSIDE,
-            isPromotingTo: null,
-          },
-        ],
+        lastMove: {
+          piece: Piece.BLACK_KING,
+          player: Player.BLACK,
+          from: [0x08000000, 0x00000000],
+          to: [0x02000000, 0x00000000],
+          isCapturing: null,
+          isCastling: Castle.BLACK_KINGSIDE,
+          isPromotingTo: null,
+        },
         possibleMoves: {},
         possibleCastles: {
           [Castle.WHITE_KINGSIDE]: game.possibleCastles[Castle.WHITE_KINGSIDE],
@@ -801,18 +792,15 @@ function movePiece(
       const newGame: Game = {
         position: newPosition,
         player: Player.WHITE,
-        pastMoves: [
-          ...game.pastMoves,
-          {
-            piece: Piece.BLACK_KING,
-            player: Player.BLACK,
-            from: [0x08000000, 0x00000000],
-            to: [0x20000000, 0x00000000],
-            isCapturing: null,
-            isCastling: Castle.BLACK_QUEENSIDE,
-            isPromotingTo: null,
-          },
-        ],
+        lastMove: {
+          piece: Piece.BLACK_KING,
+          player: Player.BLACK,
+          from: [0x08000000, 0x00000000],
+          to: [0x20000000, 0x00000000],
+          isCapturing: null,
+          isCastling: Castle.BLACK_QUEENSIDE,
+          isPromotingTo: null,
+        },
         possibleMoves: {},
         possibleCastles: {
           [Castle.WHITE_KINGSIDE]: game.possibleCastles[Castle.WHITE_KINGSIDE],
@@ -890,24 +878,21 @@ function movePiece(
   const newGame: Game = {
     position: newPosition,
     player: isWhite ? Player.BLACK : Player.WHITE,
-    pastMoves: [
-      ...game.pastMoves,
-      {
-        piece: movedPiece,
-        from,
-        to,
-        player: isWhite ? Player.WHITE : Player.BLACK,
-        isCapturing:
-          capturedPiece ||
-          (isCapturingEnPassant
-            ? isWhite
-              ? Piece.BLACK_PAWN
-              : Piece.WHITE_PAWN
-            : null),
-        isCastling: null,
-        isPromotingTo,
-      },
-    ],
+    lastMove: {
+      piece: movedPiece,
+      from,
+      to,
+      player: isWhite ? Player.WHITE : Player.BLACK,
+      isCapturing:
+        capturedPiece ||
+        (isCapturingEnPassant
+          ? isWhite
+            ? Piece.BLACK_PAWN
+            : Piece.WHITE_PAWN
+          : null),
+      isCastling: null,
+      isPromotingTo,
+    },
     possibleMoves: {},
     possibleCastles: {
       [Castle.WHITE_KINGSIDE]:

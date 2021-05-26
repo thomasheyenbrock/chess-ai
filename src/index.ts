@@ -169,14 +169,13 @@ function move(
   to: Bitboard,
   isPromotingTo: PromotionPiece | null
 ) {
-  const legalMove = Object.values(game.possibleMoves).find((possibleGame) => {
-    const lastMove = possibleGame.pastMoves[possibleGame.pastMoves.length - 1];
-    return (
-      equals([from, lastMove.from]) &&
-      equals([to, lastMove.to]) &&
-      isPromotingTo === lastMove.isPromotingTo
-    );
-  });
+  const legalMove = Object.values(game.possibleMoves).find(
+    (possibleGame) =>
+      possibleGame.lastMove &&
+      equals([from, possibleGame.lastMove.from]) &&
+      equals([to, possibleGame.lastMove.to]) &&
+      isPromotingTo === possibleGame.lastMove.isPromotingTo
+  );
   if (!legalMove) {
     return;
   }
@@ -188,10 +187,13 @@ function move(
     selectedPiece.square = null;
   }
 
-  const lastMove = game.pastMoves[game.pastMoves.length - 1];
   squares.forEach((rank, rankIndex) => {
     rank.forEach((square, fileIndex) => {
-      if (equals([square, lastMove.from]) || equals([square, lastMove.to])) {
+      if (
+        game.lastMove &&
+        (equals([square, game.lastMove.from]) ||
+          equals([square, game.lastMove.to]))
+      ) {
         squareElements[rankIndex][fileIndex].classList.add("last-move");
       } else {
         squareElements[rankIndex][fileIndex].classList.remove("last-move");
@@ -288,8 +290,13 @@ function makeMove(pickMove: PickMove) {
     return;
   }
   const randomGame = pickMove(game);
-  const lastMove = randomGame.pastMoves[randomGame.pastMoves.length - 1];
-  move(lastMove.from, lastMove.to, lastMove.isPromotingTo);
+  if (randomGame.lastMove) {
+    move(
+      randomGame.lastMove.from,
+      randomGame.lastMove.to,
+      randomGame.lastMove.isPromotingTo
+    );
+  }
   setTimeout(() => {
     makeMove(pickMove);
   }, 10);

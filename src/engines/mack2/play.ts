@@ -164,6 +164,12 @@ async function main() {
   const pairings: Pairings = JSON.parse(
     await fs.promises.readFile(pairingsFilename, "utf8")
   );
+
+  if (Object.values(pairings).every(Boolean)) {
+    console.log("Already finished");
+    return;
+  }
+
   const networkIds = await fs.promises.readdir(
     path.join(__dirname, `generation${generation}`)
   );

@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@tensorflow/tfjs-node": "^3.6.1",
+    "concurrently": "^6.2.0",
     "seedrandom": "~2.4.3"
   }
 }

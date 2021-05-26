@@ -26,6 +26,8 @@ async function main() {
     throw new Error("generation missing");
   }
 
+  console.log(`Generating networks for generation ${generation}`);
+
   const networkIds: string[] = [];
 
   const base = path.resolve(__dirname, `generation${generation}`);
@@ -82,7 +84,7 @@ async function main() {
       .map(([id]) => id);
 
     for (let i = 0; i < survivorIds.length; i++) {
-      console.log("Mutating best networks", i / survivorIds.length);
+      console.log(`Mutating best networks: ${i} / ${survivorIds.length}`);
       const model = await tf.loadLayersModel(
         `file://${path.resolve(
           __dirname,
@@ -96,10 +98,7 @@ async function main() {
 
       const weights = model.getWeights();
       for (let j = 1; j <= REPRODUCTION; j++) {
-        console.log(
-          "Mutating best networks",
-          i / survivorIds.length + j / survivorIds.length / REPRODUCTION
-        );
+        console.log(`  Cloning network: ${j} / ${REPRODUCTION}`);
         const newModel = await generateRandomNetwork();
         newModel.setWeights(
           weights.map((weight) =>
@@ -110,19 +109,17 @@ async function main() {
         networkIds.push(`${survivorIds[i]}_${j}`);
       }
     }
-    console.log("Mutating best networks", 1);
   }
 
   const newNetworks =
     NUMBER_OF_NETWORKS - (generation > 1 ? SURVIVORS * (REPRODUCTION + 1) : 0);
 
   for (let i = 0; i < newNetworks; i++) {
-    console.log("Generating random networks", i / newNetworks);
+    console.log(`Generating random networks: ${i} / ${newNetworks}`);
     const network = await generateRandomNetwork();
     await network.save(`file://${base}/${i}`);
     networkIds.push(i.toString());
   }
-  console.log("Generating random networks", 1);
 
   const pairings: Pairings[] = [{}];
   for (let i = 0; i < networkIds.length - 1; i++) {

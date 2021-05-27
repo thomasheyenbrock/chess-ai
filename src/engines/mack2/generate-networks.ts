@@ -3,9 +3,10 @@ import * as fs from "fs";
 import * as path from "path";
 import { Result } from "../../move-generator";
 import { NUMBER_OF_NETWORKS, REPRODUCTION, SURVIVORS } from "./constants";
+import { parsePairings, stringifyPairings } from "./pairings";
 import { Pairings } from "./types";
 
-async function generateRandomNetwork() {
+function generateRandomNetwork() {
   return tf.sequential({
     layers: [
       tf.layers.dense({
@@ -35,28 +36,31 @@ async function main() {
   await fs.promises.mkdir(base);
 
   if (generation > 1) {
+    console.log("Evaluate scores for previous generaton");
     const pairingFiles = await fs.promises.readdir(
       path.join(__dirname, `generation${generation - 1}`)
     );
     const pairings: Pairings[] = await Promise.all(
       pairingFiles
-        .filter((filename) => filename.match(/^pairings.*\.json$/))
-        .map(async (filename) =>
-          JSON.parse(
-            await fs.promises.readFile(
-              path.join(__dirname, `generation${generation - 1}`, filename),
-              "utf8"
-            )
-          )
+        .filter((filename) => filename.match(/^pairings.*\.txt$/))
+        .map(
+          async (filename) =>
+            parsePairings(
+              await fs.promises.readFile(
+                path.join(__dirname, `generation${generation - 1}`, filename),
+                "utf8"
+              )
+            ).pairings
         )
     );
     const scores = Object.entries(
       pairings.reduce<Pairings>((acc, pairing) => ({ ...acc, ...pairing }), {})
-    ).reduce<Score>((acc, [pairingId, result]) => {
+    ).reduce<Score>((acc, [pairingId, game]) => {
       const [white, black] = pairingId.split("-");
       acc[white] = acc[white] || 0;
       acc[black] = acc[black] || 0;
-      switch (result) {
+      switch (game?.result) {
+        case undefined:
         case null:
           throw new Error(`no result for pairing ${pairingId}`);
         case Result.WHITE:
@@ -78,10 +82,14 @@ async function main() {
       }
       return acc;
     }, {});
+    console.log(scores);
+
+    console.log("Determining survivors");
     const survivorIds = Object.entries(scores)
       .sort(([, a], [, b]) => b - a)
       .slice(0, SURVIVORS)
       .map(([id]) => id);
+    console.log(survivorIds);
 
     for (let i = 0; i < survivorIds.length; i++) {
       console.log(`Mutating best networks: ${i} / ${survivorIds.length}`);
@@ -99,7 +107,7 @@ async function main() {
       const weights = model.getWeights();
       for (let j = 1; j <= REPRODUCTION; j++) {
         console.log(`  Cloning network: ${j} / ${REPRODUCTION}`);
-        const newModel = await generateRandomNetwork();
+        const newModel = generateRandomNetwork();
         newModel.setWeights(
           weights.map((weight) =>
             weight.add(tf.randomUniform(weight.shape, -0.5, 0.5))
@@ -116,7 +124,7 @@ async function main() {
 
   for (let i = 0; i < newNetworks; i++) {
     console.log(`Generating random networks: ${i} / ${newNetworks}`);
-    const network = await generateRandomNetwork();
+    const network = generateRandomNetwork();
     await network.save(`file://${base}/${i}`);
     networkIds.push(i.toString());
   }
@@ -141,9 +149,9 @@ async function main() {
         path.join(
           __dirname,
           `generation${process.argv[2]}`,
-          `pairings_${i}.json`
+          `pairings_${i}.txt`
         ),
-        JSON.stringify(p)
+        stringifyPairings({ pairings: p, move: 1 })
       )
     )
   );

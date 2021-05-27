@@ -53,12 +53,20 @@ async function main() {
 
     console.log(`Self-playing generation ${generation}`);
 
-    await concurrently([
-      `node ${__dirname}/play.js ${generation} 0`,
-      `node ${__dirname}/play.js ${generation} 1`,
-      `node ${__dirname}/play.js ${generation} 2`,
-      `node ${__dirname}/play.js ${generation} 3`,
-    ]);
+    let hasError = true;
+    while (hasError) {
+      hasError = false;
+      try {
+        await concurrently([
+          `node ${__dirname}/play.js ${generation} 0`,
+          `node ${__dirname}/play.js ${generation} 1`,
+          `node ${__dirname}/play.js ${generation} 2`,
+          `node ${__dirname}/play.js ${generation} 3`,
+        ]);
+      } catch {
+        hasError = true;
+      }
+    }
 
     generation += 1;
   }

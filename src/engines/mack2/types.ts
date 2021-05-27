@@ -1,5 +1,5 @@
-import { Result } from "../../move-generator";
+import { Game } from "../../move-generator";
 
-export type Pairings = { [id: string]: Result | null };
+export type Pairings = { [id: string]: Game | null };
 
 export type Batch = { white: string; black: string }[];

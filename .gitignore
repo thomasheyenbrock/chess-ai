@@ -3,3 +3,6 @@ node_modules
 model.json
 weights.bin
 pairings.json
+pairings.txt
+script.js
+script.js.map

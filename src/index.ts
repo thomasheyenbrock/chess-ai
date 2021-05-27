@@ -285,21 +285,25 @@ for (const element of document.getElementsByClassName("square")) {
   });
 }
 
-function makeMove(pickMove: PickMove) {
+function makeMove(pickMove: PickMove, humanPlayer?: Player) {
   if (game.result || Object.keys(game.possibleMoves).length === 0) {
     return;
   }
-  const randomGame = pickMove(game);
-  if (randomGame.lastMove) {
-    move(
-      randomGame.lastMove.from,
-      randomGame.lastMove.to,
-      randomGame.lastMove.isPromotingTo
-    );
+
+  if (game.player !== humanPlayer) {
+    const nextGame = pickMove(game);
+    if (nextGame.lastMove) {
+      move(
+        nextGame.lastMove.from,
+        nextGame.lastMove.to,
+        nextGame.lastMove.isPromotingTo
+      );
+    }
   }
+
   setTimeout(() => {
-    makeMove(pickMove);
-  }, 10);
+    makeMove(pickMove, humanPlayer);
+  }, 100);
 }
 
 document.getElementById("button-reset")!.addEventListener("click", () => {
@@ -310,4 +314,24 @@ document.getElementById("button-reset")!.addEventListener("click", () => {
 
 document.getElementById("button-mack1")!.addEventListener("click", () => {
   makeMove(engines.mack1);
+});
+
+document.getElementById("button-mack1-white")!.addEventListener("click", () => {
+  makeMove(engines.mack1, Player.WHITE);
+});
+
+document.getElementById("button-mack1-black")!.addEventListener("click", () => {
+  makeMove(engines.mack1, Player.BLACK);
+});
+
+document.getElementById("button-mack2")!.addEventListener("click", () => {
+  makeMove(engines.mack2);
+});
+
+document.getElementById("button-mack2-white")!.addEventListener("click", () => {
+  makeMove(engines.mack2, Player.WHITE);
+});
+
+document.getElementById("button-mack2-black")!.addEventListener("click", () => {
+  makeMove(engines.mack2, Player.BLACK);
 });

@@ -1,7 +1,9 @@
 {
   "compilerOptions": {
     "downlevelIteration": true,
+    "esModuleInterop": true,
     "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "resolveJsonModule": true,
     "strict": true
   }
 }

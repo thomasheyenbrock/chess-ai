@@ -98,18 +98,16 @@ async function main() {
     {}
   );
 
-  let moveCounter = 0;
+  let counter = 0;
   const doneGames: GameWithPlayers[] = [];
   while (
     Object.keys(gamesPerNetwork).length > 0 &&
-    moveCounter < MOVES_PER_PLAY * 2
+    counter++ < MOVES_PER_PLAY * 2
   ) {
-    let halfMoveCounter =
-      gamesPerNetwork[Object.keys(gamesPerNetwork)[0]][0].game.moveCounter * 2 +
-      moveCounter++;
+    const sampleGame = gamesPerNetwork[Object.keys(gamesPerNetwork)[0]][0].game;
     console.log(
-      `Move ${Math.floor(halfMoveCounter / 2 + 0.5)} ${
-        halfMoveCounter % 2 === 0 ? "Black" : "White"
+      `Move ${sampleGame.moveCounter} ${
+        sampleGame.player === Player.WHITE ? "White" : "Black"
       }, ${Object.keys(gamesPerNetwork).length} networks still playing`
     );
     let newGamesPerNetwork: GamesPerNetwork = {};

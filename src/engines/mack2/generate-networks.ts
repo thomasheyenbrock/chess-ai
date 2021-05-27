@@ -1,7 +1,7 @@
 import * as tf from "@tensorflow/tfjs-node";
 import * as fs from "fs";
 import * as path from "path";
-import { Result } from "../../move-generator";
+import { Player, Result } from "../../move-generator";
 import { NUMBER_OF_NETWORKS, REPRODUCTION, SURVIVORS } from "./constants";
 import { parsePairings, stringifyPairings } from "./pairings";
 import { Pairings } from "./types";
@@ -43,41 +43,46 @@ async function main() {
     const pairings: Pairings[] = await Promise.all(
       pairingFiles
         .filter((filename) => filename.match(/^pairings.*\.txt$/))
-        .map(
-          async (filename) =>
-            parsePairings(
-              await fs.promises.readFile(
-                path.join(__dirname, `generation${generation - 1}`, filename),
-                "utf8"
-              )
-            ).pairings
+        .map(async (filename) =>
+          parsePairings(
+            await fs.promises.readFile(
+              path.join(__dirname, `generation${generation - 1}`, filename),
+              "utf8"
+            )
+          )
         )
     );
     const scores = Object.entries(
       pairings.reduce<Pairings>((acc, pairing) => ({ ...acc, ...pairing }), {})
     ).reduce<Score>((acc, [pairingId, game]) => {
+      if (!game || !game.result) {
+        throw new Error(`no result for pairing ${pairingId}`);
+      }
+
       const [white, black] = pairingId.split("-");
       acc[white] = acc[white] || 0;
       acc[black] = acc[black] || 0;
-      switch (game?.result) {
-        case undefined:
-        case null:
-          throw new Error(`no result for pairing ${pairingId}`);
+
+      const halfMoves =
+        (game.moveCounter - 1) * 2 + (game.player === Player.WHITE ? 0 : 1);
+      const moveScore = 10 * 2 ** (-halfMoves / 100);
+
+      switch (game.result) {
         case Result.WHITE:
-          acc[white] += 10;
+          acc[white] += 5 + moveScore;
           break;
         case Result.BLACK:
-          acc[black] += 10;
+          acc[black] += 5 + moveScore;
           break;
         case Result.STALEMATE:
         case Result.DEAD_POSITION:
-          acc[white] += 5;
-          acc[black] += 5;
+          acc[white] += 1 + moveScore / 2;
+          acc[black] += 1 + moveScore / 2;
           break;
         case Result.REPITITION:
         case Result.FIFTY_MOVE_RULE:
-          acc[white] += 1;
-          acc[black] += 1;
+          acc[white] -= 2;
+          acc[black] -= 2;
           break;
       }
       return acc;
@@ -151,7 +156,7 @@ async function main() {
           `generation${process.argv[2]}`,
           `pairings_${i}.txt`
         ),
-        stringifyPairings({ pairings: p, move: 1 })
+        stringifyPairings(p)
       )
     )
   );

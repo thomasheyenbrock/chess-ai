@@ -1,27 +1,18 @@
 import { Pairings } from "./types";
 
-export function parsePairings(str: string): {
-  pairings: Pairings;
-  move: number;
-} {
+export function parsePairings(str: string): Pairings {
   const lines = str.trim().split("\n");
   const pairings: Pairings = {};
-  for (const line of lines.slice(1)) {
+  for (const line of lines) {
     const [id, ...gameParts] = line.split(" ");
     const gameString = gameParts.join(" ");
     pairings[id] = JSON.parse(gameString);
   }
-  return { pairings, move: parseInt(lines[0]) };
+  return pairings;
 }
 
-export function stringifyPairings({
-  pairings,
-  move,
-}: {
-  pairings: Pairings;
-  move?: number;
-}) {
-  let stringified = move ? `${move}\n` : "";
+export function stringifyPairings(pairings: Pairings) {
+  let stringified = "";
   for (const id in pairings) {
     stringified += `${id} ${JSON.stringify(pairings[id])}\n`;
   }

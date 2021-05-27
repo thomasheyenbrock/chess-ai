@@ -38,7 +38,7 @@ export function gameFromFen(fen: string): Game {
     castles,
     enPassantSquare,
     fiftyMoveCounter,
-    totalMoveCounter,
+    moveCounter,
   ] = fen.split(" ");
   const position: Game["position"] = {
     K: [0x00000000, 0x00000000],
@@ -90,6 +90,7 @@ export function gameFromFen(fen: string): Game {
             mapFileToFileIndex[enPassantFile]
           ],
     positionCounts: {},
+    moveCounter: parseInt(moveCounter, 10),
     fiftyMoveCounter: parseInt(fiftyMoveCounter, 10),
     result: null,
   };

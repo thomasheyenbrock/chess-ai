@@ -171,6 +171,7 @@ export type Game = {
   possibleCastles: Record<Castle, boolean>;
   enPassantSquare: Bitboard;
   positionCounts: { [stringifiedGame: string]: number };
+  moveCounter: number;
   fiftyMoveCounter: number;
   result: Result | null;
 };
@@ -687,6 +688,7 @@ function movePiece(
             game.possibleCastles[Castle.BLACK_QUEENSIDE],
         },
         enPassantSquare: [0x00000000, 0x00000000],
+        moveCounter: game.moveCounter,
         fiftyMoveCounter: game.fiftyMoveCounter + 1,
         positionCounts: game.positionCounts,
         result: null,
@@ -728,6 +730,7 @@ function movePiece(
             game.possibleCastles[Castle.BLACK_QUEENSIDE],
         },
         enPassantSquare: [0x00000000, 0x00000000],
+        moveCounter: game.moveCounter,
         fiftyMoveCounter: game.fiftyMoveCounter + 1,
         positionCounts: game.positionCounts,
         result: null,
@@ -769,6 +772,7 @@ function movePiece(
           [Castle.BLACK_QUEENSIDE]: false,
         },
         enPassantSquare: [0x00000000, 0x00000000],
+        moveCounter: game.moveCounter + 1,
         fiftyMoveCounter: game.fiftyMoveCounter + 1,
         positionCounts: game.positionCounts,
         result: null,
@@ -810,6 +814,7 @@ function movePiece(
           [Castle.BLACK_QUEENSIDE]: false,
         },
         enPassantSquare: [0x00000000, 0x00000000],
+        moveCounter: game.moveCounter + 1,
         fiftyMoveCounter: game.fiftyMoveCounter + 1,
         positionCounts: game.positionCounts,
         result: null,
@@ -941,6 +946,7 @@ function movePiece(
         ),
     },
     enPassantSquare,
+    moveCounter: game.moveCounter + (isWhite ? 0 : 1),
     fiftyMoveCounter:
       movedPiece === Piece.WHITE_PAWN ||
       movedPiece === Piece.BLACK_PAWN ||

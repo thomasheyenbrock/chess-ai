@@ -44,7 +44,7 @@ async function main() {
     `generation${generation}`,
     `pairings_${pairingBatch}.txt`
   );
-  const { pairings, move } = parsePairings(
+  const pairings = parsePairings(
     await fs.promises.readFile(pairingsFilename, "utf8")
   );
 
@@ -98,13 +98,15 @@ async function main() {
     {}
   );
 
-  let newMove = 0;
+  let moveCounter = 0;
   const doneGames: GameWithPlayers[] = [];
   while (
     Object.keys(gamesPerNetwork).length > 0 &&
-    newMove < MOVES_PER_PLAY * 2
+    moveCounter < MOVES_PER_PLAY * 2
   ) {
-    let halfMoveCounter = move + newMove++;
+    let halfMoveCounter =
+      gamesPerNetwork[Object.keys(gamesPerNetwork)[0]][0].game.moveCounter * 2 +
+      moveCounter++;
     console.log(
       `Move ${Math.floor(halfMoveCounter / 2 + 0.5)} ${
         halfMoveCounter % 2 === 0 ? "Black" : "White"
@@ -137,7 +139,7 @@ async function main() {
   }
   await fs.promises.writeFile(
     pairingsFilename,
-    stringifyPairings({ pairings: donePairings, move: move + newMove })
+    stringifyPairings(donePairings)
   );
 
   for (const gameWithPlayerList of Object.values(gamesPerNetwork)) {
@@ -147,7 +149,7 @@ async function main() {
     }
     await fs.promises.appendFile(
       pairingsFilename,
-      stringifyPairings({ pairings: continuedPairings })
+      stringifyPairings(continuedPairings)
     );
   }
 

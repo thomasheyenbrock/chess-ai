@@ -96,6 +96,7 @@ async function main() {
       .map(([id]) => id);
     console.log(survivorIds);
 
+    const mutationFactor = 2 ** (-generation / 50 - 1);
     for (let i = 0; i < survivorIds.length; i++) {
       console.log(`Mutating best networks: ${i} / ${survivorIds.length}`);
       const model = await tf.loadLayersModel(
@@ -115,7 +116,9 @@ async function main() {
         const newModel = generateRandomNetwork();
         newModel.setWeights(
           weights.map((weight) =>
-            weight.add(tf.randomUniform(weight.shape, -0.5, 0.5))
+            weight.add(
+              tf.randomUniform(weight.shape, -mutationFactor, mutationFactor)
+            )
           )
         );
         await newModel.save(`file://${base}/${survivorIds[i]}_${j}`);

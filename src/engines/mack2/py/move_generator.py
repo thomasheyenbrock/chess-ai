@@ -239,38 +239,147 @@ def get_capture_squares(position: Position, is_white: bool) -> int:
     )
 
 
-def is_in_check(position: Position, is_white: bool) -> bool:
-    king = position.K if is_white else position.k
+NORTH_MOVES = {}
+SOUTH_MOVES = {}
+WEST_MOVES = {}
+EAST_MOVES = {}
+NORTH_WEST_MOVES = {}
+SOUTH_WEST_MOVES = {}
+NORTH_EAST_MOVES = {}
+SOUTH_EAST_MOVES = {}
 
-    enemy_knight = position.n if is_white else position.N
-    top = get_top_square(get_top_square(king))
-    bottom = get_bottom_square(get_bottom_square(king))
-    left = get_left_square(get_left_square(king))
-    right = get_right_square(get_right_square(king))
-    if (
-        (
-            get_left_square(top)
-            | get_right_square(top)
-            | get_left_square(bottom)
-            | get_right_square(bottom)
-            | get_top_square(left)
-            | get_bottom_square(left)
-            | get_top_square(right)
-            | get_bottom_square(right)
+NORTH_ATTACKS = {}
+SOUTH_ATTACKS = {}
+WEST_ATTACKS = {}
+EAST_ATTACKS = {}
+NORTH_WEST_ATTACKS = {}
+SOUTH_WEST_ATTACKS = {}
+NORTH_EAST_ATTACKS = {}
+SOUTH_EAST_ATTACKS = {}
+
+KNIGHT_MOVES = {}
+PAWN_ATTACKS = {True: {}, False: {}}
+
+
+def generate_possibilities(direction: Callable[[int], int]) -> List[int]:
+    forward = direction(current)
+    possibilities = [0] if forward == 0 else [0, forward]
+    while forward != 0:
+        forward = direction(forward)
+        new_possibilities = []
+        for p in possibilities:
+            new_possibilities += [p] if forward == 0 else [p, p | forward]
+        possibilities = new_possibilities
+    return possibilities
+
+
+for rank in range(8):
+    for file in range(8):
+        square = 2 ** (8 * rank + file)
+
+        NORTH_MOVES[square] = 0x0000_0000_0000_0000
+        NORTH_ATTACKS[square] = {0x0000_0000_0000_0000: 0x0000_0000_0000_0000}
+        current = get_top_square(square)
+        while current != 0:
+            NORTH_MOVES[square] |= current
+            for p in generate_possibilities(get_top_square):
+                NORTH_ATTACKS[square][p | current] = current
+            current = get_top_square(current)
+
+        SOUTH_MOVES[square] = 0x0000_0000_0000_0000
+        SOUTH_ATTACKS[square] = {0x0000_0000_0000_0000: 0x0000_0000_0000_0000}
+        current = get_bottom_square(square)
+        while current != 0:
+            SOUTH_MOVES[square] |= current
+            for p in generate_possibilities(get_bottom_square):
+                SOUTH_ATTACKS[square][p | current] = current
+            current = get_bottom_square(current)
+
+        WEST_MOVES[square] = 0x0000_0000_0000_0000
+        WEST_ATTACKS[square] = {0x0000_0000_0000_0000: 0x0000_0000_0000_0000}
+        current = get_left_square(square)
+        while current != 0:
+            WEST_MOVES[square] |= current
+            for p in generate_possibilities(get_left_square):
+                WEST_ATTACKS[square][p | current] = current
+            current = get_left_square(current)
+
+        EAST_MOVES[square] = 0x0000_0000_0000_0000
+        EAST_ATTACKS[square] = {0x0000_0000_0000_0000: 0x0000_0000_0000_0000}
+        current = get_right_square(square)
+        while current != 0:
+            EAST_MOVES[square] |= current
+            for p in generate_possibilities(get_right_square):
+                EAST_ATTACKS[square][p | current] = current
+            current = get_right_square(current)
+
+        NORTH_WEST_MOVES[square] = 0x0000_0000_0000_0000
+        NORTH_WEST_ATTACKS[square] = {0x0000_0000_0000_0000: 0x0000_0000_0000_0000}
+        current = get_top_square(get_left_square(square))
+        while current != 0:
+            NORTH_WEST_MOVES[square] |= current
+            for p in generate_possibilities(
+                lambda x: get_top_square(get_left_square(x))
+            ):
+                NORTH_WEST_ATTACKS[square][p | current] = current
+            current = get_top_square(get_left_square(current))
+
+        NORTH_EAST_MOVES[square] = 0x0000_0000_0000_0000
+        NORTH_EAST_ATTACKS[square] = {0x0000_0000_0000_0000: 0x0000_0000_0000_0000}
+        current = get_top_square(get_right_square(square))
+        while current != 0:
+            NORTH_EAST_MOVES[square] |= current
+            for p in generate_possibilities(
+                lambda x: get_top_square(get_right_square(x))
+            ):
+                NORTH_EAST_ATTACKS[square][p | current] = current
+            current = get_top_square(get_right_square(current))
+
+        SOUTH_WEST_MOVES[square] = 0x0000_0000_0000_0000
+        SOUTH_WEST_ATTACKS[square] = {0x0000_0000_0000_0000: 0x0000_0000_0000_0000}
+        current = get_bottom_square(get_left_square(square))
+        while current != 0:
+            SOUTH_WEST_MOVES[square] |= current
+            for p in generate_possibilities(
+                lambda x: get_bottom_square(get_left_square(x))
+            ):
+                SOUTH_WEST_ATTACKS[square][p | current] = current
+            current = get_bottom_square(get_left_square(current))
+
+        SOUTH_EAST_MOVES[square] = 0x0000_0000_0000_0000
+        SOUTH_EAST_ATTACKS[square] = {0x0000_0000_0000_0000: 0x0000_0000_0000_0000}
+        current = get_bottom_square(get_right_square(square))
+        while current != 0:
+            SOUTH_EAST_MOVES[square] |= current
+            for p in generate_possibilities(
+                lambda x: get_bottom_square(get_right_square(x))
+            ):
+                SOUTH_EAST_ATTACKS[square][p | current] = current
+            current = get_bottom_square(get_right_square(current))
+
+        top = get_top_square(square)
+        bottom = get_bottom_square(square)
+
+        PAWN_ATTACKS[True][square] = get_left_square(top) | get_right_square(top)
+        PAWN_ATTACKS[False][square] = get_left_square(bottom) | get_right_square(bottom)
+
+        top2 = get_top_square(top)
+        bottom2 = get_bottom_square(bottom)
+        left2 = get_left_square(get_left_square(square))
+        right2 = get_right_square(get_right_square(square))
+        KNIGHT_MOVES[square] = (
+            get_left_square(top2)
+            | get_right_square(top2)
+            | get_left_square(bottom2)
+            | get_right_square(bottom2)
+            | get_top_square(left2)
+            | get_bottom_square(left2)
+            | get_top_square(right2)
+            | get_bottom_square(right2)
         )
-        & enemy_knight
-    ) != 0:
-        # Checked by knight
-        return True
 
-    enemy_pawn = position.p if is_white else position.P
-    in_direction = get_top_square(king) if is_white else get_bottom_square(king)
-    if (
-        (get_left_square(in_direction) | get_right_square(in_direction)) & enemy_pawn
-    ) != 0:
-        # Checked by pawn
-        return True
 
+def is_in_check(position: Position, is_white: bool) -> bool:
     all_pieces = (
         position.K
         | position.Q
@@ -285,96 +394,37 @@ def is_in_check(position: Position, is_white: bool) -> bool:
         | position.n
         | position.p
     )
+    king = position.K if is_white else position.k
+    queen = position.q if is_white else position.Q
+    rook = position.r if is_white else position.R
+    bishop = position.b if is_white else position.B
+    knight = position.n if is_white else position.N
+    pawn = position.p if is_white else position.P
 
-    enemy_queen_and_rook = (
-        (position.q | position.r) if is_white else (position.Q | position.R)
-    )
+    queen_and_rook = queen | rook
+    queen_and_bishop = queen | bishop
 
-    current_top = get_top_square(king)
-    while current_top != 0:
-        if current_top & enemy_queen_and_rook != 0:
-            # Checked on file by queen or rook
-            return True
-        if current_top & all_pieces != 0:
-            # Some other piece, so break the loop
-            break
-        current_top = get_top_square(current_top)
+    north_pieces = NORTH_MOVES[king] & all_pieces
+    south_pieces = SOUTH_MOVES[king] & all_pieces
+    west_pieces = WEST_MOVES[king] & all_pieces
+    east_pieces = EAST_MOVES[king] & all_pieces
+    north_west_pieces = NORTH_WEST_MOVES[king] & all_pieces
+    south_west_pieces = SOUTH_WEST_MOVES[king] & all_pieces
+    north_east_pieces = NORTH_EAST_MOVES[king] & all_pieces
+    south_east_pieces = SOUTH_EAST_MOVES[king] & all_pieces
 
-    current_bottom = get_bottom_square(king)
-    while current_bottom != 0:
-        if current_bottom & enemy_queen_and_rook != 0:
-            # Checked on file by queen or rook
-            return True
-        if current_bottom & all_pieces != 0:
-            # Some other piece, so break the loop
-            break
-        current_bottom = get_bottom_square(current_bottom)
-
-    current_left = get_left_square(king)
-    while current_left != 0:
-        if current_left & enemy_queen_and_rook != 0:
-            # Checked on rank by queen or rook
-            return True
-        if current_left & all_pieces != 0:
-            # Some other piece, so break the loop
-            break
-        current_left = get_left_square(current_left)
-
-    current_right = get_right_square(king)
-    while current_right != 0:
-        if current_right & enemy_queen_and_rook != 0:
-            # Checked on rank by queen or rook
-            return True
-        if current_right & all_pieces != 0:
-            # Some other piece, so break the loop
-            break
-        current_right = get_right_square(current_right)
-
-    enemy_queen_and_bishop = (
-        (position.q | position.b) if is_white else (position.Q | position.B)
-    )
-
-    current_top_left = get_left_square(get_top_square(king))
-    while current_top_left != 0:
-        if current_top_left & enemy_queen_and_bishop != 0:
-            # Checked on diagonal by queen or bishop
-            return True
-        if current_top_left & all_pieces != 0:
-            # Some other piece, so break the loop
-            break
-        current_top_left = get_left_square(get_top_square(current_top_left))
-
-    current_top_right = get_right_square(get_top_square(king))
-    while current_top_right != 0:
-        if current_top_right & enemy_queen_and_bishop != 0:
-            # Checked on diagonal by queen or bishop
-            return True
-        if current_top_right & all_pieces != 0:
-            # Some other piece, so break the loop
-            break
-        current_top_right = get_right_square(get_top_square(current_top_right))
-
-    current_bottom_left = get_left_square(get_bottom_square(king))
-    while current_bottom_left != 0:
-        if current_bottom_left & enemy_queen_and_bishop != 0:
-            # Checked on diagonal by queen or bishop
-            return True
-        if current_bottom_left & all_pieces != 0:
-            # Some other piece, so break the loop
-            break
-        current_bottom_left = get_left_square(get_bottom_square(current_bottom_left))
-
-    current_bottom_right = get_right_square(get_bottom_square(king))
-    while current_bottom_right != 0:
-        if current_bottom_right & enemy_queen_and_bishop != 0:
-            # Checked on diagonal by queen or bishop
-            return True
-        if current_bottom_right & all_pieces != 0:
-            # Some other piece, so break the loop
-            break
-        current_bottom_right = get_right_square(get_bottom_square(current_bottom_right))
-
-    return False
+    return (
+        (KNIGHT_MOVES[king] & knight)
+        | (NORTH_ATTACKS[king][north_pieces] & queen_and_rook)
+        | (SOUTH_ATTACKS[king][south_pieces] & queen_and_rook)
+        | (WEST_ATTACKS[king][west_pieces] & queen_and_rook)
+        | (EAST_ATTACKS[king][east_pieces] & queen_and_rook)
+        | (NORTH_WEST_ATTACKS[king][north_west_pieces] & queen_and_bishop)
+        | (SOUTH_WEST_ATTACKS[king][south_west_pieces] & queen_and_bishop)
+        | (NORTH_EAST_ATTACKS[king][north_east_pieces] & queen_and_bishop)
+        | (SOUTH_EAST_ATTACKS[king][south_east_pieces] & queen_and_bishop)
+        | (PAWN_ATTACKS[is_white][king] & pawn)
+    ) != 0
 
 
 def move_piece(

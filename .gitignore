@@ -6,3 +6,4 @@ pairings.json
 pairings.txt
 script.js
 script.js.map
+*.pyc

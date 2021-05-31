@@ -210,32 +210,22 @@ def get_moveable_squares_for_pawn(
 
 
 def get_capture_squares(position: Position, is_white: bool) -> int:
-    white_pieces = (
-        position.K | position.Q | position.R | position.B | position.N | position.P
-    )
-    black_pieces = (
-        position.k | position.q | position.r | position.b | position.n | position.p
-    )
-    all_pieces = white_pieces | black_pieces
     # If white is on turn, we check if black is checking white
-    friendly_pieces = black_pieces if is_white else white_pieces
-    enemy_pieces = white_pieces if is_white else black_pieces
+    player = Player.BLACK if is_white else Player.WHITE
+    friendly_pieces = position.black_pieces if is_white else position.white_pieces
+    enemy_pieces = position.white_pieces if is_white else position.black_pieces
     return (
         get_moveable_squares_for_queen(
-            all_pieces, enemy_pieces, position.q if is_white else position.Q
+            position.all_pieces, enemy_pieces, position.Q[player]
         )
         | get_moveable_squares_for_rook(
-            all_pieces, enemy_pieces, position.r if is_white else position.R
+            position.all_pieces, enemy_pieces, position.R[player]
         )
         | get_moveable_squares_for_bishop(
-            all_pieces, enemy_pieces, position.b if is_white else position.B
+            position.all_pieces, enemy_pieces, position.B[player]
         )
-        | get_moveable_squares_for_knight(
-            friendly_pieces, position.n if is_white else position.N
-        )
-        | get_capture_squares_for_pawn(
-            is_white, friendly_pieces, position.p if is_white else position.P
-        )
+        | get_moveable_squares_for_knight(friendly_pieces, position.N[player])
+        | get_capture_squares_for_pawn(is_white, friendly_pieces, position.P[player])
     )
 
 
@@ -380,38 +370,25 @@ for rank in range(8):
 
 
 def is_in_check(position: Position, is_white: bool) -> bool:
-    all_pieces = (
-        position.K
-        | position.Q
-        | position.R
-        | position.B
-        | position.N
-        | position.P
-        | position.k
-        | position.q
-        | position.r
-        | position.b
-        | position.n
-        | position.p
-    )
-    king = position.K if is_white else position.k
-    queen = position.q if is_white else position.Q
-    rook = position.r if is_white else position.R
-    bishop = position.b if is_white else position.B
-    knight = position.n if is_white else position.N
-    pawn = position.p if is_white else position.P
+    player = Player.BLACK if is_white else Player.WHITE
+    king = position.K[Player.WHITE if is_white else Player.BLACK]
+    queen = position.Q[player]
+    rook = position.R[player]
+    bishop = position.B[player]
+    knight = position.N[player]
+    pawn = position.P[player]
 
     queen_and_rook = queen | rook
     queen_and_bishop = queen | bishop
 
-    north_pieces = NORTH_MOVES[king] & all_pieces
-    south_pieces = SOUTH_MOVES[king] & all_pieces
-    west_pieces = WEST_MOVES[king] & all_pieces
-    east_pieces = EAST_MOVES[king] & all_pieces
-    north_west_pieces = NORTH_WEST_MOVES[king] & all_pieces
-    south_west_pieces = SOUTH_WEST_MOVES[king] & all_pieces
-    north_east_pieces = NORTH_EAST_MOVES[king] & all_pieces
-    south_east_pieces = SOUTH_EAST_MOVES[king] & all_pieces
+    north_pieces = NORTH_MOVES[king] & position.all_pieces
+    south_pieces = SOUTH_MOVES[king] & position.all_pieces
+    west_pieces = WEST_MOVES[king] & position.all_pieces
+    east_pieces = EAST_MOVES[king] & position.all_pieces
+    north_west_pieces = NORTH_WEST_MOVES[king] & position.all_pieces
+    south_west_pieces = SOUTH_WEST_MOVES[king] & position.all_pieces
+    north_east_pieces = NORTH_EAST_MOVES[king] & position.all_pieces
+    south_east_pieces = SOUTH_EAST_MOVES[king] & position.all_pieces
 
     return (
         (KNIGHT_MOVES[king] & knight)
@@ -439,26 +416,29 @@ def move_piece(
     is_promoting_to: Optional[PromotionPiece],
 ) -> Game:
     new_position = Position(
-        K=game.position.K,
-        Q=game.position.Q,
-        R=game.position.R,
-        B=game.position.B,
-        N=game.position.N,
-        P=game.position.P,
-        k=game.position.k,
-        q=game.position.q,
-        r=game.position.r,
-        b=game.position.b,
-        n=game.position.n,
-        p=game.position.p,
+        K=game.position.K[Player.WHITE],
+        Q=game.position.Q[Player.WHITE],
+        R=game.position.R[Player.WHITE],
+        B=game.position.B[Player.WHITE],
+        N=game.position.N[Player.WHITE],
+        P=game.position.P[Player.WHITE],
+        k=game.position.K[Player.BLACK],
+        q=game.position.Q[Player.BLACK],
+        r=game.position.R[Player.BLACK],
+        b=game.position.B[Player.BLACK],
+        n=game.position.N[Player.BLACK],
+        p=game.position.P[Player.BLACK],
     )
 
     if castle == Castle.WHITE_KINGSIDE:
-        new_position.K = 0x0000_0000_0000_0002
-        new_position.R = new_position.R ^ 0x0000_0000_0000_0005
+        new_position.K[Player.WHITE] = 0x0000_0000_0000_0002
+        new_position.R[Player.WHITE] ^= 0x0000_0000_0000_0005
+        new_position.white_pieces ^= 0x0000_0000_0000_000F
+        new_position.all_pieces ^= 0x0000_0000_0000_000F
+
         last_move = Move(
             player=Player.WHITE,
-            piece=Piece.WHITE_KING,
+            piece=Piece.KING,
             from_square=0x0000_0000_0000_0008,
             to_square=0x0000_0000_0000_0002,
             is_capturing=None,
@@ -486,10 +466,13 @@ def move_piece(
         return new_game
 
     if castle == Castle.WHITE_QUEENSIDE:
-        new_position.K = 0x0000_0000_0000_0020
-        new_position.R = new_position.R ^ 0x0000_0000_0000_0090
+        new_position.K[Player.WHITE] = 0x0000_0000_0000_0020
+        new_position.R[Player.WHITE] ^= 0x0000_0000_0000_0090
+        new_position.white_pieces ^= 0x0000_0000_0000_00B8
+        new_position.all_pieces ^= 0x0000_0000_0000_00B8
+
         last_move = Move(
-            piece=Piece.WHITE_KING,
+            piece=Piece.KING,
             player=Player.WHITE,
             from_square=0x0000_0000_0000_0008,
             to_square=0x0000_0000_0000_0020,
@@ -518,10 +501,12 @@ def move_piece(
         return new_game
 
     if castle == Castle.BLACK_KINGSIDE:
-        new_position.k = 0x0200_0000_0000_0000
-        new_position.r = new_position.r ^ 0x0500_0000_0000_0000
+        new_position.K[Player.BLACK] = 0x0200_0000_0000_0000
+        new_position.R[Player.BLACK] ^= 0x0500_0000_0000_0000
+        new_position.black_pieces ^= 0x0F00_0000_0000_0000
+        new_position.all_pieces ^= 0x0F00_0000_0000_0000
         last_move = Move(
-            piece=Piece.BLACK_KING,
+            piece=Piece.KING,
             player=Player.BLACK,
             from_square=0x0800_0000_0000_0000,
             to_square=0x0200_0000_0000_0000,
@@ -550,10 +535,12 @@ def move_piece(
         return new_game
 
     if castle == Castle.BLACK_QUEENSIDE:
-        new_position.k = 0x2000_0000_0000_0000
-        new_position.r = new_position.r ^ 0x9000_0000_0000_0000
+        new_position.K[Player.BLACK] = 0x2000_0000_0000_0000
+        new_position.R[Player.BLACK] ^= 0x9000_0000_0000_0000
+        new_position.black_pieces ^= 0xB800_0000_0000_0000
+        new_position.all_pieces ^= 0xB800_0000_0000_0000
         last_move = Move(
-            piece=Piece.BLACK_KING,
+            piece=Piece.KING,
             player=Player.BLACK,
             from_square=0x0800_0000_0000_0000,
             to_square=0x2000_0000_0000_0000,
@@ -582,58 +569,73 @@ def move_piece(
         return new_game
 
     captured_piece = None
-    if (to_square & game.position.p) != 0:
-        captured_piece = Piece.BLACK_PAWN
-    elif (to_square & game.position.P) != 0:
-        captured_piece = Piece.WHITE_PAWN
-    elif (to_square & game.position.n) != 0:
-        captured_piece = Piece.BLACK_KNIGHT
-    elif (to_square & game.position.N) != 0:
-        captured_piece = Piece.WHITE_KNIGHT
-    elif (to_square & game.position.b) != 0:
-        captured_piece = Piece.BLACK_BISHOP
-    elif (to_square & game.position.B) != 0:
-        captured_piece = Piece.WHITE_BISHOP
-    elif (to_square & game.position.r) != 0:
-        captured_piece = Piece.BLACK_ROOK
-    elif (to_square & game.position.R) != 0:
-        captured_piece = Piece.WHITE_ROOK
-    elif (to_square & game.position.q) != 0:
-        captured_piece = Piece.BLACK_QUEEN
-    elif (to_square & game.position.Q) != 0:
-        captured_piece = Piece.WHITE_QUEEN
+    if (to_square & game.position.P[Player.WHITE]) != 0:
+        captured_piece = Piece.PAWN
+    elif (to_square & game.position.P[Player.BLACK]) != 0:
+        captured_piece = Piece.PAWN
+    elif (to_square & game.position.N[Player.WHITE]) != 0:
+        captured_piece = Piece.KNIGHT
+    elif (to_square & game.position.N[Player.BLACK]) != 0:
+        captured_piece = Piece.KNIGHT
+    elif (to_square & game.position.B[Player.WHITE]) != 0:
+        captured_piece = Piece.BISHOP
+    elif (to_square & game.position.B[Player.BLACK]) != 0:
+        captured_piece = Piece.BISHOP
+    elif (to_square & game.position.R[Player.WHITE]) != 0:
+        captured_piece = Piece.ROOK
+    elif (to_square & game.position.R[Player.BLACK]) != 0:
+        captured_piece = Piece.ROOK
+    elif (to_square & game.position.Q[Player.WHITE]) != 0:
+        captured_piece = Piece.QUEEN
+    elif (to_square & game.position.Q[Player.BLACK]) != 0:
+        captured_piece = Piece.QUEEN
 
     captured_piece_en_passant = None
 
-    setattr(
-        new_position,
-        moved_piece.value,
-        (getattr(new_position, moved_piece.value) ^ from_square) | to_square,
-    )
+    current = getattr(new_position, moved_piece.value)
+    current[game.player] = (current[game.player] ^ from_square) | to_square
+    setattr(new_position, moved_piece.value, current)
+    if is_white:
+        new_position.white_pieces = (
+            new_position.white_pieces ^ from_square
+        ) | to_square
+    else:
+        new_position.black_pieces = (
+            new_position.black_pieces ^ from_square
+        ) | to_square
+    new_position.all_pieces = (new_position.all_pieces ^ from_square) | to_square
 
+    opposite_player = Player.BLACK if is_white else Player.WHITE
     if captured_piece != None:
-        setattr(
-            new_position,
-            captured_piece.value,
-            (getattr(new_position, captured_piece.value) ^ to_square),
-        )
+        current = getattr(new_position, captured_piece.value)
+        current[opposite_player] ^= to_square
+        setattr(new_position, captured_piece.value, current)
+        if is_white:
+            new_position.black_pieces ^= to_square
+        else:
+            new_position.white_pieces ^= to_square
+
     if is_capturing_en_passant:
-        captured_piece_en_passant = "p" if is_white else "P"
-        get_square_in_direction = get_bottom_square if is_white else get_top_square
-        setattr(
-            new_position,
-            captured_piece_en_passant,
-            getattr(new_position, captured_piece_en_passant)
-            ^ get_square_in_direction(to_square),
+        captured_square = (
+            get_bottom_square(to_square) if is_white else get_top_square(to_square)
         )
+        current = getattr(new_position, Piece.PAWN.value)
+        current[opposite_player] ^= captured_square
+        setattr(new_position, Piece.PAWN.value, current)
+        if is_white:
+            new_position.black_pieces ^= captured_square
+        else:
+            new_position.white_pieces ^= captured_square
+        new_position.all_pieces ^= captured_square
+
     if is_promoting_to:
-        pawn_piece = "P" if is_white else "p"
-        setattr(
-            new_position,
-            is_promoting_to.value,
-            (getattr(new_position, is_promoting_to.value) | to_square),
-        )
-        setattr(new_position, pawn_piece, getattr(new_position, pawn_piece) ^ to_square)
+        current = getattr(new_position, is_promoting_to.value)
+        current[game.player] |= to_square
+        setattr(new_position, is_promoting_to.value, current)
+
+        current = getattr(new_position, Piece.PAWN.value)
+        current[game.player] ^= to_square
+        setattr(new_position, Piece.PAWN.value, current)
 
     last_move = Move(
         piece=moved_piece,
@@ -650,39 +652,51 @@ def move_piece(
         last_move=last_move,
         possible_castles={
             Castle.WHITE_KINGSIDE: game.possible_castles[Castle.WHITE_KINGSIDE]
-            and moved_piece != Piece.WHITE_KING
+            and not (is_white and moved_piece == Piece.KING)
             and not (
-                moved_piece == Piece.WHITE_ROOK and from_square == 0x0000_0000_0000_0001
+                is_white
+                and moved_piece == Piece.ROOK
+                and from_square == 0x0000_0000_0000_0001
             )
             and not (
-                captured_piece == Piece.WHITE_ROOK
+                not is_white
+                and captured_piece == Piece.ROOK
                 and to_square == 0x0000_0000_0000_0001
             ),
             Castle.WHITE_QUEENSIDE: game.possible_castles[Castle.WHITE_QUEENSIDE]
-            and moved_piece != Piece.WHITE_KING
+            and not (is_white and moved_piece == Piece.KING)
             and not (
-                moved_piece == Piece.WHITE_ROOK and from_square == 0x0000_0000_0000_0080
+                is_white
+                and moved_piece == Piece.ROOK
+                and from_square == 0x0000_0000_0000_0080
             )
             and not (
-                captured_piece == Piece.WHITE_ROOK
+                not is_white
+                and captured_piece == Piece.ROOK
                 and to_square == 0x0000_0000_0000_0080
             ),
             Castle.BLACK_KINGSIDE: game.possible_castles[Castle.BLACK_KINGSIDE]
-            and moved_piece != Piece.BLACK_KING
+            and not (not is_white and moved_piece == Piece.KING)
             and not (
-                moved_piece == Piece.BLACK_ROOK and from_square == 0x0100_0000_0000_0000
+                not is_white
+                and moved_piece == Piece.ROOK
+                and from_square == 0x0100_0000_0000_0000
             )
             and not (
-                captured_piece == Piece.BLACK_ROOK
+                is_white
+                and captured_piece == Piece.ROOK
                 and to_square == 0x0100_0000_0000_0000
             ),
             Castle.BLACK_QUEENSIDE: game.possible_castles[Castle.BLACK_QUEENSIDE]
-            and moved_piece != Piece.BLACK_KING
+            and not (not is_white and moved_piece == Piece.KING)
             and not (
-                moved_piece == Piece.BLACK_ROOK and from_square == 0x8000_0000_0000_0000
+                not is_white
+                and moved_piece == Piece.ROOK
+                and from_square == 0x8000_0000_0000_0000
             )
             and not (
-                captured_piece == Piece.BLACK_ROOK
+                is_white
+                and captured_piece == Piece.ROOK
                 and to_square == 0x8000_0000_0000_0000
             ),
         },
@@ -690,10 +704,7 @@ def move_piece(
         position_counts=game.position_counts,
         move_counter=game.move_counter + (0 if is_white else 1),
         fifty_move_counter=0
-        if moved_piece == Piece.WHITE_PAWN
-        or moved_piece == Piece.BLACK_PAWN
-        or captured_piece
-        or is_capturing_en_passant
+        if moved_piece == Piece.PAWN or captured_piece or is_capturing_en_passant
         else game.fifty_move_counter + 1,
     )
     new_game.increment_position_count()
@@ -704,39 +715,29 @@ def move_piece(
 def get_legal_moves(game: Game) -> dict[str, Game]:
     is_white = game.player == Player.WHITE
 
-    white_pieces = (
-        game.position.K
-        | game.position.Q
-        | game.position.R
-        | game.position.B
-        | game.position.N
-        | game.position.P
+    friendly_pieces = (
+        game.position.white_pieces if is_white else game.position.black_pieces
     )
-    black_pieces = (
-        game.position.k
-        | game.position.q
-        | game.position.r
-        | game.position.b
-        | game.position.n
-        | game.position.p
+    enemy_pieces = (
+        game.position.black_pieces if is_white else game.position.white_pieces
     )
-    all_pieces = white_pieces | black_pieces
-    friendly_pieces = white_pieces if is_white else black_pieces
-    enemy_pieces = black_pieces if is_white else white_pieces
 
     possible_games: dict[str, Game] = {}
 
-    pawn_piece = Piece.WHITE_PAWN if is_white else Piece.BLACK_PAWN
-    pawns = split(getattr(game.position, pawn_piece.value))
+    pawns = split(getattr(game.position, Piece.PAWN.value)[game.player])
     for from_square in pawns:
         single, double, en_passant, promotion = get_moveable_squares_for_pawn(
-            is_white, all_pieces, enemy_pieces, game.en_passant_square, from_square
+            is_white,
+            game.position.all_pieces,
+            enemy_pieces,
+            game.en_passant_square,
+            from_square,
         )
 
         for to_square in split(single):
             updated_game = move_piece(
                 game=game,
-                moved_piece=pawn_piece,
+                moved_piece=Piece.PAWN,
                 from_square=from_square,
                 to_square=to_square,
                 en_passant_square=0x0000_0000_0000_0000,
@@ -751,7 +752,7 @@ def get_legal_moves(game: Game) -> dict[str, Game]:
         for to_square in split(double):
             updated_game = move_piece(
                 game=game,
-                moved_piece=pawn_piece,
+                moved_piece=Piece.PAWN,
                 from_square=from_square,
                 to_square=to_square,
                 en_passant_square=(
@@ -770,7 +771,7 @@ def get_legal_moves(game: Game) -> dict[str, Game]:
         for to_square in split(en_passant):
             updated_game = move_piece(
                 game=game,
-                moved_piece=pawn_piece,
+                moved_piece=Piece.PAWN,
                 from_square=from_square,
                 to_square=to_square,
                 en_passant_square=0x0000_0000_0000_0000,
@@ -785,14 +786,14 @@ def get_legal_moves(game: Game) -> dict[str, Game]:
         for to_square in split(promotion):
             updated_game_with_queen_promotion = move_piece(
                 game=game,
-                moved_piece=pawn_piece,
+                moved_piece=Piece.PAWN,
                 from_square=from_square,
                 to_square=to_square,
                 en_passant_square=0x0000_0000_0000_0000,
                 is_white=is_white,
                 castle=None,
                 is_capturing_en_passant=False,
-                is_promoting_to=Piece.WHITE_QUEEN if is_white else Piece.BLACK_QUEEN,
+                is_promoting_to=Piece.QUEEN,
             )
             if not is_in_check(updated_game_with_queen_promotion.position, is_white):
                 possible_games[
@@ -801,14 +802,14 @@ def get_legal_moves(game: Game) -> dict[str, Game]:
 
             updated_game_with_rook_promotion = move_piece(
                 game=game,
-                moved_piece=pawn_piece,
+                moved_piece=Piece.PAWN,
                 from_square=from_square,
                 to_square=to_square,
                 en_passant_square=0x0000_0000_0000_0000,
                 is_white=is_white,
                 castle=None,
                 is_capturing_en_passant=False,
-                is_promoting_to=Piece.WHITE_ROOK if is_white else Piece.BLACK_ROOK,
+                is_promoting_to=Piece.ROOK,
             )
             if not is_in_check(updated_game_with_rook_promotion.position, is_white):
                 possible_games[
@@ -817,14 +818,14 @@ def get_legal_moves(game: Game) -> dict[str, Game]:
 
             updated_game_with_bishop_promotion = move_piece(
                 game=game,
-                moved_piece=pawn_piece,
+                moved_piece=Piece.PAWN,
                 from_square=from_square,
                 to_square=to_square,
                 en_passant_square=0x0000_0000_0000_0000,
                 is_white=is_white,
                 castle=None,
                 is_capturing_en_passant=False,
-                is_promoting_to=Piece.WHITE_BISHOP if is_white else Piece.BLACK_BISHOP,
+                is_promoting_to=Piece.BISHOP,
             )
             if not is_in_check(updated_game_with_bishop_promotion.position, is_white):
                 possible_games[
@@ -833,22 +834,21 @@ def get_legal_moves(game: Game) -> dict[str, Game]:
 
             updated_game_with_knight_promotion = move_piece(
                 game=game,
-                moved_piece=pawn_piece,
+                moved_piece=Piece.PAWN,
                 from_square=from_square,
                 to_square=to_square,
                 en_passant_square=0x0000_0000_0000_0000,
                 is_white=is_white,
                 castle=None,
                 is_capturing_en_passant=False,
-                is_promoting_to=Piece.WHITE_KNIGHT if is_white else Piece.BLACK_KNIGHT,
+                is_promoting_to=Piece.KNIGHT,
             )
             if not is_in_check(updated_game_with_knight_promotion.position, is_white):
                 possible_games[
                     updated_game_with_knight_promotion.last_move.id()
                 ] = updated_game_with_knight_promotion
 
-    knight_piece = Piece.WHITE_KNIGHT if is_white else Piece.BLACK_KNIGHT
-    knights = split(getattr(game.position, knight_piece.value))
+    knights = split(getattr(game.position, Piece.KNIGHT.value)[game.player])
     for from_square in knights:
         possible_moves = split(
             get_moveable_squares_for_knight(friendly_pieces, from_square)
@@ -856,7 +856,7 @@ def get_legal_moves(game: Game) -> dict[str, Game]:
         for to_square in possible_moves:
             updated_game = move_piece(
                 game=game,
-                moved_piece=knight_piece,
+                moved_piece=Piece.KNIGHT,
                 from_square=from_square,
                 to_square=to_square,
                 en_passant_square=0x0000_0000_0000_0000,
@@ -868,16 +868,17 @@ def get_legal_moves(game: Game) -> dict[str, Game]:
             if not is_in_check(updated_game.position, is_white):
                 possible_games[updated_game.last_move.id()] = updated_game
 
-    bishop_piece = Piece.WHITE_BISHOP if is_white else Piece.BLACK_BISHOP
-    bishops = split(getattr(game.position, bishop_piece.value))
+    bishops = split(getattr(game.position, Piece.BISHOP.value)[game.player])
     for from_square in bishops:
         possible_moves = split(
-            get_moveable_squares_for_bishop(all_pieces, enemy_pieces, from_square)
+            get_moveable_squares_for_bishop(
+                game.position.all_pieces, enemy_pieces, from_square
+            )
         )
         for to_square in possible_moves:
             updated_game = move_piece(
                 game=game,
-                moved_piece=bishop_piece,
+                moved_piece=Piece.BISHOP,
                 from_square=from_square,
                 to_square=to_square,
                 en_passant_square=0x0000_0000_0000_0000,
@@ -889,16 +890,17 @@ def get_legal_moves(game: Game) -> dict[str, Game]:
             if not is_in_check(updated_game.position, is_white):
                 possible_games[updated_game.last_move.id()] = updated_game
 
-    rook_piece = Piece.WHITE_ROOK if is_white else Piece.BLACK_ROOK
-    rooks = split(getattr(game.position, rook_piece.value))
+    rooks = split(getattr(game.position, Piece.ROOK.value)[game.player])
     for from_square in rooks:
         possible_moves = split(
-            get_moveable_squares_for_rook(all_pieces, enemy_pieces, from_square)
+            get_moveable_squares_for_rook(
+                game.position.all_pieces, enemy_pieces, from_square
+            )
         )
         for to_square in possible_moves:
             updated_game = move_piece(
                 game=game,
-                moved_piece=rook_piece,
+                moved_piece=Piece.ROOK,
                 from_square=from_square,
                 to_square=to_square,
                 en_passant_square=0x0000_0000_0000_0000,
@@ -910,16 +912,17 @@ def get_legal_moves(game: Game) -> dict[str, Game]:
             if not is_in_check(updated_game.position, is_white):
                 possible_games[updated_game.last_move.id()] = updated_game
 
-    queen_piece = Piece.WHITE_QUEEN if is_white else Piece.BLACK_QUEEN
-    queens = split(getattr(game.position, queen_piece.value))
+    queens = split(getattr(game.position, Piece.QUEEN.value)[game.player])
     for from_square in queens:
         possible_moves = split(
-            get_moveable_squares_for_queen(all_pieces, enemy_pieces, from_square)
+            get_moveable_squares_for_queen(
+                game.position.all_pieces, enemy_pieces, from_square
+            )
         )
         for to_square in possible_moves:
             updated_game = move_piece(
                 game=game,
-                moved_piece=queen_piece,
+                moved_piece=Piece.QUEEN,
                 from_square=from_square,
                 to_square=to_square,
                 en_passant_square=0x0000_0000_0000_0000,
@@ -931,21 +934,20 @@ def get_legal_moves(game: Game) -> dict[str, Game]:
             if not is_in_check(updated_game.position, is_white):
                 possible_games[updated_game.last_move.id()] = updated_game
 
-    king_piece = Piece.WHITE_KING if is_white else Piece.BLACK_KING
-    king = getattr(game.position, king_piece.value)
+    king = getattr(game.position, Piece.KING.value)[game.player]
     regular, kingsideCastles, queensideCastles = get_moveable_squares_for_king(
-        all_pieces=all_pieces,
+        all_pieces=game.position.all_pieces,
         friendly_pieces=friendly_pieces,
         capture_squares=get_capture_squares(game.position, is_white),
         king=king,
-        enemy_king=game.position.k if is_white else game.position.K,
+        enemy_king=game.position.K[Player.BLACK if is_white else Player.WHITE],
         is_white=is_white,
         possible_castles=game.possible_castles,
     )
     for to_square in split(regular):
         updated_game = move_piece(
             game=game,
-            moved_piece=king_piece,
+            moved_piece=Piece.KING,
             from_square=king,
             to_square=to_square,
             en_passant_square=0x0000_0000_0000_0000,
@@ -959,7 +961,7 @@ def get_legal_moves(game: Game) -> dict[str, Game]:
     if kingsideCastles != 0:
         updated_game = move_piece(
             game=game,
-            moved_piece=king_piece,
+            moved_piece=Piece.KING,
             from_square=king,
             to_square=kingsideCastles,
             en_passant_square=0x0000_0000_0000_0000,
@@ -973,7 +975,7 @@ def get_legal_moves(game: Game) -> dict[str, Game]:
     if queensideCastles != 0:
         updated_game = move_piece(
             game=game,
-            moved_piece=king_piece,
+            moved_piece=Piece.KING,
             from_square=king,
             to_square=queensideCastles,
             en_passant_square=0x0000_0000_0000_0000,
@@ -1012,16 +1014,16 @@ class Result(Enum):
 
 
 def is_dead_position(position: Position) -> bool:
-    white_queens = split(position.Q)
-    white_rooks = split(position.R)
-    white_bishops = split(position.B)
-    white_knights = split(position.N)
-    white_pawns = split(position.P)
-    black_queens = split(position.q)
-    black_rooks = split(position.r)
-    black_bishops = split(position.b)
-    black_knights = split(position.n)
-    black_pawns = split(position.p)
+    white_queens = split(position.Q[Player.WHITE])
+    white_rooks = split(position.R[Player.WHITE])
+    white_bishops = split(position.B[Player.WHITE])
+    white_knights = split(position.N[Player.WHITE])
+    white_pawns = split(position.P[Player.WHITE])
+    black_queens = split(position.Q[Player.BLACK])
+    black_rooks = split(position.R[Player.BLACK])
+    black_bishops = split(position.B[Player.BLACK])
+    black_knights = split(position.N[Player.BLACK])
+    black_pawns = split(position.P[Player.BLACK])
 
     number_of_white_pieces = (
         len(white_queens)

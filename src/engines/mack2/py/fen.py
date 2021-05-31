@@ -1,4 +1,4 @@
-from game import Castle, Game, Player, Position
+from game import Castle, Game, Piece, Player, Position
 
 map_rank_to_rank_index = {
     "1": 7,
@@ -125,11 +125,16 @@ def game_from_fen(fen: str) -> Game:
                 emptySquares = int(piece)
                 fileIndex += emptySquares
             else:
-                setattr(
-                    position,
-                    piece,
-                    getattr(position, piece) | squares[rankIndex][fileIndex],
-                )
+                current = getattr(position, piece.upper())
+                current[
+                    Player.BLACK if piece == piece.lower() else Player.WHITE
+                ] |= squares[rankIndex][fileIndex]
+                setattr(position, piece, current)
+                if piece == piece.lower():
+                    position.black_pieces |= squares[rankIndex][fileIndex]
+                else:
+                    position.white_pieces |= squares[rankIndex][fileIndex]
+                position.all_pieces |= squares[rankIndex][fileIndex]
                 fileIndex += 1
             rank = rank[1:]
     return Game(

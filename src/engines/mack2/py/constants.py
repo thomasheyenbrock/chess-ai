@@ -17,6 +17,15 @@ SOUTH_WEST_RAY = {}
 NORTH_EAST_RAY = {}
 SOUTH_EAST_RAY = {}
 
+NORTH_MOVES = {}
+SOUTH_MOVES = {}
+WEST_MOVES = {}
+EAST_MOVES = {}
+NORTH_WEST_MOVES = {}
+SOUTH_WEST_MOVES = {}
+NORTH_EAST_MOVES = {}
+SOUTH_EAST_MOVES = {}
+
 NORTH_ATTACKS = {}
 SOUTH_ATTACKS = {}
 WEST_ATTACKS = {}
@@ -48,84 +57,124 @@ for rank in range(8):
         square = 2 ** (8 * rank + file)
 
         NORTH_RAY[square] = 0x0000_0000_0000_0000
+        NORTH_MOVES[square] = {}
         NORTH_ATTACKS[square] = {0x0000_0000_0000_0000: 0x0000_0000_0000_0000}
         current = get_top_square(square)
+        carry = 0
         while current != 0:
             NORTH_RAY[square] |= current
             for p in generate_possibilities(get_top_square):
+                NORTH_MOVES[square][p | current] = carry
                 NORTH_ATTACKS[square][p | current] = current
+            carry |= current
             current = get_top_square(current)
+        NORTH_MOVES[square][0] = carry
 
         SOUTH_RAY[square] = 0x0000_0000_0000_0000
+        SOUTH_MOVES[square] = {}
         SOUTH_ATTACKS[square] = {0x0000_0000_0000_0000: 0x0000_0000_0000_0000}
         current = get_bottom_square(square)
+        carry = 0
         while current != 0:
             SOUTH_RAY[square] |= current
             for p in generate_possibilities(get_bottom_square):
+                SOUTH_MOVES[square][p | current] = carry
                 SOUTH_ATTACKS[square][p | current] = current
+            carry |= current
             current = get_bottom_square(current)
+        SOUTH_MOVES[square][0] = carry
 
         WEST_RAY[square] = 0x0000_0000_0000_0000
+        WEST_MOVES[square] = {}
         WEST_ATTACKS[square] = {0x0000_0000_0000_0000: 0x0000_0000_0000_0000}
         current = get_left_square(square)
+        carry = 0
         while current != 0:
             WEST_RAY[square] |= current
             for p in generate_possibilities(get_left_square):
+                WEST_MOVES[square][p | current] = carry
                 WEST_ATTACKS[square][p | current] = current
+            carry |= current
             current = get_left_square(current)
+        WEST_MOVES[square][0] = carry
 
         EAST_RAY[square] = 0x0000_0000_0000_0000
+        EAST_MOVES[square] = {}
         EAST_ATTACKS[square] = {0x0000_0000_0000_0000: 0x0000_0000_0000_0000}
         current = get_right_square(square)
+        carry = 0
         while current != 0:
             EAST_RAY[square] |= current
             for p in generate_possibilities(get_right_square):
+                EAST_MOVES[square][p | current] = carry
                 EAST_ATTACKS[square][p | current] = current
+            carry |= current
             current = get_right_square(current)
+        EAST_MOVES[square][0] = carry
 
         NORTH_WEST_RAY[square] = 0x0000_0000_0000_0000
+        NORTH_WEST_MOVES[square] = {}
         NORTH_WEST_ATTACKS[square] = {0x0000_0000_0000_0000: 0x0000_0000_0000_0000}
         current = get_top_square(get_left_square(square))
+        carry = 0
         while current != 0:
             NORTH_WEST_RAY[square] |= current
             for p in generate_possibilities(
                 lambda x: get_top_square(get_left_square(x))
             ):
+                NORTH_WEST_MOVES[square][p | current] = carry
                 NORTH_WEST_ATTACKS[square][p | current] = current
+            carry |= current
             current = get_top_square(get_left_square(current))
+        NORTH_WEST_MOVES[square][0] = carry
 
         NORTH_EAST_RAY[square] = 0x0000_0000_0000_0000
+        NORTH_EAST_MOVES[square] = {}
         NORTH_EAST_ATTACKS[square] = {0x0000_0000_0000_0000: 0x0000_0000_0000_0000}
         current = get_top_square(get_right_square(square))
+        carry = 0
         while current != 0:
             NORTH_EAST_RAY[square] |= current
             for p in generate_possibilities(
                 lambda x: get_top_square(get_right_square(x))
             ):
+                NORTH_EAST_MOVES[square][p | current] = carry
                 NORTH_EAST_ATTACKS[square][p | current] = current
+            carry |= current
             current = get_top_square(get_right_square(current))
+        NORTH_EAST_MOVES[square][0] = carry
 
         SOUTH_WEST_RAY[square] = 0x0000_0000_0000_0000
+        SOUTH_WEST_MOVES[square] = {}
         SOUTH_WEST_ATTACKS[square] = {0x0000_0000_0000_0000: 0x0000_0000_0000_0000}
         current = get_bottom_square(get_left_square(square))
+        carry = 0
         while current != 0:
             SOUTH_WEST_RAY[square] |= current
             for p in generate_possibilities(
                 lambda x: get_bottom_square(get_left_square(x))
             ):
+                SOUTH_WEST_MOVES[square][p | current] = carry
                 SOUTH_WEST_ATTACKS[square][p | current] = current
+            carry |= current
             current = get_bottom_square(get_left_square(current))
+        SOUTH_WEST_MOVES[square][0] = carry
 
         SOUTH_EAST_RAY[square] = 0x0000_0000_0000_0000
+        SOUTH_EAST_MOVES[square] = {}
         SOUTH_EAST_ATTACKS[square] = {0x0000_0000_0000_0000: 0x0000_0000_0000_0000}
         current = get_bottom_square(get_right_square(square))
+        carry = 0
         while current != 0:
             SOUTH_EAST_RAY[square] |= current
             for p in generate_possibilities(
                 lambda x: get_bottom_square(get_right_square(x))
             ):
+                SOUTH_EAST_MOVES[square][p | current] = carry
                 SOUTH_EAST_ATTACKS[square][p | current] = current
+            carry |= current
             current = get_bottom_square(get_right_square(current))
+        SOUTH_EAST_MOVES[square][0] = carry
 
         top = get_top_square(square)
         bottom = get_bottom_square(square)

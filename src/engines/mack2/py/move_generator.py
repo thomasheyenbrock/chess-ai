@@ -5,17 +5,36 @@ from bitboard import (
     get_right_square,
     get_top_square,
     get_bottom_square,
-    get_moveable_sqares_to_left,
-    get_moveable_sqares_to_right,
-    get_moveable_sqares_to_top,
-    get_moveable_sqares_to_bottom,
-    get_moveable_sqares_to_top_left,
-    get_moveable_sqares_to_top_right,
-    get_moveable_sqares_to_bottom_left,
-    get_moveable_sqares_to_bottom_right,
     split,
 )
-from constants import KING_MOVES
+from constants import (
+    EAST_ATTACKS,
+    EAST_MOVES,
+    EAST_RAY,
+    KING_MOVES,
+    KNIGHT_MOVES,
+    NORTH_ATTACKS,
+    NORTH_EAST_ATTACKS,
+    NORTH_EAST_MOVES,
+    NORTH_EAST_RAY,
+    NORTH_MOVES,
+    NORTH_RAY,
+    NORTH_WEST_ATTACKS,
+    NORTH_WEST_MOVES,
+    NORTH_WEST_RAY,
+    SOUTH_ATTACKS,
+    SOUTH_EAST_ATTACKS,
+    SOUTH_EAST_MOVES,
+    SOUTH_EAST_RAY,
+    SOUTH_MOVES,
+    SOUTH_RAY,
+    SOUTH_WEST_ATTACKS,
+    SOUTH_WEST_MOVES,
+    SOUTH_WEST_RAY,
+    WEST_ATTACKS,
+    WEST_MOVES,
+    WEST_RAY,
+)
 from enums import Castle, Piece, Player, PromotionPiece, Result
 from game import Game, Move, Position
 
@@ -91,59 +110,52 @@ def get_moveable_squares_for_king(
     )
 
 
-def get_moveable_squares_for_queen(
-    all_pieces: int, enemy_pieces: int, queen: int
-) -> int:
-    moveable_squares = (
-        get_moveable_sqares_to_left(all_pieces, enemy_pieces, queen)
-        | get_moveable_sqares_to_right(all_pieces, enemy_pieces, queen)
-        | get_moveable_sqares_to_top(all_pieces, enemy_pieces, queen)
-        | get_moveable_sqares_to_bottom(all_pieces, enemy_pieces, queen)
-        | get_moveable_sqares_to_top_left(all_pieces, enemy_pieces, queen)
-        | get_moveable_sqares_to_top_right(all_pieces, enemy_pieces, queen)
-        | get_moveable_sqares_to_bottom_left(all_pieces, enemy_pieces, queen)
-        | get_moveable_sqares_to_bottom_right(all_pieces, enemy_pieces, queen)
+def get_rank_and_file_moves(all_pieces: int, enemy_pieces: int, square: int) -> int:
+    north_pieces = NORTH_RAY[square] & all_pieces
+    south_pieces = SOUTH_RAY[square] & all_pieces
+    west_pieces = WEST_RAY[square] & all_pieces
+    east_pieces = EAST_RAY[square] & all_pieces
+
+    north_moves = NORTH_MOVES[square][north_pieces] ^ (
+        NORTH_ATTACKS[square][north_pieces] & enemy_pieces
     )
-    return moveable_squares ^ (moveable_squares & queen)
-
-
-def get_moveable_squares_for_rook(all_pieces: int, enemy_pieces: int, rook: int) -> int:
-    moveable_squares = (
-        get_moveable_sqares_to_left(all_pieces, enemy_pieces, rook)
-        | get_moveable_sqares_to_right(all_pieces, enemy_pieces, rook)
-        | get_moveable_sqares_to_top(all_pieces, enemy_pieces, rook)
-        | get_moveable_sqares_to_bottom(all_pieces, enemy_pieces, rook)
+    south_moves = SOUTH_MOVES[square][south_pieces] ^ (
+        SOUTH_ATTACKS[square][south_pieces] & enemy_pieces
     )
-    return moveable_squares ^ (moveable_squares & rook)
-
-
-def get_moveable_squares_for_bishop(
-    all_pieces: int, enemy_pieces: int, bishop: int
-) -> int:
-    moveable_squares = (
-        get_moveable_sqares_to_top_left(all_pieces, enemy_pieces, bishop)
-        | get_moveable_sqares_to_top_right(all_pieces, enemy_pieces, bishop)
-        | get_moveable_sqares_to_bottom_left(all_pieces, enemy_pieces, bishop)
-        | get_moveable_sqares_to_bottom_right(all_pieces, enemy_pieces, bishop)
+    west_moves = WEST_MOVES[square][west_pieces] ^ (
+        WEST_ATTACKS[square][west_pieces] & enemy_pieces
     )
-    return moveable_squares ^ (moveable_squares & bishop)
+    east_moves = EAST_MOVES[square][east_pieces] ^ (
+        EAST_ATTACKS[square][east_pieces] & enemy_pieces
+    )
+
+    return north_moves | south_moves | west_moves | east_moves
+
+
+def get_diagonal_moves(all_pieces: int, enemy_pieces: int, square: int) -> int:
+    north_west_pieces = NORTH_WEST_RAY[square] & all_pieces
+    south_west_pieces = SOUTH_WEST_RAY[square] & all_pieces
+    north_east_pieces = NORTH_EAST_RAY[square] & all_pieces
+    south_east_pieces = SOUTH_EAST_RAY[square] & all_pieces
+
+    north_west_moves = NORTH_WEST_MOVES[square][north_west_pieces] ^ (
+        NORTH_WEST_ATTACKS[square][north_west_pieces] & enemy_pieces
+    )
+    north_east_moves = NORTH_EAST_MOVES[square][north_east_pieces] ^ (
+        NORTH_EAST_ATTACKS[square][north_east_pieces] & enemy_pieces
+    )
+    south_west_moves = SOUTH_WEST_MOVES[square][south_west_pieces] ^ (
+        SOUTH_WEST_ATTACKS[square][south_west_pieces] & enemy_pieces
+    )
+    south_east_moves = SOUTH_EAST_MOVES[square][south_east_pieces] ^ (
+        SOUTH_EAST_ATTACKS[square][south_east_pieces] & enemy_pieces
+    )
+
+    return north_west_moves | north_east_moves | south_west_moves | south_east_moves
 
 
 def get_moveable_squares_for_knight(friendly_pieces: int, knight: int) -> int:
-    top = get_top_square(get_top_square(knight))
-    bottom = get_bottom_square(get_bottom_square(knight))
-    left = get_left_square(get_left_square(knight))
-    right = get_right_square(get_right_square(knight))
-    moveable_squares = (
-        get_left_square(top)
-        | get_right_square(top)
-        | get_left_square(bottom)
-        | get_right_square(bottom)
-        | get_top_square(left)
-        | get_bottom_square(left)
-        | get_top_square(right)
-        | get_bottom_square(right)
-    )
+    moveable_squares = KNIGHT_MOVES[knight]
     return moveable_squares & (moveable_squares ^ friendly_pieces)
 
 
@@ -562,9 +574,7 @@ def get_legal_moves(game: Game) -> dict[str, Game]:
     bishops = split(getattr(game.position, Piece.BISHOP.value)[game.player])
     for from_square in bishops:
         possible_moves = split(
-            get_moveable_squares_for_bishop(
-                game.position.all_pieces, enemy_pieces, from_square
-            )
+            get_diagonal_moves(game.position.all_pieces, enemy_pieces, from_square)
         )
         for to_square in possible_moves:
             updated_game = move_piece(
@@ -584,9 +594,7 @@ def get_legal_moves(game: Game) -> dict[str, Game]:
     rooks = split(getattr(game.position, Piece.ROOK.value)[game.player])
     for from_square in rooks:
         possible_moves = split(
-            get_moveable_squares_for_rook(
-                game.position.all_pieces, enemy_pieces, from_square
-            )
+            get_rank_and_file_moves(game.position.all_pieces, enemy_pieces, from_square)
         )
         for to_square in possible_moves:
             updated_game = move_piece(
@@ -606,9 +614,8 @@ def get_legal_moves(game: Game) -> dict[str, Game]:
     queens = split(getattr(game.position, Piece.QUEEN.value)[game.player])
     for from_square in queens:
         possible_moves = split(
-            get_moveable_squares_for_queen(
-                game.position.all_pieces, enemy_pieces, from_square
-            )
+            get_rank_and_file_moves(game.position.all_pieces, enemy_pieces, from_square)
+            | get_diagonal_moves(game.position.all_pieces, enemy_pieces, from_square)
         )
         for to_square in possible_moves:
             updated_game = move_piece(

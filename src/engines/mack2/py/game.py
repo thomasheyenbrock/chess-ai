@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Optional, Tuple
 
-from bitboard import get_bottom_square, get_top_square
+from bitboard import get_bottom_square, get_top_square, split
 from constants import (
     NORTH_MOVES,
     SOUTH_MOVES,
@@ -367,6 +367,82 @@ class Position:
             Player.BLACK if player == Player.WHITE else Player.WHITE, self.K[player]
         )
         return attackers != 0
+
+    def is_dead(self) -> bool:
+        white_queens = split(self.Q[Player.WHITE])
+        white_rooks = split(self.R[Player.WHITE])
+        white_bishops = split(self.B[Player.WHITE])
+        white_knights = split(self.N[Player.WHITE])
+        white_pawns = split(self.P[Player.WHITE])
+        black_queens = split(self.Q[Player.BLACK])
+        black_rooks = split(self.R[Player.BLACK])
+        black_bishops = split(self.B[Player.BLACK])
+        black_knights = split(self.N[Player.BLACK])
+        black_pawns = split(self.P[Player.BLACK])
+
+        number_of_white_pieces = (
+            len(white_queens)
+            + len(white_rooks)
+            + len(white_bishops)
+            + len(white_knights)
+            + len(white_pawns)
+        )
+        number_of_black_pieces = (
+            len(black_queens)
+            + len(black_rooks)
+            + len(black_bishops)
+            + len(black_knights)
+            + len(black_pawns)
+        )
+
+        # king against king
+        if number_of_white_pieces + number_of_black_pieces == 0:
+            return True
+
+        # king against king and bishop
+        if (
+            number_of_white_pieces == 0
+            and number_of_black_pieces == 1
+            and black_bishops.length == 1
+        ):
+            return True
+        if (
+            number_of_black_pieces == 0
+            and number_of_white_pieces == 1
+            and white_bishops.length == 1
+        ):
+            return True
+
+        # king against king and knight
+        if (
+            number_of_white_pieces == 0
+            and number_of_black_pieces == 1
+            and black_knights.length == 1
+        ):
+            return True
+        if (
+            number_of_black_pieces == 0
+            and number_of_white_pieces == 1
+            and white_knights.length == 1
+        ):
+            return True
+
+        # king and bishop against king and bishop, with both bishops on squares of the same color
+        if (
+            number_of_white_pieces == 1
+            and number_of_black_pieces == 1
+            and white_bishops.length == 1
+            and black_bishops.length == 1
+        ):
+            is_white_bishop_on_white_square = (
+                white_bishops[0] & 0xAA55_AA55_AA55_AA55
+            ) == 0
+            is_black_bishop_on_white_square = (
+                black_bishops[0] & 0xAA55_AA55_AA55_AA55
+            ) == 0
+            return is_white_bishop_on_white_square == is_black_bishop_on_white_square
+
+        return False
 
 
 class Game:

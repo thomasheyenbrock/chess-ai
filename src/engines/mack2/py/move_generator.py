@@ -732,91 +732,13 @@ def count_legal_moves(game: Game, depth: int = 1):
         sum += add
     return sum
 
-
-def is_dead_position(position: Position) -> bool:
-    white_queens = split(position.Q[Player.WHITE])
-    white_rooks = split(position.R[Player.WHITE])
-    white_bishops = split(position.B[Player.WHITE])
-    white_knights = split(position.N[Player.WHITE])
-    white_pawns = split(position.P[Player.WHITE])
-    black_queens = split(position.Q[Player.BLACK])
-    black_rooks = split(position.R[Player.BLACK])
-    black_bishops = split(position.B[Player.BLACK])
-    black_knights = split(position.N[Player.BLACK])
-    black_pawns = split(position.P[Player.BLACK])
-
-    number_of_white_pieces = (
-        len(white_queens)
-        + len(white_rooks)
-        + len(white_bishops)
-        + len(white_knights)
-        + len(white_pawns)
-    )
-    number_of_black_pieces = (
-        len(black_queens)
-        + len(black_rooks)
-        + len(black_bishops)
-        + len(black_knights)
-        + len(black_pawns)
-    )
-
-    # king against king
-    if number_of_white_pieces + number_of_black_pieces == 0:
-        return True
-
-    # king against king and bishop
-    if (
-        number_of_white_pieces == 0
-        and number_of_black_pieces == 1
-        and black_bishops.length == 1
-    ):
-        return True
-    if (
-        number_of_black_pieces == 0
-        and number_of_white_pieces == 1
-        and white_bishops.length == 1
-    ):
-        return True
-
-    # king against king and knight
-    if (
-        number_of_white_pieces == 0
-        and number_of_black_pieces == 1
-        and black_knights.length == 1
-    ):
-        return True
-    if (
-        number_of_black_pieces == 0
-        and number_of_white_pieces == 1
-        and white_knights.length == 1
-    ):
-        return True
-
-    # king and bishop against king and bishop, with both bishops on squares of the same color
-    if (
-        number_of_white_pieces == 1
-        and number_of_black_pieces == 1
-        and white_bishops.length == 1
-        and black_bishops.length == 1
-    ):
-        is_white_bishop_on_white_square = (
-            white_bishops[0] & 0xAA55_AA55_AA55_AA55
-        ) == 0
-        is_black_bishop_on_white_square = (
-            black_bishops[0] & 0xAA55_AA55_AA55_AA55
-        ) == 0
-        return is_white_bishop_on_white_square == is_black_bishop_on_white_square
-
-    return False
-
-
 def get_game_result(game: Game, legal_moves: dict[str, Game]) -> Optional[Result]:
     if len(legal_moves) == 0:
         if game.position.is_check(game.player):
             return Result.BLACK if game.player == Player.WHITE else Result.WHITE
         return Result.STALEMATE
 
-    if is_dead_position(game.position):
+    if game.position.is_dead():
         return Result.DEAD_POSITION
 
     for count in game.position_counts.values():

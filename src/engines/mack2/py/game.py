@@ -1,9 +1,29 @@
 from __future__ import annotations
-from enum import Enum
 from typing import Optional, Tuple
 
 from bitboard import get_bottom_square, get_top_square
-
+from constants import (
+    NORTH_MOVES,
+    SOUTH_MOVES,
+    WEST_MOVES,
+    EAST_MOVES,
+    NORTH_WEST_MOVES,
+    NORTH_EAST_MOVES,
+    SOUTH_WEST_MOVES,
+    SOUTH_EAST_MOVES,
+    NORTH_ATTACKS,
+    SOUTH_ATTACKS,
+    WEST_ATTACKS,
+    EAST_ATTACKS,
+    NORTH_WEST_ATTACKS,
+    NORTH_EAST_ATTACKS,
+    SOUTH_WEST_ATTACKS,
+    SOUTH_EAST_ATTACKS,
+    KING_MOVES,
+    KNIGHT_MOVES,
+    PAWN_ATTACKS,
+)
+from enums import Castle, Piece, Player, PromotionPiece
 
 map_square_to_human_notation = {
     0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000001: "h1",
@@ -71,38 +91,6 @@ map_square_to_human_notation = {
     0b01000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000: "b8",
     0b10000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000: "a8",
 }
-
-
-class Player(Enum):
-    WHITE = "w"
-    BLACK = "b"
-
-
-class Piece(Enum):
-    KING = "K"
-    QUEEN = "Q"
-    ROOK = "R"
-    BISHOP = "B"
-    KNIGHT = "N"
-    PAWN = "P"
-
-
-class PromotionPiece(Enum):
-    WHITE_QUEEN = "Q"
-    WHITE_ROOK = "R"
-    WHITE_BISHOP = "B"
-    WHITE_KNIGHT = "N"
-    BLACK_QUEEN = "q"
-    BLACK_ROOK = "r"
-    BLACK_BISHOP = "b"
-    BLACK_KNIGHT = "n"
-
-
-class Castle(Enum):
-    WHITE_KINGSIDE = "K"
-    WHITE_QUEENSIDE = "Q"
-    BLACK_KINGSIDE = "k"
-    BLACK_QUEENSIDE = "q"
 
 
 class Move:
@@ -339,6 +327,46 @@ class Position:
             setattr(new_position, Piece.PAWN.value, current)
 
         return new_position, is_capturing
+
+    def attackers(self, player: Player, square: int) -> int:
+        king = self.K[player]
+        queen = self.Q[player]
+        rook = self.R[player]
+        bishop = self.B[player]
+        knight = self.N[player]
+        pawn = self.P[player]
+
+        queen_and_rook = queen | rook
+        queen_and_bishop = queen | bishop
+
+        north_pieces = NORTH_MOVES[square] & self.all_pieces
+        south_pieces = SOUTH_MOVES[square] & self.all_pieces
+        west_pieces = WEST_MOVES[square] & self.all_pieces
+        east_pieces = EAST_MOVES[square] & self.all_pieces
+        north_west_pieces = NORTH_WEST_MOVES[square] & self.all_pieces
+        south_west_pieces = SOUTH_WEST_MOVES[square] & self.all_pieces
+        north_east_pieces = NORTH_EAST_MOVES[square] & self.all_pieces
+        south_east_pieces = SOUTH_EAST_MOVES[square] & self.all_pieces
+
+        return (
+            (KING_MOVES[square] & king)
+            | (NORTH_ATTACKS[square][north_pieces] & queen_and_rook)
+            | (SOUTH_ATTACKS[square][south_pieces] & queen_and_rook)
+            | (WEST_ATTACKS[square][west_pieces] & queen_and_rook)
+            | (EAST_ATTACKS[square][east_pieces] & queen_and_rook)
+            | (NORTH_WEST_ATTACKS[square][north_west_pieces] & queen_and_bishop)
+            | (SOUTH_WEST_ATTACKS[square][south_west_pieces] & queen_and_bishop)
+            | (NORTH_EAST_ATTACKS[square][north_east_pieces] & queen_and_bishop)
+            | (SOUTH_EAST_ATTACKS[square][south_east_pieces] & queen_and_bishop)
+            | (KNIGHT_MOVES[square] & knight)
+            | (PAWN_ATTACKS[player][square] & pawn)
+        ) != 0
+
+    def is_check(self, player: Player):
+        attackers = self.attackers(
+            Player.BLACK if player == Player.WHITE else Player.WHITE, self.K[player]
+        )
+        return attackers != 0
 
 
 class Game:

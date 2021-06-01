@@ -1,5 +1,5 @@
-from enum import Enum
-from typing import Callable, List, Optional, Tuple
+from typing import Optional, Tuple
+
 from bitboard import (
     get_left_square,
     get_right_square,
@@ -15,7 +15,8 @@ from bitboard import (
     get_moveable_sqares_to_bottom_right,
     split,
 )
-from game import Castle, Game, Move, Piece, Player, Position, PromotionPiece
+from enums import Castle, Piece, Player, PromotionPiece, Result
+from game import Game, Move, Position
 
 
 def get_moveable_squares_for_king(
@@ -227,181 +228,6 @@ def get_capture_squares(position: Position, is_white: bool) -> int:
         | get_moveable_squares_for_knight(friendly_pieces, position.N[player])
         | get_capture_squares_for_pawn(is_white, friendly_pieces, position.P[player])
     )
-
-
-NORTH_MOVES = {}
-SOUTH_MOVES = {}
-WEST_MOVES = {}
-EAST_MOVES = {}
-NORTH_WEST_MOVES = {}
-SOUTH_WEST_MOVES = {}
-NORTH_EAST_MOVES = {}
-SOUTH_EAST_MOVES = {}
-
-NORTH_ATTACKS = {}
-SOUTH_ATTACKS = {}
-WEST_ATTACKS = {}
-EAST_ATTACKS = {}
-NORTH_WEST_ATTACKS = {}
-SOUTH_WEST_ATTACKS = {}
-NORTH_EAST_ATTACKS = {}
-SOUTH_EAST_ATTACKS = {}
-
-KNIGHT_MOVES = {}
-PAWN_ATTACKS = {True: {}, False: {}}
-
-
-def generate_possibilities(direction: Callable[[int], int]) -> List[int]:
-    forward = direction(current)
-    possibilities = [0] if forward == 0 else [0, forward]
-    while forward != 0:
-        forward = direction(forward)
-        new_possibilities = []
-        for p in possibilities:
-            new_possibilities += [p] if forward == 0 else [p, p | forward]
-        possibilities = new_possibilities
-    return possibilities
-
-
-for rank in range(8):
-    for file in range(8):
-        square = 2 ** (8 * rank + file)
-
-        NORTH_MOVES[square] = 0x0000_0000_0000_0000
-        NORTH_ATTACKS[square] = {0x0000_0000_0000_0000: 0x0000_0000_0000_0000}
-        current = get_top_square(square)
-        while current != 0:
-            NORTH_MOVES[square] |= current
-            for p in generate_possibilities(get_top_square):
-                NORTH_ATTACKS[square][p | current] = current
-            current = get_top_square(current)
-
-        SOUTH_MOVES[square] = 0x0000_0000_0000_0000
-        SOUTH_ATTACKS[square] = {0x0000_0000_0000_0000: 0x0000_0000_0000_0000}
-        current = get_bottom_square(square)
-        while current != 0:
-            SOUTH_MOVES[square] |= current
-            for p in generate_possibilities(get_bottom_square):
-                SOUTH_ATTACKS[square][p | current] = current
-            current = get_bottom_square(current)
-
-        WEST_MOVES[square] = 0x0000_0000_0000_0000
-        WEST_ATTACKS[square] = {0x0000_0000_0000_0000: 0x0000_0000_0000_0000}
-        current = get_left_square(square)
-        while current != 0:
-            WEST_MOVES[square] |= current
-            for p in generate_possibilities(get_left_square):
-                WEST_ATTACKS[square][p | current] = current
-            current = get_left_square(current)
-
-        EAST_MOVES[square] = 0x0000_0000_0000_0000
-        EAST_ATTACKS[square] = {0x0000_0000_0000_0000: 0x0000_0000_0000_0000}
-        current = get_right_square(square)
-        while current != 0:
-            EAST_MOVES[square] |= current
-            for p in generate_possibilities(get_right_square):
-                EAST_ATTACKS[square][p | current] = current
-            current = get_right_square(current)
-
-        NORTH_WEST_MOVES[square] = 0x0000_0000_0000_0000
-        NORTH_WEST_ATTACKS[square] = {0x0000_0000_0000_0000: 0x0000_0000_0000_0000}
-        current = get_top_square(get_left_square(square))
-        while current != 0:
-            NORTH_WEST_MOVES[square] |= current
-            for p in generate_possibilities(
-                lambda x: get_top_square(get_left_square(x))
-            ):
-                NORTH_WEST_ATTACKS[square][p | current] = current
-            current = get_top_square(get_left_square(current))
-
-        NORTH_EAST_MOVES[square] = 0x0000_0000_0000_0000
-        NORTH_EAST_ATTACKS[square] = {0x0000_0000_0000_0000: 0x0000_0000_0000_0000}
-        current = get_top_square(get_right_square(square))
-        while current != 0:
-            NORTH_EAST_MOVES[square] |= current
-            for p in generate_possibilities(
-                lambda x: get_top_square(get_right_square(x))
-            ):
-                NORTH_EAST_ATTACKS[square][p | current] = current
-            current = get_top_square(get_right_square(current))
-
-        SOUTH_WEST_MOVES[square] = 0x0000_0000_0000_0000
-        SOUTH_WEST_ATTACKS[square] = {0x0000_0000_0000_0000: 0x0000_0000_0000_0000}
-        current = get_bottom_square(get_left_square(square))
-        while current != 0:
-            SOUTH_WEST_MOVES[square] |= current
-            for p in generate_possibilities(
-                lambda x: get_bottom_square(get_left_square(x))
-            ):
-                SOUTH_WEST_ATTACKS[square][p | current] = current
-            current = get_bottom_square(get_left_square(current))
-
-        SOUTH_EAST_MOVES[square] = 0x0000_0000_0000_0000
-        SOUTH_EAST_ATTACKS[square] = {0x0000_0000_0000_0000: 0x0000_0000_0000_0000}
-        current = get_bottom_square(get_right_square(square))
-        while current != 0:
-            SOUTH_EAST_MOVES[square] |= current
-            for p in generate_possibilities(
-                lambda x: get_bottom_square(get_right_square(x))
-            ):
-                SOUTH_EAST_ATTACKS[square][p | current] = current
-            current = get_bottom_square(get_right_square(current))
-
-        top = get_top_square(square)
-        bottom = get_bottom_square(square)
-
-        PAWN_ATTACKS[True][square] = get_left_square(top) | get_right_square(top)
-        PAWN_ATTACKS[False][square] = get_left_square(bottom) | get_right_square(bottom)
-
-        top2 = get_top_square(top)
-        bottom2 = get_bottom_square(bottom)
-        left2 = get_left_square(get_left_square(square))
-        right2 = get_right_square(get_right_square(square))
-        KNIGHT_MOVES[square] = (
-            get_left_square(top2)
-            | get_right_square(top2)
-            | get_left_square(bottom2)
-            | get_right_square(bottom2)
-            | get_top_square(left2)
-            | get_bottom_square(left2)
-            | get_top_square(right2)
-            | get_bottom_square(right2)
-        )
-
-
-def is_in_check(position: Position, is_white: bool) -> bool:
-    player = Player.BLACK if is_white else Player.WHITE
-    king = position.K[Player.WHITE if is_white else Player.BLACK]
-    queen = position.Q[player]
-    rook = position.R[player]
-    bishop = position.B[player]
-    knight = position.N[player]
-    pawn = position.P[player]
-
-    queen_and_rook = queen | rook
-    queen_and_bishop = queen | bishop
-
-    north_pieces = NORTH_MOVES[king] & position.all_pieces
-    south_pieces = SOUTH_MOVES[king] & position.all_pieces
-    west_pieces = WEST_MOVES[king] & position.all_pieces
-    east_pieces = EAST_MOVES[king] & position.all_pieces
-    north_west_pieces = NORTH_WEST_MOVES[king] & position.all_pieces
-    south_west_pieces = SOUTH_WEST_MOVES[king] & position.all_pieces
-    north_east_pieces = NORTH_EAST_MOVES[king] & position.all_pieces
-    south_east_pieces = SOUTH_EAST_MOVES[king] & position.all_pieces
-
-    return (
-        (KNIGHT_MOVES[king] & knight)
-        | (NORTH_ATTACKS[king][north_pieces] & queen_and_rook)
-        | (SOUTH_ATTACKS[king][south_pieces] & queen_and_rook)
-        | (WEST_ATTACKS[king][west_pieces] & queen_and_rook)
-        | (EAST_ATTACKS[king][east_pieces] & queen_and_rook)
-        | (NORTH_WEST_ATTACKS[king][north_west_pieces] & queen_and_bishop)
-        | (SOUTH_WEST_ATTACKS[king][south_west_pieces] & queen_and_bishop)
-        | (NORTH_EAST_ATTACKS[king][north_east_pieces] & queen_and_bishop)
-        | (SOUTH_EAST_ATTACKS[king][south_east_pieces] & queen_and_bishop)
-        | (PAWN_ATTACKS[is_white][king] & pawn)
-    ) != 0
 
 
 def move_piece(
@@ -649,7 +475,7 @@ def get_legal_moves(game: Game) -> dict[str, Game]:
                 is_capturing_en_passant=False,
                 is_promoting_to=None,
             )
-            if not is_in_check(updated_game.position, is_white):
+            if not updated_game.position.is_check(game.player):
                 possible_games[updated_game.last_move.id()] = updated_game
 
         for to_square in split(double):
@@ -668,7 +494,7 @@ def get_legal_moves(game: Game) -> dict[str, Game]:
                 is_capturing_en_passant=False,
                 is_promoting_to=None,
             )
-            if not is_in_check(updated_game.position, is_white):
+            if not updated_game.position.is_check(game.player):
                 possible_games[updated_game.last_move.id()] = updated_game
 
         for to_square in split(en_passant):
@@ -683,7 +509,7 @@ def get_legal_moves(game: Game) -> dict[str, Game]:
                 is_capturing_en_passant=True,
                 is_promoting_to=None,
             )
-            if not is_in_check(updated_game.position, is_white):
+            if not updated_game.position.is_check(game.player):
                 possible_games[updated_game.last_move.id()] = updated_game
 
         for to_square in split(promotion):
@@ -698,7 +524,7 @@ def get_legal_moves(game: Game) -> dict[str, Game]:
                 is_capturing_en_passant=False,
                 is_promoting_to=Piece.QUEEN,
             )
-            if not is_in_check(updated_game_with_queen_promotion.position, is_white):
+            if not updated_game_with_queen_promotion.position.is_check(game.player):
                 possible_games[
                     updated_game_with_queen_promotion.last_move.id()
                 ] = updated_game_with_queen_promotion
@@ -714,7 +540,7 @@ def get_legal_moves(game: Game) -> dict[str, Game]:
                 is_capturing_en_passant=False,
                 is_promoting_to=Piece.ROOK,
             )
-            if not is_in_check(updated_game_with_rook_promotion.position, is_white):
+            if not updated_game_with_rook_promotion.position.is_check(game.player):
                 possible_games[
                     updated_game_with_rook_promotion.last_move.id()
                 ] = updated_game_with_rook_promotion
@@ -730,7 +556,7 @@ def get_legal_moves(game: Game) -> dict[str, Game]:
                 is_capturing_en_passant=False,
                 is_promoting_to=Piece.BISHOP,
             )
-            if not is_in_check(updated_game_with_bishop_promotion.position, is_white):
+            if not updated_game_with_bishop_promotion.position.is_check(game.player):
                 possible_games[
                     updated_game_with_bishop_promotion.last_move.id()
                 ] = updated_game_with_bishop_promotion
@@ -746,7 +572,7 @@ def get_legal_moves(game: Game) -> dict[str, Game]:
                 is_capturing_en_passant=False,
                 is_promoting_to=Piece.KNIGHT,
             )
-            if not is_in_check(updated_game_with_knight_promotion.position, is_white):
+            if not updated_game_with_knight_promotion.position.is_check(game.player):
                 possible_games[
                     updated_game_with_knight_promotion.last_move.id()
                 ] = updated_game_with_knight_promotion
@@ -768,7 +594,7 @@ def get_legal_moves(game: Game) -> dict[str, Game]:
                 is_capturing_en_passant=False,
                 is_promoting_to=None,
             )
-            if not is_in_check(updated_game.position, is_white):
+            if not updated_game.position.is_check(game.player):
                 possible_games[updated_game.last_move.id()] = updated_game
 
     bishops = split(getattr(game.position, Piece.BISHOP.value)[game.player])
@@ -790,7 +616,7 @@ def get_legal_moves(game: Game) -> dict[str, Game]:
                 is_capturing_en_passant=False,
                 is_promoting_to=None,
             )
-            if not is_in_check(updated_game.position, is_white):
+            if not updated_game.position.is_check(game.player):
                 possible_games[updated_game.last_move.id()] = updated_game
 
     rooks = split(getattr(game.position, Piece.ROOK.value)[game.player])
@@ -812,7 +638,7 @@ def get_legal_moves(game: Game) -> dict[str, Game]:
                 is_capturing_en_passant=False,
                 is_promoting_to=None,
             )
-            if not is_in_check(updated_game.position, is_white):
+            if not updated_game.position.is_check(game.player):
                 possible_games[updated_game.last_move.id()] = updated_game
 
     queens = split(getattr(game.position, Piece.QUEEN.value)[game.player])
@@ -834,7 +660,7 @@ def get_legal_moves(game: Game) -> dict[str, Game]:
                 is_capturing_en_passant=False,
                 is_promoting_to=None,
             )
-            if not is_in_check(updated_game.position, is_white):
+            if not updated_game.position.is_check(game.player):
                 possible_games[updated_game.last_move.id()] = updated_game
 
     king = getattr(game.position, Piece.KING.value)[game.player]
@@ -859,7 +685,7 @@ def get_legal_moves(game: Game) -> dict[str, Game]:
             is_capturing_en_passant=False,
             is_promoting_to=None,
         )
-        if not is_in_check(updated_game.position, is_white):
+        if not updated_game.position.is_check(game.player):
             possible_games[updated_game.last_move.id()] = updated_game
     if kingsideCastles != 0:
         updated_game = move_piece(
@@ -905,15 +731,6 @@ def count_legal_moves(game: Game, depth: int = 1):
         #     print(next_game.last_move, add)
         sum += add
     return sum
-
-
-class Result(Enum):
-    WHITE = "White wins"
-    BLACK = "Black wins"
-    STALEMATE = "Stalemate"
-    DEAD_POSITION = "Dead position"
-    REPITITION = "Third repitition of position"
-    FIFTY_MOVE_RULE = "Fifty moves without capture or pawn movement"
 
 
 def is_dead_position(position: Position) -> bool:
@@ -995,9 +812,8 @@ def is_dead_position(position: Position) -> bool:
 
 def get_game_result(game: Game, legal_moves: dict[str, Game]) -> Optional[Result]:
     if len(legal_moves) == 0:
-        is_white = game.player == Player.WHITE
-        if is_in_check(game.position, is_white):
-            return Result.BLACK if is_white else Result.WHITE
+        if game.position.is_check(game.player):
+            return Result.BLACK if game.player == Player.WHITE else Result.WHITE
         return Result.STALEMATE
 
     if is_dead_position(game.position):

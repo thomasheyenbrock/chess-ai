@@ -1,4 +1,6 @@
-from game import Castle, Game, Piece, Player, Position
+from enums import Castle, Player
+from game import Game, Position
+
 
 map_rank_to_rank_index = {
     "1": 7,

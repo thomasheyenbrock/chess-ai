@@ -415,36 +415,17 @@ def move_piece(
     is_capturing_en_passant: bool,
     is_promoting_to: Optional[PromotionPiece],
 ) -> Game:
-    new_position = Position(
-        K=game.position.K[Player.WHITE],
-        Q=game.position.Q[Player.WHITE],
-        R=game.position.R[Player.WHITE],
-        B=game.position.B[Player.WHITE],
-        N=game.position.N[Player.WHITE],
-        P=game.position.P[Player.WHITE],
-        k=game.position.K[Player.BLACK],
-        q=game.position.Q[Player.BLACK],
-        r=game.position.R[Player.BLACK],
-        b=game.position.B[Player.BLACK],
-        n=game.position.N[Player.BLACK],
-        p=game.position.P[Player.BLACK],
-    )
-
     if castle == Castle.WHITE_KINGSIDE:
-        new_position.K[Player.WHITE] = 0x0000_0000_0000_0002
-        new_position.R[Player.WHITE] ^= 0x0000_0000_0000_0005
-        new_position.white_pieces ^= 0x0000_0000_0000_000F
-        new_position.all_pieces ^= 0x0000_0000_0000_000F
-
         last_move = Move(
             player=Player.WHITE,
             piece=Piece.KING,
             from_square=0x0000_0000_0000_0008,
             to_square=0x0000_0000_0000_0002,
-            is_capturing=None,
+            is_capturing_en_passant=False,
             is_castling=Castle.WHITE_KINGSIDE,
             is_promoting_to=None,
         )
+        new_position, is_capturing = game.position.move(last_move)
         new_game = Game(
             position=new_position,
             player=Player.BLACK,
@@ -462,24 +443,20 @@ def move_piece(
             move_counter=game.move_counter,
             fifty_move_counter=game.fifty_move_counter + 1,
         )
-        new_game.increment_position_count()
+        new_game.increment_position_count(is_capturing)
         return new_game
 
     if castle == Castle.WHITE_QUEENSIDE:
-        new_position.K[Player.WHITE] = 0x0000_0000_0000_0020
-        new_position.R[Player.WHITE] ^= 0x0000_0000_0000_0090
-        new_position.white_pieces ^= 0x0000_0000_0000_00B8
-        new_position.all_pieces ^= 0x0000_0000_0000_00B8
-
         last_move = Move(
             piece=Piece.KING,
             player=Player.WHITE,
             from_square=0x0000_0000_0000_0008,
             to_square=0x0000_0000_0000_0020,
-            is_capturing=None,
+            is_capturing_en_passant=False,
             is_castling=Castle.WHITE_QUEENSIDE,
             is_promoting_to=None,
         )
+        new_position, is_capturing = game.position.move(last_move)
         new_game = Game(
             position=new_position,
             player=Player.BLACK,
@@ -497,23 +474,20 @@ def move_piece(
             move_counter=game.move_counter,
             fifty_move_counter=game.fifty_move_counter + 1,
         )
-        new_game.increment_position_count()
+        new_game.increment_position_count(is_capturing)
         return new_game
 
     if castle == Castle.BLACK_KINGSIDE:
-        new_position.K[Player.BLACK] = 0x0200_0000_0000_0000
-        new_position.R[Player.BLACK] ^= 0x0500_0000_0000_0000
-        new_position.black_pieces ^= 0x0F00_0000_0000_0000
-        new_position.all_pieces ^= 0x0F00_0000_0000_0000
         last_move = Move(
             piece=Piece.KING,
             player=Player.BLACK,
             from_square=0x0800_0000_0000_0000,
             to_square=0x0200_0000_0000_0000,
-            is_capturing=None,
+            is_capturing_en_passant=False,
             is_castling=Castle.BLACK_KINGSIDE,
             is_promoting_to=None,
         )
+        new_position, is_capturing = game.position.move(last_move)
         new_game = Game(
             position=new_position,
             player=Player.WHITE,
@@ -531,23 +505,20 @@ def move_piece(
             move_counter=game.move_counter + 1,
             fifty_move_counter=game.fifty_move_counter + 1,
         )
-        new_game.increment_position_count()
+        new_game.increment_position_count(is_capturing)
         return new_game
 
     if castle == Castle.BLACK_QUEENSIDE:
-        new_position.K[Player.BLACK] = 0x2000_0000_0000_0000
-        new_position.R[Player.BLACK] ^= 0x9000_0000_0000_0000
-        new_position.black_pieces ^= 0xB800_0000_0000_0000
-        new_position.all_pieces ^= 0xB800_0000_0000_0000
         last_move = Move(
             piece=Piece.KING,
             player=Player.BLACK,
             from_square=0x0800_0000_0000_0000,
             to_square=0x2000_0000_0000_0000,
-            is_capturing=None,
+            is_capturing_en_passant=False,
             is_castling=Castle.BLACK_QUEENSIDE,
             is_promoting_to=None,
         )
+        new_position, is_capturing = game.position.move(last_move)
         new_game = Game(
             position=new_position,
             player=Player.WHITE,
@@ -565,87 +536,19 @@ def move_piece(
             move_counter=game.move_counter + 1,
             fifty_move_counter=game.fifty_move_counter + 1,
         )
-        new_game.increment_position_count()
+        new_game.increment_position_count(is_capturing)
         return new_game
-
-    captured_piece = None
-    if (to_square & game.position.P[Player.WHITE]) != 0:
-        captured_piece = Piece.PAWN
-    elif (to_square & game.position.P[Player.BLACK]) != 0:
-        captured_piece = Piece.PAWN
-    elif (to_square & game.position.N[Player.WHITE]) != 0:
-        captured_piece = Piece.KNIGHT
-    elif (to_square & game.position.N[Player.BLACK]) != 0:
-        captured_piece = Piece.KNIGHT
-    elif (to_square & game.position.B[Player.WHITE]) != 0:
-        captured_piece = Piece.BISHOP
-    elif (to_square & game.position.B[Player.BLACK]) != 0:
-        captured_piece = Piece.BISHOP
-    elif (to_square & game.position.R[Player.WHITE]) != 0:
-        captured_piece = Piece.ROOK
-    elif (to_square & game.position.R[Player.BLACK]) != 0:
-        captured_piece = Piece.ROOK
-    elif (to_square & game.position.Q[Player.WHITE]) != 0:
-        captured_piece = Piece.QUEEN
-    elif (to_square & game.position.Q[Player.BLACK]) != 0:
-        captured_piece = Piece.QUEEN
-
-    captured_piece_en_passant = None
-
-    current = getattr(new_position, moved_piece.value)
-    current[game.player] = (current[game.player] ^ from_square) | to_square
-    setattr(new_position, moved_piece.value, current)
-    if is_white:
-        new_position.white_pieces = (
-            new_position.white_pieces ^ from_square
-        ) | to_square
-    else:
-        new_position.black_pieces = (
-            new_position.black_pieces ^ from_square
-        ) | to_square
-    new_position.all_pieces = (new_position.all_pieces ^ from_square) | to_square
-
-    opposite_player = Player.BLACK if is_white else Player.WHITE
-    if captured_piece != None:
-        current = getattr(new_position, captured_piece.value)
-        current[opposite_player] ^= to_square
-        setattr(new_position, captured_piece.value, current)
-        if is_white:
-            new_position.black_pieces ^= to_square
-        else:
-            new_position.white_pieces ^= to_square
-
-    if is_capturing_en_passant:
-        captured_square = (
-            get_bottom_square(to_square) if is_white else get_top_square(to_square)
-        )
-        current = getattr(new_position, Piece.PAWN.value)
-        current[opposite_player] ^= captured_square
-        setattr(new_position, Piece.PAWN.value, current)
-        if is_white:
-            new_position.black_pieces ^= captured_square
-        else:
-            new_position.white_pieces ^= captured_square
-        new_position.all_pieces ^= captured_square
-
-    if is_promoting_to:
-        current = getattr(new_position, is_promoting_to.value)
-        current[game.player] |= to_square
-        setattr(new_position, is_promoting_to.value, current)
-
-        current = getattr(new_position, Piece.PAWN.value)
-        current[game.player] ^= to_square
-        setattr(new_position, Piece.PAWN.value, current)
 
     last_move = Move(
         piece=moved_piece,
         from_square=from_square,
         to_square=to_square,
         player=Player.WHITE if is_white else Player.BLACK,
-        is_capturing=captured_piece or captured_piece_en_passant,
+        is_capturing_en_passant=is_capturing_en_passant,
         is_castling=None,
         is_promoting_to=is_promoting_to,
     )
+    new_position, is_capturing = game.position.move(last_move)
     new_game = Game(
         position=new_position,
         player=Player.BLACK if is_white else Player.WHITE,
@@ -660,7 +563,7 @@ def move_piece(
             )
             and not (
                 not is_white
-                and captured_piece == Piece.ROOK
+                and is_capturing == Piece.ROOK
                 and to_square == 0x0000_0000_0000_0001
             ),
             Castle.WHITE_QUEENSIDE: game.possible_castles[Castle.WHITE_QUEENSIDE]
@@ -672,7 +575,7 @@ def move_piece(
             )
             and not (
                 not is_white
-                and captured_piece == Piece.ROOK
+                and is_capturing == Piece.ROOK
                 and to_square == 0x0000_0000_0000_0080
             ),
             Castle.BLACK_KINGSIDE: game.possible_castles[Castle.BLACK_KINGSIDE]
@@ -684,7 +587,7 @@ def move_piece(
             )
             and not (
                 is_white
-                and captured_piece == Piece.ROOK
+                and is_capturing == Piece.ROOK
                 and to_square == 0x0100_0000_0000_0000
             ),
             Castle.BLACK_QUEENSIDE: game.possible_castles[Castle.BLACK_QUEENSIDE]
@@ -696,7 +599,7 @@ def move_piece(
             )
             and not (
                 is_white
-                and captured_piece == Piece.ROOK
+                and is_capturing == Piece.ROOK
                 and to_square == 0x8000_0000_0000_0000
             ),
         },
@@ -704,10 +607,10 @@ def move_piece(
         position_counts=game.position_counts,
         move_counter=game.move_counter + (0 if is_white else 1),
         fifty_move_counter=0
-        if moved_piece == Piece.PAWN or captured_piece or is_capturing_en_passant
+        if moved_piece == Piece.PAWN or is_capturing or is_capturing_en_passant
         else game.fifty_move_counter + 1,
     )
-    new_game.increment_position_count()
+    new_game.increment_position_count(is_capturing)
 
     return new_game
 

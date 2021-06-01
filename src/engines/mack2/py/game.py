@@ -3,14 +3,14 @@ from typing import Optional, Tuple
 
 from bitboard import get_bottom_square, get_top_square, split
 from constants import (
-    NORTH_MOVES,
-    SOUTH_MOVES,
-    WEST_MOVES,
-    EAST_MOVES,
-    NORTH_WEST_MOVES,
-    NORTH_EAST_MOVES,
-    SOUTH_WEST_MOVES,
-    SOUTH_EAST_MOVES,
+    NORTH_RAY,
+    SOUTH_RAY,
+    WEST_RAY,
+    EAST_RAY,
+    NORTH_WEST_RAY,
+    NORTH_EAST_RAY,
+    SOUTH_WEST_RAY,
+    SOUTH_EAST_RAY,
     NORTH_ATTACKS,
     SOUTH_ATTACKS,
     WEST_ATTACKS,
@@ -339,14 +339,14 @@ class Position:
         queen_and_rook = queen | rook
         queen_and_bishop = queen | bishop
 
-        north_pieces = NORTH_MOVES[square] & self.all_pieces
-        south_pieces = SOUTH_MOVES[square] & self.all_pieces
-        west_pieces = WEST_MOVES[square] & self.all_pieces
-        east_pieces = EAST_MOVES[square] & self.all_pieces
-        north_west_pieces = NORTH_WEST_MOVES[square] & self.all_pieces
-        south_west_pieces = SOUTH_WEST_MOVES[square] & self.all_pieces
-        north_east_pieces = NORTH_EAST_MOVES[square] & self.all_pieces
-        south_east_pieces = SOUTH_EAST_MOVES[square] & self.all_pieces
+        north_pieces = NORTH_RAY[square] & self.all_pieces
+        south_pieces = SOUTH_RAY[square] & self.all_pieces
+        west_pieces = WEST_RAY[square] & self.all_pieces
+        east_pieces = EAST_RAY[square] & self.all_pieces
+        north_west_pieces = NORTH_WEST_RAY[square] & self.all_pieces
+        south_west_pieces = SOUTH_WEST_RAY[square] & self.all_pieces
+        north_east_pieces = NORTH_EAST_RAY[square] & self.all_pieces
+        south_east_pieces = SOUTH_EAST_RAY[square] & self.all_pieces
 
         return (
             (KING_MOVES[square] & king)

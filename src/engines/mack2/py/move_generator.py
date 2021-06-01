@@ -15,64 +15,43 @@ from bitboard import (
     get_moveable_sqares_to_bottom_right,
     split,
 )
+from constants import KING_MOVES
 from enums import Castle, Piece, Player, PromotionPiece, Result
 from game import Game, Move, Position
 
 
 def get_moveable_squares_for_king(
-    all_pieces: int,
+    position: Position,
     friendly_pieces: int,
-    capture_squares: int,
     king: int,
-    enemy_king: int,
     is_white: bool,
     possible_castles: dict[Castle, bool],
 ) -> Tuple[int, int, int]:
-    top = get_top_square(king)
-    bottom = get_bottom_square(king)
-    left = get_left_square(king)
-    right = get_right_square(king)
-
-    enemy_king_top = get_top_square(enemy_king)
-    enemy_king_bottom = get_bottom_square(enemy_king)
-    enemy_king_left = get_left_square(enemy_king)
-    enemy_king_right = get_right_square(enemy_king)
-    enemy_king_squares = (
-        enemy_king
-        | enemy_king_top
-        | get_right_square(enemy_king_top)
-        | enemy_king_right
-        | get_bottom_square(enemy_king_right)
-        | enemy_king_bottom
-        | get_left_square(enemy_king_bottom)
-        | enemy_king_left
-        | get_top_square(enemy_king_left)
-    )
-
-    regular_moves = (
-        top
-        | get_right_square(top)
-        | right
-        | get_bottom_square(right)
-        | bottom
-        | get_left_square(bottom)
-        | left
-        | get_top_square(left)
-    )
+    regular_moves = KING_MOVES[king]
     regular_moves = regular_moves ^ (regular_moves & friendly_pieces)
-    regular_moves = regular_moves ^ (regular_moves & enemy_king_squares)
 
     can_castle_kingside = (
         possible_castles.get(
             Castle.WHITE_KINGSIDE if is_white else Castle.BLACK_KINGSIDE
         )
         and (
-            all_pieces & (0x0000_0000_0000_0006 if is_white else 0x0600_0000_0000_0000)
+            position.all_pieces
+            & (0x0000_0000_0000_0006 if is_white else 0x0600_0000_0000_0000)
         )
         == 0
-        and (
-            capture_squares
-            & (0x0000_0000_0000_000E if is_white else 0x0E00_0000_0000_0000)
+        and position.attackers(
+            Player.BLACK if is_white else Player.WHITE,
+            0x0000_0000_0000_0002 if is_white else 0x0200_0000_0000_0000,
+        )
+        == 0
+        and position.attackers(
+            Player.BLACK if is_white else Player.WHITE,
+            0x0000_0000_0000_0004 if is_white else 0x0400_0000_0000_0000,
+        )
+        == 0
+        and position.attackers(
+            Player.BLACK if is_white else Player.WHITE,
+            0x0000_0000_0000_0008 if is_white else 0x0800_0000_0000_0000,
         )
         == 0
     )
@@ -81,12 +60,23 @@ def get_moveable_squares_for_king(
             Castle.WHITE_QUEENSIDE if is_white else Castle.BLACK_QUEENSIDE
         )
         and (
-            all_pieces & (0x0000_0000_0000_0070 if is_white else 0x7000_0000_0000_0000)
+            position.all_pieces
+            & (0x0000_0000_0000_0070 if is_white else 0x7000_0000_0000_0000)
         )
         == 0
-        and (
-            capture_squares
-            & (0x0000_0000_0000_0038 if is_white else 0x3800_0000_0000_0000)
+        and position.attackers(
+            Player.BLACK if is_white else Player.WHITE,
+            0x0000_0000_0000_0008 if is_white else 0x0800_0000_0000_0000,
+        )
+        == 0
+        and position.attackers(
+            Player.BLACK if is_white else Player.WHITE,
+            0x0000_0000_0000_0010 if is_white else 0x1000_0000_0000_0000,
+        )
+        == 0
+        and position.attackers(
+            Player.BLACK if is_white else Player.WHITE,
+            0x0000_0000_0000_0020 if is_white else 0x2000_0000_0000_0000,
         )
         == 0
     )
@@ -157,14 +147,6 @@ def get_moveable_squares_for_knight(friendly_pieces: int, knight: int) -> int:
     return moveable_squares & (moveable_squares ^ friendly_pieces)
 
 
-def get_capture_squares_for_pawn(
-    is_white: bool, friendly_pieces: int, pawn: int
-) -> int:
-    forward = get_bottom_square(pawn) if is_white else get_top_square(pawn)
-    capture_squares = get_left_square(forward) | get_right_square(forward)
-    return capture_squares ^ (capture_squares & friendly_pieces)
-
-
 def get_moveable_squares_for_pawn(
     is_white: bool,
     all_pieces: int,
@@ -207,26 +189,6 @@ def get_moveable_squares_for_pawn(
             (get_right_square(one_forward) & en_passant_square)
         ),
         (single & (0xFF00_0000_0000_0000 if is_white else 0x0000_0000_0000_00FF)),
-    )
-
-
-def get_capture_squares(position: Position, is_white: bool) -> int:
-    # If white is on turn, we check if black is checking white
-    player = Player.BLACK if is_white else Player.WHITE
-    friendly_pieces = position.black_pieces if is_white else position.white_pieces
-    enemy_pieces = position.white_pieces if is_white else position.black_pieces
-    return (
-        get_moveable_squares_for_queen(
-            position.all_pieces, enemy_pieces, position.Q[player]
-        )
-        | get_moveable_squares_for_rook(
-            position.all_pieces, enemy_pieces, position.R[player]
-        )
-        | get_moveable_squares_for_bishop(
-            position.all_pieces, enemy_pieces, position.B[player]
-        )
-        | get_moveable_squares_for_knight(friendly_pieces, position.N[player])
-        | get_capture_squares_for_pawn(is_white, friendly_pieces, position.P[player])
     )
 
 
@@ -665,11 +627,9 @@ def get_legal_moves(game: Game) -> dict[str, Game]:
 
     king = getattr(game.position, Piece.KING.value)[game.player]
     regular, kingsideCastles, queensideCastles = get_moveable_squares_for_king(
-        all_pieces=game.position.all_pieces,
+        position=game.position,
         friendly_pieces=friendly_pieces,
-        capture_squares=get_capture_squares(game.position, is_white),
         king=king,
-        enemy_king=game.position.K[Player.BLACK if is_white else Player.WHITE],
         is_white=is_white,
         possible_castles=game.possible_castles,
     )
@@ -731,6 +691,7 @@ def count_legal_moves(game: Game, depth: int = 1):
         #     print(next_game.last_move, add)
         sum += add
     return sum
+
 
 def get_game_result(game: Game, legal_moves: dict[str, Game]) -> Optional[Result]:
     if len(legal_moves) == 0:

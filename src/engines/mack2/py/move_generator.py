@@ -1,8 +1,6 @@
 from typing import Optional, Tuple
 
 from bitboard import (
-    get_left_square,
-    get_right_square,
     get_top_square,
     get_bottom_square,
     split,
@@ -22,6 +20,12 @@ from constants import (
     NORTH_WEST_ATTACKS,
     NORTH_WEST_MOVES,
     NORTH_WEST_RAY,
+    PAWN_ATTACK_MOVES,
+    PAWN_ATTACK_MOVES_PROMOTION,
+    PAWN_DOUBLE_MOVES,
+    PAWN_EN_PASSANT_CAPTURES,
+    PAWN_SINGLE_MOVES,
+    PAWN_SINGLE_MOVES_PROMOTION,
     SOUTH_ATTACKS,
     SOUTH_EAST_ATTACKS,
     SOUTH_EAST_MOVES,
@@ -157,51 +161,6 @@ def get_diagonal_moves(all_pieces: int, enemy_pieces: int, square: int) -> int:
 def get_moveable_squares_for_knight(friendly_pieces: int, knight: int) -> int:
     moveable_squares = KNIGHT_MOVES[knight]
     return moveable_squares & (moveable_squares ^ friendly_pieces)
-
-
-def get_moveable_squares_for_pawn(
-    is_white: bool,
-    all_pieces: int,
-    enemy_pieces: int,
-    en_passant_square: int,
-    pawn: int,
-) -> Tuple[int, int, int, int]:
-    forward = get_top_square if is_white else get_bottom_square
-    one_forward = forward(pawn)
-    two_forward = forward(one_forward)
-    free_squares = 0xFFFF_FFFF_FFFF_FFFF ^ all_pieces
-    single = (
-        # Move one square forward
-        (one_forward & free_squares)
-        |
-        # Taking to the left
-        (get_left_square(one_forward) & enemy_pieces)
-        |
-        # Taking to the right
-        (get_right_square(one_forward) & enemy_pieces)
-    )
-    return (
-        (single & (0x00FF_FFFF_FFFF_FFFF if is_white else 0xFFFF_FFFF_FFFF_FF00)),
-        # Move two squares forward (only when landing on the fourth / fifth rank)
-        (
-            two_forward
-            & free_squares
-            & (
-                get_top_square(free_squares)
-                if is_white
-                else get_bottom_square(free_squares)
-            )
-            & (0x0000_0000_FF00_0000 if is_white else 0x0000_00FF_0000_0000)
-        ),
-        (
-            # Taking en passant to the left
-            (get_left_square(one_forward) & en_passant_square)
-            |
-            # Taking en passant to the right
-            (get_right_square(one_forward) & en_passant_square)
-        ),
-        (single & (0xFF00_0000_0000_0000 if is_white else 0x0000_0000_0000_00FF)),
-    )
 
 
 def move_piece(
@@ -424,20 +383,14 @@ def get_legal_moves(game: Game) -> dict[str, Game]:
     enemy_pieces = (
         game.position.black_pieces if is_white else game.position.white_pieces
     )
+    empty_squares = 0xFFFF_FFFF_FFFF_FFFF ^ game.position.all_pieces
 
     possible_games: dict[str, Game] = {}
 
     pawns = split(getattr(game.position, Piece.PAWN.value)[game.player])
     for from_square in pawns:
-        single, double, en_passant, promotion = get_moveable_squares_for_pawn(
-            is_white,
-            game.position.all_pieces,
-            enemy_pieces,
-            game.en_passant_square,
-            from_square,
-        )
-
-        for to_square in split(single):
+        to_square = PAWN_SINGLE_MOVES[game.player][from_square] & empty_squares
+        if to_square:
             updated_game = move_piece(
                 game=game,
                 moved_piece=Piece.PAWN,
@@ -452,7 +405,36 @@ def get_legal_moves(game: Game) -> dict[str, Game]:
             if not updated_game.position.is_check(game.player):
                 possible_games[updated_game.last_move.id()] = updated_game
 
-        for to_square in split(double):
+        attacks = [
+            p & enemy_pieces for p in PAWN_ATTACK_MOVES[game.player][from_square]
+        ]
+        for to_square in attacks:
+            if to_square == 0:
+                continue
+            updated_game = move_piece(
+                game=game,
+                moved_piece=Piece.PAWN,
+                from_square=from_square,
+                to_square=to_square,
+                en_passant_square=0x0000_0000_0000_0000,
+                is_white=is_white,
+                castle=None,
+                is_capturing_en_passant=False,
+                is_promoting_to=None,
+            )
+            if not updated_game.position.is_check(game.player):
+                possible_games[updated_game.last_move.id()] = updated_game
+
+        to_square = (
+            PAWN_DOUBLE_MOVES[game.player][from_square]
+            & empty_squares
+            & (
+                get_top_square(empty_squares)
+                if is_white
+                else get_bottom_square(empty_squares)
+            )
+        )
+        if to_square:
             updated_game = move_piece(
                 game=game,
                 moved_piece=Piece.PAWN,
@@ -471,7 +453,10 @@ def get_legal_moves(game: Game) -> dict[str, Game]:
             if not updated_game.position.is_check(game.player):
                 possible_games[updated_game.last_move.id()] = updated_game
 
-        for to_square in split(en_passant):
+        to_square = (
+            PAWN_EN_PASSANT_CAPTURES[game.player][from_square] & game.en_passant_square
+        )
+        if to_square:
             updated_game = move_piece(
                 game=game,
                 moved_piece=Piece.PAWN,
@@ -486,7 +471,17 @@ def get_legal_moves(game: Game) -> dict[str, Game]:
             if not updated_game.position.is_check(game.player):
                 possible_games[updated_game.last_move.id()] = updated_game
 
-        for to_square in split(promotion):
+        single_move_promotions = [
+            p & empty_squares
+            for p in PAWN_SINGLE_MOVES_PROMOTION[game.player][from_square]
+        ]
+        attack_promotions = [
+            p & enemy_pieces
+            for p in PAWN_ATTACK_MOVES_PROMOTION[game.player][from_square]
+        ]
+        for to_square in single_move_promotions + attack_promotions:
+            if to_square == 0:
+                continue
             updated_game_with_queen_promotion = move_piece(
                 game=game,
                 moved_piece=Piece.PAWN,

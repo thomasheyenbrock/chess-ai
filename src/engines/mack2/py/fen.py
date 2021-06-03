@@ -44,12 +44,10 @@ def game_from_fen(fen: str) -> Game:
                 emptySquares = int(piece)
                 fileIndex += emptySquares
             else:
-                current = getattr(position, piece.upper())
                 square = SQUARES[rankIndex * 8 + fileIndex]
-                current[
+                position.pieces[piece.upper()][
                     Player["BLACK"] if piece == piece.lower() else Player["WHITE"]
                 ] |= square
-                setattr(position, piece, current)
                 if piece == piece.lower():
                     position.black_pieces |= square
                 else:

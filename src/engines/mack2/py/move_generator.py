@@ -98,8 +98,7 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
     )
     empty_squares = 0xFFFF_FFFF_FFFF_FFFF ^ game.position.all_pieces
 
-    pawns = split(getattr(game.position, Piece["PAWN"])[game.player])
-    for from_square in pawns:
+    for from_square in split(getattr(game.position, Piece["PAWN"])[game.player]):
         to_square = PAWN_SINGLE_MOVES[game.player][from_square] & empty_squares
         if to_square:
             move = Move(
@@ -248,12 +247,10 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
             if not position.is_check(game.player):
                 yield move
 
-    knights = split(getattr(game.position, Piece["KNIGHT"])[game.player])
-    for from_square in knights:
-        possible_moves = split(
+    for from_square in split(getattr(game.position, Piece["KNIGHT"])[game.player]):
+        for to_square in split(
             KNIGHT_MOVES[from_square] & (KNIGHT_MOVES[from_square] ^ friendly_pieces)
-        )
-        for to_square in possible_moves:
+        ):
             move = Move(
                 player=game.player,
                 piece=Piece["KNIGHT"],
@@ -268,12 +265,10 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
             if not position.is_check(game.player):
                 yield move
 
-    bishops = split(getattr(game.position, Piece["BISHOP"])[game.player])
-    for from_square in bishops:
-        possible_moves = split(
+    for from_square in split(getattr(game.position, Piece["BISHOP"])[game.player]):
+        for to_square in split(
             get_diagonal_moves(game.position.all_pieces, enemy_pieces, from_square)
-        )
-        for to_square in possible_moves:
+        ):
             move = Move(
                 player=game.player,
                 piece=Piece["BISHOP"],
@@ -288,12 +283,10 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
             if not position.is_check(game.player):
                 yield move
 
-    rooks = split(getattr(game.position, Piece["ROOK"])[game.player])
-    for from_square in rooks:
-        possible_moves = split(
+    for from_square in split(getattr(game.position, Piece["ROOK"])[game.player]):
+        for to_square in split(
             get_rank_and_file_moves(game.position.all_pieces, enemy_pieces, from_square)
-        )
-        for to_square in possible_moves:
+        ):
             move = Move(
                 player=game.player,
                 piece=Piece["ROOK"],
@@ -308,13 +301,11 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
             if not position.is_check(game.player):
                 yield move
 
-    queens = split(getattr(game.position, Piece["QUEEN"])[game.player])
-    for from_square in queens:
-        possible_moves = split(
+    for from_square in split(getattr(game.position, Piece["QUEEN"])[game.player]):
+        for to_square in split(
             get_rank_and_file_moves(game.position.all_pieces, enemy_pieces, from_square)
             | get_diagonal_moves(game.position.all_pieces, enemy_pieces, from_square)
-        )
-        for to_square in possible_moves:
+        ):
             move = Move(
                 player=game.player,
                 piece=Piece["QUEEN"],

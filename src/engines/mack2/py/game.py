@@ -373,16 +373,16 @@ class Position:
         return attackers != 0
 
     def is_dead(self) -> bool:
-        white_queens = split(self.Q[Player["WHITE"]])
-        white_rooks = split(self.R[Player["WHITE"]])
-        white_bishops = split(self.B[Player["WHITE"]])
-        white_knights = split(self.N[Player["WHITE"]])
-        white_pawns = split(self.P[Player["WHITE"]])
-        black_queens = split(self.Q[Player["BLACK"]])
-        black_rooks = split(self.R[Player["BLACK"]])
-        black_bishops = split(self.B[Player["BLACK"]])
-        black_knights = split(self.N[Player["BLACK"]])
-        black_pawns = split(self.P[Player["BLACK"]])
+        white_queens = list(split(self.Q[Player["WHITE"]]))
+        white_rooks = list(split(self.R[Player["WHITE"]]))
+        white_bishops = list(split(self.B[Player["WHITE"]]))
+        white_knights = list(split(self.N[Player["WHITE"]]))
+        white_pawns = list(split(self.P[Player["WHITE"]]))
+        black_queens = list(split(self.Q[Player["BLACK"]]))
+        black_rooks = list(split(self.R[Player["BLACK"]]))
+        black_bishops = list(split(self.B[Player["BLACK"]]))
+        black_knights = list(split(self.N[Player["BLACK"]]))
+        black_pawns = list(split(self.P[Player["BLACK"]]))
 
         number_of_white_pieces = (
             len(white_queens)

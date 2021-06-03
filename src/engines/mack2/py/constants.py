@@ -8,6 +8,7 @@ from bitboard import (
 )
 from enums import Player
 
+
 NORTH_RAY = {}
 SOUTH_RAY = {}
 WEST_RAY = {}

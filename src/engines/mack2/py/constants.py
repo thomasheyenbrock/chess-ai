@@ -6,7 +6,6 @@ from bitboard import (
     get_left_square,
     get_right_square,
 )
-from enums import Player
 
 
 NORTH_RAY = {}
@@ -38,13 +37,13 @@ SOUTH_EAST_ATTACKS = {}
 
 KING_MOVES = {}
 KNIGHT_MOVES = {}
-PAWN_ATTACKS = {Player["WHITE"]: {}, Player["BLACK"]: {}}
-PAWN_SINGLE_MOVES = {Player["WHITE"]: {}, Player["BLACK"]: {}}
-PAWN_SINGLE_MOVES_PROMOTION = {Player["WHITE"]: {}, Player["BLACK"]: {}}
-PAWN_DOUBLE_MOVES = {Player["WHITE"]: {}, Player["BLACK"]: {}}
-PAWN_ATTACK_MOVES = {Player["WHITE"]: {}, Player["BLACK"]: {}}
-PAWN_ATTACK_MOVES_PROMOTION = {Player["WHITE"]: {}, Player["BLACK"]: {}}
-PAWN_EN_PASSANT_CAPTURES = {Player["WHITE"]: {}, Player["BLACK"]: {}}
+PAWN_ATTACKS = {True: {}, False: {}}
+PAWN_SINGLE_MOVES = {True: {}, False: {}}
+PAWN_SINGLE_MOVES_PROMOTION = {True: {}, False: {}}
+PAWN_DOUBLE_MOVES = {True: {}, False: {}}
+PAWN_ATTACK_MOVES = {True: {}, False: {}}
+PAWN_ATTACK_MOVES_PROMOTION = {True: {}, False: {}}
+PAWN_EN_PASSANT_CAPTURES = {True: {}, False: {}}
 
 
 def generate_possibilities(direction: Callable[[int], int]) -> List[int]:
@@ -218,32 +217,32 @@ for rank in range(8):
             | get_bottom_square(right2)
         )
 
-        PAWN_ATTACKS[Player["WHITE"]][square] = bottom_left | bottom_right
-        PAWN_ATTACKS[Player["BLACK"]][square] = top_left | top_right
+        PAWN_ATTACKS[True][square] = bottom_left | bottom_right
+        PAWN_ATTACKS[False][square] = top_left | top_right
 
         if square & 0x00FF_0000_0000_0000 == 0:
-            PAWN_SINGLE_MOVES[Player["WHITE"]][square] = top
-            PAWN_SINGLE_MOVES_PROMOTION[Player["WHITE"]][square] = []
+            PAWN_SINGLE_MOVES[True][square] = top
+            PAWN_SINGLE_MOVES_PROMOTION[True][square] = []
         else:
-            PAWN_SINGLE_MOVES[Player["WHITE"]][square] = 0
-            PAWN_SINGLE_MOVES_PROMOTION[Player["WHITE"]][square] = [top]
+            PAWN_SINGLE_MOVES[True][square] = 0
+            PAWN_SINGLE_MOVES_PROMOTION[True][square] = [top]
 
         if square & 0x0000_0000_0000_FF00 == 0:
-            PAWN_SINGLE_MOVES[Player["BLACK"]][square] = bottom
-            PAWN_SINGLE_MOVES_PROMOTION[Player["BLACK"]][square] = []
+            PAWN_SINGLE_MOVES[False][square] = bottom
+            PAWN_SINGLE_MOVES_PROMOTION[False][square] = []
         else:
-            PAWN_SINGLE_MOVES[Player["BLACK"]][square] = 0
-            PAWN_SINGLE_MOVES_PROMOTION[Player["BLACK"]][square] = [bottom]
+            PAWN_SINGLE_MOVES[False][square] = 0
+            PAWN_SINGLE_MOVES_PROMOTION[False][square] = [bottom]
 
         if square & 0x0000_0000_0000_FF00 == 0:
-            PAWN_DOUBLE_MOVES[Player["WHITE"]][square] = 0
+            PAWN_DOUBLE_MOVES[True][square] = 0
         else:
-            PAWN_DOUBLE_MOVES[Player["WHITE"]][square] = top2
+            PAWN_DOUBLE_MOVES[True][square] = top2
 
         if square & 0x00FF_0000_0000_0000 == 0:
-            PAWN_DOUBLE_MOVES[Player["BLACK"]][square] = 0
+            PAWN_DOUBLE_MOVES[False][square] = 0
         else:
-            PAWN_DOUBLE_MOVES[Player["BLACK"]][square] = bottom2
+            PAWN_DOUBLE_MOVES[False][square] = bottom2
 
         black_pawn_attacks = []
         if bottom_left != 0:
@@ -251,11 +250,11 @@ for rank in range(8):
         if bottom_right != 0:
             black_pawn_attacks += [bottom_right]
         if square & 0x0000_0000_0000_FF00 == 0:
-            PAWN_ATTACK_MOVES[Player["BLACK"]][square] = black_pawn_attacks
-            PAWN_ATTACK_MOVES_PROMOTION[Player["BLACK"]][square] = []
+            PAWN_ATTACK_MOVES[False][square] = black_pawn_attacks
+            PAWN_ATTACK_MOVES_PROMOTION[False][square] = []
         else:
-            PAWN_ATTACK_MOVES[Player["BLACK"]][square] = []
-            PAWN_ATTACK_MOVES_PROMOTION[Player["BLACK"]][square] = black_pawn_attacks
+            PAWN_ATTACK_MOVES[False][square] = []
+            PAWN_ATTACK_MOVES_PROMOTION[False][square] = black_pawn_attacks
 
         white_pawn_attacks = []
         if top_left != 0:
@@ -263,11 +262,11 @@ for rank in range(8):
         if top_right != 0:
             white_pawn_attacks += [top_right]
         if square & 0x00FF_0000_0000_0000 == 0:
-            PAWN_ATTACK_MOVES[Player["WHITE"]][square] = white_pawn_attacks
-            PAWN_ATTACK_MOVES_PROMOTION[Player["WHITE"]][square] = []
+            PAWN_ATTACK_MOVES[True][square] = white_pawn_attacks
+            PAWN_ATTACK_MOVES_PROMOTION[True][square] = []
         else:
-            PAWN_ATTACK_MOVES[Player["WHITE"]][square] = []
-            PAWN_ATTACK_MOVES_PROMOTION[Player["WHITE"]][square] = white_pawn_attacks
+            PAWN_ATTACK_MOVES[True][square] = []
+            PAWN_ATTACK_MOVES_PROMOTION[True][square] = white_pawn_attacks
 
         black_pawn_attacks = []
         if bottom_left != 0:
@@ -275,20 +274,30 @@ for rank in range(8):
         if bottom_right != 0:
             black_pawn_attacks += [bottom_right]
         if square & 0x0000_0000_0000_FF00 == 0:
-            PAWN_ATTACK_MOVES[Player["BLACK"]][square] = black_pawn_attacks
-            PAWN_ATTACK_MOVES_PROMOTION[Player["BLACK"]][square] = []
+            PAWN_ATTACK_MOVES[False][square] = black_pawn_attacks
+            PAWN_ATTACK_MOVES_PROMOTION[False][square] = []
         else:
-            PAWN_ATTACK_MOVES[Player["BLACK"]][square] = []
-            PAWN_ATTACK_MOVES_PROMOTION[Player["BLACK"]][square] = black_pawn_attacks
+            PAWN_ATTACK_MOVES[False][square] = []
+            PAWN_ATTACK_MOVES_PROMOTION[False][square] = black_pawn_attacks
 
         if square & 0x0000_00FF_0000_0000 == 0:
-            PAWN_EN_PASSANT_CAPTURES[Player["WHITE"]][square] = 0
+            PAWN_EN_PASSANT_CAPTURES[True][square] = 0
         else:
-            PAWN_EN_PASSANT_CAPTURES[Player["WHITE"]][square] = top_left | top_right
+            PAWN_EN_PASSANT_CAPTURES[True][square] = top_left | top_right
 
         if square & 0x0000_0000_FF00_0000 == 0:
-            PAWN_EN_PASSANT_CAPTURES[Player["BLACK"]][square] = 0
+            PAWN_EN_PASSANT_CAPTURES[False][square] = 0
         else:
-            PAWN_EN_PASSANT_CAPTURES[Player["BLACK"]][square] = (
-                bottom_left | bottom_right
-            )
+            PAWN_EN_PASSANT_CAPTURES[False][square] = bottom_left | bottom_right
+
+# for s in NORTH_ATTACKS[0x0000_0001_0000_0000]:
+#     print(bin(s), bin(NORTH_ATTACKS[0x0000_0001_0000_0000][s]))
+# print("")
+# for s in NORTH_MOVES[0x0000_0001_0000_0000]:
+#     print(bin(s), bin(NORTH_MOVES[0x0000_0001_0000_0000][s]))
+# print("")
+# for s in SOUTH_ATTACKS[0x0000_0001_0000_0000]:
+#     print(bin(s), bin(SOUTH_ATTACKS[0x0000_0001_0000_0000][s]))
+# print("")
+# for s in SOUTH_MOVES[0x0000_0001_0000_0000]:
+#     print(bin(s), bin(SOUTH_MOVES[0x0000_0001_0000_0000][s]))

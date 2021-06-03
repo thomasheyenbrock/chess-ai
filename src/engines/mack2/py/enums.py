@@ -1,24 +1,3 @@
-Player = {"WHITE": "w", "BLACK": "b"}
-
-
-Piece = {
-    "KING": "K",
-    "QUEEN": "Q",
-    "ROOK": "R",
-    "BISHOP": "B",
-    "KNIGHT": "N",
-    "PAWN": "P",
-}
-
-
-Castle = {
-    "WHITE_KINGSIDE": "K",
-    "WHITE_QUEENSIDE": "Q",
-    "BLACK_KINGSIDE": "k",
-    "BLACK_QUEENSIDE": "q",
-}
-
-
 Result = {
     "WHITE": "White wins",
     "BLACK": "Black wins",

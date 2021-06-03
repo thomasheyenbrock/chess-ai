@@ -1,5 +1,4 @@
 from bitboard import SQUARES
-from enums import Castle, Player
 from game import Game, Position
 
 
@@ -45,9 +44,7 @@ def game_from_fen(fen: str) -> Game:
                 fileIndex += emptySquares
             else:
                 square = SQUARES[rankIndex * 8 + fileIndex]
-                position.pieces[piece.upper()][
-                    Player["BLACK"] if piece == piece.lower() else Player["WHITE"]
-                ] |= square
+                position.pieces[piece.upper()][piece != piece.lower()] |= square
                 if piece == piece.lower():
                     position.black_pieces |= square
                 else:
@@ -57,13 +54,13 @@ def game_from_fen(fen: str) -> Game:
             rank = rank[1:]
     return Game(
         position=position,
-        player=Player["WHITE"] if player == "w" else Player["BLACK"],
+        player=player == "w",
         last_move=None,
         possible_castles={
-            Castle["WHITE_KINGSIDE"]: "K" in castles,
-            Castle["WHITE_QUEENSIDE"]: "Q" in castles,
-            Castle["BLACK_KINGSIDE"]: "k" in castles,
-            Castle["BLACK_QUEENSIDE"]: "q" in castles,
+            "K": "K" in castles,
+            "Q": "Q" in castles,
+            "k": "k" in castles,
+            "q": "q" in castles,
         },
         en_passant_square=0x0000_0000_0000_0000
         if en_passant_square == "-"

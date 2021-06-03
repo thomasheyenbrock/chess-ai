@@ -39,7 +39,7 @@ from constants import (
     WEST_MOVES,
     WEST_RAY,
 )
-from enums import Castle, Piece, Player, Result
+from enums import Result
 from game import Game, Move
 
 
@@ -88,28 +88,25 @@ def get_diagonal_moves(all_pieces: int, enemy_pieces: int, square: int) -> int:
 
 
 def get_legal_moves(game: Game) -> Iterable[Move]:
-    is_white = game.player == Player["WHITE"]
-    opposite_player = Player["BLACK"] if is_white else Player["WHITE"]
-
     friendly_pieces = (
-        game.position.white_pieces if is_white else game.position.black_pieces
+        game.position.white_pieces if game.player else game.position.black_pieces
     )
     enemy_pieces = (
-        game.position.black_pieces if is_white else game.position.white_pieces
+        game.position.black_pieces if game.player else game.position.white_pieces
     )
     empty_squares = 0xFFFF_FFFF_FFFF_FFFF ^ game.position.all_pieces
     attacked_squares = game.position.attacked_squares(
-        player=opposite_player, exclude_king=True
+        player=not game.player, exclude_king=True
     )
     non_attacked_squares = 0xFFFF_FFFF_FFFF_FFFF ^ attacked_squares
 
-    king = game.position.pieces[Piece["KING"]][game.player]
+    king = game.position.pieces["K"][game.player]
     king_moves = KING_MOVES[king] & non_attacked_squares
     king_moves ^= king_moves & friendly_pieces
     for to_square in split(king_moves):
         yield Move(
             player=game.player,
-            piece=Piece["KING"],
+            piece="K",
             from_square=king,
             to_square=to_square,
             en_passant_square=0,
@@ -118,7 +115,7 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
             is_promoting_to=None,
         )
 
-    attackers = list(game.position.checkers(player=opposite_player, king=king))
+    attackers = list(game.position.checkers(player=not game.player, king=king))
     number_of_attackers = len(attackers)
     if number_of_attackers > 1:
         # Multiple pieces are giving check, so the king has to move
@@ -129,8 +126,8 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
     if number_of_attackers == 1:
         attacker = attackers[0]
         capture_mask = attacker
-        if (attacker & game.position.pieces[Piece["KNIGHT"]][opposite_player] != 0) or (
-            attacker & game.position.pieces[Piece["PAWN"]][opposite_player] != 0
+        if (attacker & game.position.pieces["N"][not game.player] != 0) or (
+            attacker & game.position.pieces["P"][not game.player] != 0
         ):
             # checked by knight or pawn, this can't be blocked
             push_mask = 0
@@ -149,15 +146,11 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
 
     capture_or_push_mask = capture_mask | push_mask
 
-    enemy_queens = game.position.pieces[Piece["QUEEN"]][opposite_player]
-    enemy_queens_and_rooks = (
-        enemy_queens | game.position.pieces[Piece["ROOK"]][opposite_player]
-    )
-    enemy_queens_and_bishops = (
-        enemy_queens | game.position.pieces[Piece["BISHOP"]][opposite_player]
-    )
+    enemy_queens = game.position.pieces["Q"][not game.player]
+    enemy_queens_and_rooks = enemy_queens | game.position.pieces["R"][not game.player]
+    enemy_queens_and_bishops = enemy_queens | game.position.pieces["B"][not game.player]
 
-    for from_square in split(game.position.pieces[Piece["QUEEN"]][game.player]):
+    for from_square in split(game.position.pieces["Q"][game.player]):
         moveable_squares = (
             capture_or_push_mask
             & (
@@ -178,7 +171,7 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
         for to_square in split(moveable_squares):
             yield Move(
                 player=game.player,
-                piece=Piece["QUEEN"],
+                piece="Q",
                 from_square=from_square,
                 to_square=to_square,
                 en_passant_square=0,
@@ -187,7 +180,7 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
                 is_promoting_to=None,
             )
 
-    for from_square in split(game.position.pieces[Piece["ROOK"]][game.player]):
+    for from_square in split(game.position.pieces["R"][game.player]):
         moveable_squares = (
             capture_or_push_mask
             & get_rank_and_file_moves(
@@ -203,7 +196,7 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
         for to_square in split(moveable_squares):
             yield Move(
                 player=game.player,
-                piece=Piece["ROOK"],
+                piece="R",
                 from_square=from_square,
                 to_square=to_square,
                 en_passant_square=0,
@@ -212,7 +205,7 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
                 is_promoting_to=None,
             )
 
-    for from_square in split(game.position.pieces[Piece["BISHOP"]][game.player]):
+    for from_square in split(game.position.pieces["B"][game.player]):
         moveable_squares = (
             capture_or_push_mask
             & get_diagonal_moves(game.position.all_pieces, enemy_pieces, from_square)
@@ -226,7 +219,7 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
         for to_square in split(moveable_squares):
             yield Move(
                 player=game.player,
-                piece=Piece["BISHOP"],
+                piece="B",
                 from_square=from_square,
                 to_square=to_square,
                 en_passant_square=0,
@@ -235,7 +228,7 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
                 is_promoting_to=None,
             )
 
-    for from_square in split(game.position.pieces[Piece["KNIGHT"]][game.player]):
+    for from_square in split(game.position.pieces["N"][game.player]):
         moveable_squares = (
             capture_or_push_mask
             & KNIGHT_MOVES[from_square]
@@ -250,7 +243,7 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
         for to_square in split(moveable_squares):
             yield Move(
                 player=game.player,
-                piece=Piece["KNIGHT"],
+                piece="N",
                 from_square=from_square,
                 to_square=to_square,
                 en_passant_square=0,
@@ -259,7 +252,7 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
                 is_promoting_to=None,
             )
 
-    for from_square in split(game.position.pieces[Piece["PAWN"]][game.player]):
+    for from_square in split(game.position.pieces["P"][game.player]):
         pinned_movement = game.position.pinned_movement(
             square=from_square,
             king=king,
@@ -275,7 +268,7 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
         if to_square != 0:
             yield Move(
                 player=game.player,
-                piece=Piece["PAWN"],
+                piece="P",
                 from_square=from_square,
                 to_square=to_square,
                 en_passant_square=0,
@@ -293,7 +286,7 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
                 continue
             yield Move(
                 player=game.player,
-                piece=Piece["PAWN"],
+                piece="P",
                 from_square=from_square,
                 to_square=to_square,
                 en_passant_square=0,
@@ -307,7 +300,7 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
             & empty_squares
             & (
                 get_top_square(empty_squares)
-                if is_white
+                if game.player
                 else get_bottom_square(empty_squares)
             )
             & pinned_movement
@@ -316,11 +309,11 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
         if to_square:
             yield Move(
                 player=game.player,
-                piece=Piece["PAWN"],
+                piece="P",
                 from_square=from_square,
                 to_square=to_square,
                 en_passant_square=get_bottom_square(to_square)
-                if is_white
+                if game.player
                 else get_top_square(to_square),
                 is_capturing_en_passant=False,
                 is_castling=None,
@@ -333,14 +326,14 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
             & pinned_movement
             & (
                 get_top_square(capture_mask)
-                if is_white
+                if game.player
                 else get_bottom_square(capture_mask)
             )
         )
         if to_square:
             move = Move(
                 player=game.player,
-                piece=Piece["PAWN"],
+                piece="P",
                 from_square=from_square,
                 to_square=to_square,
                 en_passant_square=0,
@@ -365,57 +358,55 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
                 continue
             yield Move(
                 player=game.player,
-                piece=Piece["PAWN"],
+                piece="P",
                 from_square=from_square,
                 to_square=to_square,
                 en_passant_square=0,
                 is_capturing_en_passant=False,
                 is_castling=None,
-                is_promoting_to=Piece["QUEEN"],
+                is_promoting_to="Q",
             )
             yield Move(
                 player=game.player,
-                piece=Piece["PAWN"],
+                piece="P",
                 from_square=from_square,
                 to_square=to_square,
                 en_passant_square=0,
                 is_capturing_en_passant=False,
                 is_castling=None,
-                is_promoting_to=Piece["ROOK"],
+                is_promoting_to="R",
             )
             yield Move(
                 player=game.player,
-                piece=Piece["PAWN"],
+                piece="P",
                 from_square=from_square,
                 to_square=to_square,
                 en_passant_square=0,
                 is_capturing_en_passant=False,
                 is_castling=None,
-                is_promoting_to=Piece["BISHOP"],
+                is_promoting_to="B",
             )
             yield Move(
                 player=game.player,
-                piece=Piece["PAWN"],
+                piece="P",
                 from_square=from_square,
                 to_square=to_square,
                 en_passant_square=0,
                 is_capturing_en_passant=False,
                 is_castling=None,
-                is_promoting_to=Piece["KNIGHT"],
+                is_promoting_to="N",
             )
 
     can_castle_kingside = (
-        game.possible_castles.get(
-            Castle["WHITE_KINGSIDE"] if is_white else Castle["BLACK_KINGSIDE"]
-        )
+        game.possible_castles["K" if game.player else "k"]
         and (
             game.position.all_pieces
-            & (0x0000_0000_0000_0006 if is_white else 0x0600_0000_0000_0000)
+            & (0x0000_0000_0000_0006 if game.player else 0x0600_0000_0000_0000)
         )
         == 0
         and (
             attacked_squares
-            & (0x0000_0000_0000_000E if is_white else 0x0E00_0000_0000_0000)
+            & (0x0000_0000_0000_000E if game.player else 0x0E00_0000_0000_0000)
             == 0
         )
     )
@@ -423,29 +414,25 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
     if can_castle_kingside:
         yield Move(
             player=game.player,
-            piece=Piece["KING"],
-            from_square=0x0000_0000_0000_0008 if is_white else 0x0800_0000_0000_0000,
-            to_square=0x0000_0000_0000_0002 if is_white else 0x0200_0000_0000_0000,
+            piece="K",
+            from_square=0x0000_0000_0000_0008 if game.player else 0x0800_0000_0000_0000,
+            to_square=0x0000_0000_0000_0002 if game.player else 0x0200_0000_0000_0000,
             en_passant_square=0,
             is_capturing_en_passant=False,
-            is_castling=Castle["WHITE_KINGSIDE"]
-            if is_white
-            else Castle["BLACK_KINGSIDE"],
+            is_castling="K" if game.player else "k",
             is_promoting_to=None,
         )
 
     can_castle_queenside = (
-        game.possible_castles.get(
-            Castle["WHITE_QUEENSIDE"] if is_white else Castle["BLACK_QUEENSIDE"]
-        )
+        game.possible_castles["Q" if game.player else "q"]
         and (
             game.position.all_pieces
-            & (0x0000_0000_0000_0070 if is_white else 0x7000_0000_0000_0000)
+            & (0x0000_0000_0000_0070 if game.player else 0x7000_0000_0000_0000)
         )
         == 0
         and (
             attacked_squares
-            & (0x0000_0000_0000_0038 if is_white else 0x3800_0000_0000_0000)
+            & (0x0000_0000_0000_0038 if game.player else 0x3800_0000_0000_0000)
             == 0
         )
     )
@@ -453,14 +440,12 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
     if can_castle_queenside:
         yield Move(
             player=game.player,
-            piece=Piece["KING"],
-            from_square=0x0000_0000_0000_0008 if is_white else 0x0800_0000_0000_0000,
-            to_square=0x0000_0000_0000_0020 if is_white else 0x2000_0000_0000_0000,
+            piece="K",
+            from_square=0x0000_0000_0000_0008 if game.player else 0x0800_0000_0000_0000,
+            to_square=0x0000_0000_0000_0020 if game.player else 0x2000_0000_0000_0000,
             en_passant_square=0,
             is_capturing_en_passant=False,
-            is_castling=Castle["WHITE_QUEENSIDE"]
-            if is_white
-            else Castle["BLACK_QUEENSIDE"],
+            is_castling="Q" if game.player else "q",
             is_promoting_to=None,
         )
 
@@ -483,9 +468,7 @@ def count_legal_moves(game: Game, depth: int = 1):
 def get_game_result(game: Game, legal_moves: dict[str, Game]) -> Optional[str]:
     if len(legal_moves) == 0:
         if game.position.is_check(game.player):
-            return (
-                Result["BLACK"] if game.player == Player["WHITE"] else Result["WHITE"]
-            )
+            return Result["BLACK"] if game.player else Result["WHITE"]
         return Result["STALEMATE"]
 
     if game.position.is_dead():

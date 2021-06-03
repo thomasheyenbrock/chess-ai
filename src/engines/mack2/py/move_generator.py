@@ -88,7 +88,7 @@ def get_diagonal_moves(all_pieces: int, enemy_pieces: int, square: int) -> int:
 
 
 def get_legal_moves(game: Game) -> Iterable[Move]:
-    is_white = game.player == Player.WHITE
+    is_white = game.player == Player["WHITE"]
 
     friendly_pieces = (
         game.position.white_pieces if is_white else game.position.black_pieces
@@ -98,13 +98,13 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
     )
     empty_squares = 0xFFFF_FFFF_FFFF_FFFF ^ game.position.all_pieces
 
-    pawns = split(getattr(game.position, Piece.PAWN.value)[game.player])
+    pawns = split(getattr(game.position, Piece["PAWN"])[game.player])
     for from_square in pawns:
         to_square = PAWN_SINGLE_MOVES[game.player][from_square] & empty_squares
         if to_square:
             move = Move(
                 player=game.player,
-                piece=Piece.PAWN,
+                piece=Piece["PAWN"],
                 from_square=from_square,
                 to_square=to_square,
                 en_passant_square=0,
@@ -124,7 +124,7 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
                 continue
             move = Move(
                 player=game.player,
-                piece=Piece.PAWN,
+                piece=Piece["PAWN"],
                 from_square=from_square,
                 to_square=to_square,
                 en_passant_square=0,
@@ -148,7 +148,7 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
         if to_square:
             move = Move(
                 player=game.player,
-                piece=Piece.PAWN,
+                piece=Piece["PAWN"],
                 from_square=from_square,
                 to_square=to_square,
                 en_passant_square=get_bottom_square(to_square)
@@ -168,7 +168,7 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
         if to_square:
             move = Move(
                 player=game.player,
-                piece=Piece.PAWN,
+                piece=Piece["PAWN"],
                 from_square=from_square,
                 to_square=to_square,
                 en_passant_square=0,
@@ -194,13 +194,13 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
 
             move = Move(
                 player=game.player,
-                piece=Piece.PAWN,
+                piece=Piece["PAWN"],
                 from_square=from_square,
                 to_square=to_square,
                 en_passant_square=0,
                 is_capturing_en_passant=False,
                 is_castling=None,
-                is_promoting_to=Piece.QUEEN,
+                is_promoting_to=Piece["QUEEN"],
             )
             position = game.position.move(move)[0]
             if not position.is_check(game.player):
@@ -208,13 +208,13 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
 
             move = Move(
                 player=game.player,
-                piece=Piece.PAWN,
+                piece=Piece["PAWN"],
                 from_square=from_square,
                 to_square=to_square,
                 en_passant_square=0,
                 is_capturing_en_passant=False,
                 is_castling=None,
-                is_promoting_to=Piece.ROOK,
+                is_promoting_to=Piece["ROOK"],
             )
             position = game.position.move(move)[0]
             if not position.is_check(game.player):
@@ -222,13 +222,13 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
 
             move = Move(
                 player=game.player,
-                piece=Piece.PAWN,
+                piece=Piece["PAWN"],
                 from_square=from_square,
                 to_square=to_square,
                 en_passant_square=0,
                 is_capturing_en_passant=False,
                 is_castling=None,
-                is_promoting_to=Piece.BISHOP,
+                is_promoting_to=Piece["BISHOP"],
             )
             position = game.position.move(move)[0]
             if not position.is_check(game.player):
@@ -236,19 +236,19 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
 
             move = Move(
                 player=game.player,
-                piece=Piece.PAWN,
+                piece=Piece["PAWN"],
                 from_square=from_square,
                 to_square=to_square,
                 en_passant_square=0,
                 is_capturing_en_passant=False,
                 is_castling=None,
-                is_promoting_to=Piece.KNIGHT,
+                is_promoting_to=Piece["KNIGHT"],
             )
             position = game.position.move(move)[0]
             if not position.is_check(game.player):
                 yield move
 
-    knights = split(getattr(game.position, Piece.KNIGHT.value)[game.player])
+    knights = split(getattr(game.position, Piece["KNIGHT"])[game.player])
     for from_square in knights:
         possible_moves = split(
             KNIGHT_MOVES[from_square] & (KNIGHT_MOVES[from_square] ^ friendly_pieces)
@@ -256,7 +256,7 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
         for to_square in possible_moves:
             move = Move(
                 player=game.player,
-                piece=Piece.KNIGHT,
+                piece=Piece["KNIGHT"],
                 from_square=from_square,
                 to_square=to_square,
                 en_passant_square=0,
@@ -268,7 +268,7 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
             if not position.is_check(game.player):
                 yield move
 
-    bishops = split(getattr(game.position, Piece.BISHOP.value)[game.player])
+    bishops = split(getattr(game.position, Piece["BISHOP"])[game.player])
     for from_square in bishops:
         possible_moves = split(
             get_diagonal_moves(game.position.all_pieces, enemy_pieces, from_square)
@@ -276,7 +276,7 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
         for to_square in possible_moves:
             move = Move(
                 player=game.player,
-                piece=Piece.BISHOP,
+                piece=Piece["BISHOP"],
                 from_square=from_square,
                 to_square=to_square,
                 en_passant_square=0,
@@ -288,7 +288,7 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
             if not position.is_check(game.player):
                 yield move
 
-    rooks = split(getattr(game.position, Piece.ROOK.value)[game.player])
+    rooks = split(getattr(game.position, Piece["ROOK"])[game.player])
     for from_square in rooks:
         possible_moves = split(
             get_rank_and_file_moves(game.position.all_pieces, enemy_pieces, from_square)
@@ -296,7 +296,7 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
         for to_square in possible_moves:
             move = Move(
                 player=game.player,
-                piece=Piece.ROOK,
+                piece=Piece["ROOK"],
                 from_square=from_square,
                 to_square=to_square,
                 en_passant_square=0,
@@ -308,7 +308,7 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
             if not position.is_check(game.player):
                 yield move
 
-    queens = split(getattr(game.position, Piece.QUEEN.value)[game.player])
+    queens = split(getattr(game.position, Piece["QUEEN"])[game.player])
     for from_square in queens:
         possible_moves = split(
             get_rank_and_file_moves(game.position.all_pieces, enemy_pieces, from_square)
@@ -317,7 +317,7 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
         for to_square in possible_moves:
             move = Move(
                 player=game.player,
-                piece=Piece.QUEEN,
+                piece=Piece["QUEEN"],
                 from_square=from_square,
                 to_square=to_square,
                 en_passant_square=0,
@@ -329,11 +329,11 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
             if not position.is_check(game.player):
                 yield move
 
-    king = getattr(game.position, Piece.KING.value)[game.player]
+    king = getattr(game.position, Piece["KING"])[game.player]
     for to_square in split(KING_MOVES[king] ^ (KING_MOVES[king] & friendly_pieces)):
         move = Move(
             player=game.player,
-            piece=Piece.KING,
+            piece=Piece["KING"],
             from_square=king,
             to_square=to_square,
             en_passant_square=0,
@@ -347,7 +347,7 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
 
     can_castle_kingside = (
         game.possible_castles.get(
-            Castle.WHITE_KINGSIDE if is_white else Castle.BLACK_KINGSIDE
+            Castle["WHITE_KINGSIDE"] if is_white else Castle["BLACK_KINGSIDE"]
         )
         and (
             game.position.all_pieces
@@ -355,17 +355,17 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
         )
         == 0
         and game.position.attackers(
-            Player.BLACK if is_white else Player.WHITE,
+            Player["BLACK"] if is_white else Player["WHITE"],
             0x0000_0000_0000_0002 if is_white else 0x0200_0000_0000_0000,
         )
         == 0
         and game.position.attackers(
-            Player.BLACK if is_white else Player.WHITE,
+            Player["BLACK"] if is_white else Player["WHITE"],
             0x0000_0000_0000_0004 if is_white else 0x0400_0000_0000_0000,
         )
         == 0
         and game.position.attackers(
-            Player.BLACK if is_white else Player.WHITE,
+            Player["BLACK"] if is_white else Player["WHITE"],
             0x0000_0000_0000_0008 if is_white else 0x0800_0000_0000_0000,
         )
         == 0
@@ -374,18 +374,20 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
     if can_castle_kingside:
         yield Move(
             player=game.player,
-            piece=Piece.KING,
+            piece=Piece["KING"],
             from_square=0x0000_0000_0000_0008 if is_white else 0x0800_0000_0000_0000,
             to_square=0x0000_0000_0000_0002 if is_white else 0x0200_0000_0000_0000,
             en_passant_square=0,
             is_capturing_en_passant=False,
-            is_castling=Castle.WHITE_KINGSIDE if is_white else Castle.BLACK_KINGSIDE,
+            is_castling=Castle["WHITE_KINGSIDE"]
+            if is_white
+            else Castle["BLACK_KINGSIDE"],
             is_promoting_to=None,
         )
 
     can_castle_queenside = (
         game.possible_castles.get(
-            Castle.WHITE_QUEENSIDE if is_white else Castle.BLACK_QUEENSIDE
+            Castle["WHITE_QUEENSIDE"] if is_white else Castle["BLACK_QUEENSIDE"]
         )
         and (
             game.position.all_pieces
@@ -393,17 +395,17 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
         )
         == 0
         and game.position.attackers(
-            Player.BLACK if is_white else Player.WHITE,
+            Player["BLACK"] if is_white else Player["WHITE"],
             0x0000_0000_0000_0008 if is_white else 0x0800_0000_0000_0000,
         )
         == 0
         and game.position.attackers(
-            Player.BLACK if is_white else Player.WHITE,
+            Player["BLACK"] if is_white else Player["WHITE"],
             0x0000_0000_0000_0010 if is_white else 0x1000_0000_0000_0000,
         )
         == 0
         and game.position.attackers(
-            Player.BLACK if is_white else Player.WHITE,
+            Player["BLACK"] if is_white else Player["WHITE"],
             0x0000_0000_0000_0020 if is_white else 0x2000_0000_0000_0000,
         )
         == 0
@@ -412,12 +414,14 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
     if can_castle_queenside:
         yield Move(
             player=game.player,
-            piece=Piece.KING,
+            piece=Piece["KING"],
             from_square=0x0000_0000_0000_0008 if is_white else 0x0800_0000_0000_0000,
             to_square=0x0000_0000_0000_0020 if is_white else 0x2000_0000_0000_0000,
             en_passant_square=0,
             is_capturing_en_passant=False,
-            is_castling=Castle.WHITE_QUEENSIDE if is_white else Castle.BLACK_QUEENSIDE,
+            is_castling=Castle["WHITE_QUEENSIDE"]
+            if is_white
+            else Castle["BLACK_QUEENSIDE"],
             is_promoting_to=None,
         )
 
@@ -437,20 +441,22 @@ def count_legal_moves(game: Game, depth: int = 1):
     return sum
 
 
-def get_game_result(game: Game, legal_moves: dict[str, Game]) -> Optional[Result]:
+def get_game_result(game: Game, legal_moves: dict[str, Game]) -> Optional[str]:
     if len(legal_moves) == 0:
         if game.position.is_check(game.player):
-            return Result.BLACK if game.player == Player.WHITE else Result.WHITE
-        return Result.STALEMATE
+            return (
+                Result["BLACK"] if game.player == Player["WHITE"] else Result["WHITE"]
+            )
+        return Result["STALEMATE"]
 
     if game.position.is_dead():
-        return Result.DEAD_POSITION
+        return Result["DEAD_POSITION"]
 
     for count in game.position_counts.values():
         if count >= 3:
-            return Result.REPITITION
+            return Result["REPITITION"]
 
     if game.fifty_move_counter >= 100:
-        return Result.FIFTY_MOVE_RULE
+        return Result["FIFTY_MOVE_RULE"]
 
     return None

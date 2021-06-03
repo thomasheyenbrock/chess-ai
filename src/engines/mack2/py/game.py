@@ -23,7 +23,7 @@ from constants import (
     KNIGHT_MOVES,
     PAWN_ATTACKS,
 )
-from enums import Castle, Piece, Player, PromotionPiece
+from enums import Castle, Piece, Player
 
 map_square_to_human_notation = {
     0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000001: "h1",
@@ -94,25 +94,25 @@ map_square_to_human_notation = {
 
 
 class Move:
-    player: Player = None
-    piece: Piece = None
+    player: str = None
+    piece: str = None
     from_square: int = 0
     to_square: int = 0
     en_passant_square: int = 0
     is_capturing_en_passant: bool = None
-    is_castling: Optional[Castle] = None
-    is_promoting_to: Optional[PromotionPiece] = None
+    is_castling: Optional[str] = None
+    is_promoting_to: Optional[str] = None
 
     def __init__(
         self,
-        player: Player,
-        piece: Piece,
+        player: str,
+        piece: str,
         from_square: int,
         to_square: int,
         en_passant_square: int,
         is_capturing_en_passant: bool,
-        is_castling: Optional[Castle],
-        is_promoting_to: Optional[PromotionPiece],
+        is_castling: Optional[str],
+        is_promoting_to: Optional[str],
     ):
         self.player = player
         self.piece = piece
@@ -128,14 +128,14 @@ class Move:
             [
                 str(self.from_square),
                 str(self.to_square),
-                self.is_castling.value if self.is_castling != None else "",
-                self.is_promoting_to.value if self.is_promoting_to != None else "",
+                self.is_castling or "",
+                self.is_promoting_to or "",
             ]
         )
 
     def __str__(self) -> str:
         return (
-            self.piece.value
+            self.piece
             + map_square_to_human_notation[self.from_square]
             + map_square_to_human_notation[self.to_square]
         )
@@ -147,12 +147,12 @@ class Position:
     white_pieces: int = None
     black_pieces: int = None
 
-    K: dict[Player, int] = None
-    Q: dict[Player, int] = None
-    R: dict[Player, int] = None
-    B: dict[Player, int] = None
-    N: dict[Player, int] = None
-    P: dict[Player, int] = None
+    K: dict[str, int] = None
+    Q: dict[str, int] = None
+    R: dict[str, int] = None
+    B: dict[str, int] = None
+    N: dict[str, int] = None
+    P: dict[str, int] = None
 
     def __init__(
         self,
@@ -174,39 +174,39 @@ class Position:
 
         self.all_pieces = self.white_pieces | self.black_pieces
 
-        self.K = {Player.WHITE: K, Player.BLACK: k}
-        self.Q = {Player.WHITE: Q, Player.BLACK: q}
-        self.R = {Player.WHITE: R, Player.BLACK: r}
-        self.B = {Player.WHITE: B, Player.BLACK: b}
-        self.N = {Player.WHITE: N, Player.BLACK: n}
-        self.P = {Player.WHITE: P, Player.BLACK: p}
+        self.K = {Player["WHITE"]: K, Player["BLACK"]: k}
+        self.Q = {Player["WHITE"]: Q, Player["BLACK"]: q}
+        self.R = {Player["WHITE"]: R, Player["BLACK"]: r}
+        self.B = {Player["WHITE"]: B, Player["BLACK"]: b}
+        self.N = {Player["WHITE"]: N, Player["BLACK"]: n}
+        self.P = {Player["WHITE"]: P, Player["BLACK"]: p}
 
     def __str__(self) -> str:
         position = ""
         for i in range(64):
-            if self.K[Player.WHITE] & 2 ** i != 0:
+            if self.K[Player["WHITE"]] & 2 ** i != 0:
                 position = "K" + position
-            elif self.Q[Player.WHITE] & 2 ** i != 0:
+            elif self.Q[Player["WHITE"]] & 2 ** i != 0:
                 position = "Q" + position
-            elif self.R[Player.WHITE] & 2 ** i != 0:
+            elif self.R[Player["WHITE"]] & 2 ** i != 0:
                 position = "R" + position
-            elif self.B[Player.WHITE] & 2 ** i != 0:
+            elif self.B[Player["WHITE"]] & 2 ** i != 0:
                 position = "B" + position
-            elif self.N[Player.WHITE] & 2 ** i != 0:
+            elif self.N[Player["WHITE"]] & 2 ** i != 0:
                 position = "N" + position
-            elif self.P[Player.WHITE] & 2 ** i != 0:
+            elif self.P[Player["WHITE"]] & 2 ** i != 0:
                 position = "P" + position
-            elif self.K[Player.BLACK] & 2 ** i != 0:
+            elif self.K[Player["BLACK"]] & 2 ** i != 0:
                 position = "k" + position
-            elif self.Q[Player.BLACK] & 2 ** i != 0:
+            elif self.Q[Player["BLACK"]] & 2 ** i != 0:
                 position = "q" + position
-            elif self.R[Player.BLACK] & 2 ** i != 0:
+            elif self.R[Player["BLACK"]] & 2 ** i != 0:
                 position = "r" + position
-            elif self.B[Player.BLACK] & 2 ** i != 0:
+            elif self.B[Player["BLACK"]] & 2 ** i != 0:
                 position = "b" + position
-            elif self.N[Player.BLACK] & 2 ** i != 0:
+            elif self.N[Player["BLACK"]] & 2 ** i != 0:
                 position = "n" + position
-            elif self.P[Player.BLACK] & 2 ** i != 0:
+            elif self.P[Player["BLACK"]] & 2 ** i != 0:
                 position = "p" + position
             else:
                 position = " " + position
@@ -214,75 +214,75 @@ class Position:
                 position = "\n" + position
         return position
 
-    def move(self, move: Move) -> Tuple[Position, Optional[Piece]]:
+    def move(self, move: Move) -> Tuple[Position, Optional[str]]:
         new_position = Position(
-            K=self.K[Player.WHITE],
-            Q=self.Q[Player.WHITE],
-            R=self.R[Player.WHITE],
-            B=self.B[Player.WHITE],
-            N=self.N[Player.WHITE],
-            P=self.P[Player.WHITE],
-            k=self.K[Player.BLACK],
-            q=self.Q[Player.BLACK],
-            r=self.R[Player.BLACK],
-            b=self.B[Player.BLACK],
-            n=self.N[Player.BLACK],
-            p=self.P[Player.BLACK],
+            K=self.K[Player["WHITE"]],
+            Q=self.Q[Player["WHITE"]],
+            R=self.R[Player["WHITE"]],
+            B=self.B[Player["WHITE"]],
+            N=self.N[Player["WHITE"]],
+            P=self.P[Player["WHITE"]],
+            k=self.K[Player["BLACK"]],
+            q=self.Q[Player["BLACK"]],
+            r=self.R[Player["BLACK"]],
+            b=self.B[Player["BLACK"]],
+            n=self.N[Player["BLACK"]],
+            p=self.P[Player["BLACK"]],
         )
-        if move.is_castling == Castle.WHITE_KINGSIDE:
-            new_position.K[Player.WHITE] = 0x0000_0000_0000_0002
-            new_position.R[Player.WHITE] ^= 0x0000_0000_0000_0005
+        if move.is_castling == Castle["WHITE_KINGSIDE"]:
+            new_position.K[Player["WHITE"]] = 0x0000_0000_0000_0002
+            new_position.R[Player["WHITE"]] ^= 0x0000_0000_0000_0005
             new_position.white_pieces ^= 0x0000_0000_0000_000F
             new_position.all_pieces ^= 0x0000_0000_0000_000F
             return new_position, None
-        if move.is_castling == Castle.WHITE_QUEENSIDE:
-            new_position.K[Player.WHITE] = 0x0000_0000_0000_0020
-            new_position.R[Player.WHITE] ^= 0x0000_0000_0000_0090
+        if move.is_castling == Castle["WHITE_QUEENSIDE"]:
+            new_position.K[Player["WHITE"]] = 0x0000_0000_0000_0020
+            new_position.R[Player["WHITE"]] ^= 0x0000_0000_0000_0090
             new_position.white_pieces ^= 0x0000_0000_0000_00B8
             new_position.all_pieces ^= 0x0000_0000_0000_00B8
             return new_position, None
-        if move.is_castling == Castle.BLACK_KINGSIDE:
-            new_position.K[Player.BLACK] = 0x0200_0000_0000_0000
-            new_position.R[Player.BLACK] ^= 0x0500_0000_0000_0000
+        if move.is_castling == Castle["BLACK_KINGSIDE"]:
+            new_position.K[Player["BLACK"]] = 0x0200_0000_0000_0000
+            new_position.R[Player["BLACK"]] ^= 0x0500_0000_0000_0000
             new_position.black_pieces ^= 0x0F00_0000_0000_0000
             new_position.all_pieces ^= 0x0F00_0000_0000_0000
             return new_position, None
-        if move.is_castling == Castle.BLACK_QUEENSIDE:
-            new_position.K[Player.BLACK] = 0x2000_0000_0000_0000
-            new_position.R[Player.BLACK] ^= 0x9000_0000_0000_0000
+        if move.is_castling == Castle["BLACK_QUEENSIDE"]:
+            new_position.K[Player["BLACK"]] = 0x2000_0000_0000_0000
+            new_position.R[Player["BLACK"]] ^= 0x9000_0000_0000_0000
             new_position.black_pieces ^= 0xB800_0000_0000_0000
             new_position.all_pieces ^= 0xB800_0000_0000_0000
             return new_position, None
 
-        is_white = move.player == Player.WHITE
+        is_white = move.player == Player["WHITE"]
 
         is_capturing = None
-        if (move.to_square & new_position.P[Player.WHITE]) != 0:
-            is_capturing = Piece.PAWN
-        elif (move.to_square & new_position.P[Player.BLACK]) != 0:
-            is_capturing = Piece.PAWN
-        elif (move.to_square & new_position.N[Player.WHITE]) != 0:
-            is_capturing = Piece.KNIGHT
-        elif (move.to_square & new_position.N[Player.BLACK]) != 0:
-            is_capturing = Piece.KNIGHT
-        elif (move.to_square & new_position.B[Player.WHITE]) != 0:
-            is_capturing = Piece.BISHOP
-        elif (move.to_square & new_position.B[Player.BLACK]) != 0:
-            is_capturing = Piece.BISHOP
-        elif (move.to_square & new_position.R[Player.WHITE]) != 0:
-            is_capturing = Piece.ROOK
-        elif (move.to_square & new_position.R[Player.BLACK]) != 0:
-            is_capturing = Piece.ROOK
-        elif (move.to_square & new_position.Q[Player.WHITE]) != 0:
-            is_capturing = Piece.QUEEN
-        elif (move.to_square & new_position.Q[Player.BLACK]) != 0:
-            is_capturing = Piece.QUEEN
+        if (move.to_square & new_position.P[Player["WHITE"]]) != 0:
+            is_capturing = Piece["PAWN"]
+        elif (move.to_square & new_position.P[Player["BLACK"]]) != 0:
+            is_capturing = Piece["PAWN"]
+        elif (move.to_square & new_position.N[Player["WHITE"]]) != 0:
+            is_capturing = Piece["KNIGHT"]
+        elif (move.to_square & new_position.N[Player["BLACK"]]) != 0:
+            is_capturing = Piece["KNIGHT"]
+        elif (move.to_square & new_position.B[Player["WHITE"]]) != 0:
+            is_capturing = Piece["BISHOP"]
+        elif (move.to_square & new_position.B[Player["BLACK"]]) != 0:
+            is_capturing = Piece["BISHOP"]
+        elif (move.to_square & new_position.R[Player["WHITE"]]) != 0:
+            is_capturing = Piece["ROOK"]
+        elif (move.to_square & new_position.R[Player["BLACK"]]) != 0:
+            is_capturing = Piece["ROOK"]
+        elif (move.to_square & new_position.Q[Player["WHITE"]]) != 0:
+            is_capturing = Piece["QUEEN"]
+        elif (move.to_square & new_position.Q[Player["BLACK"]]) != 0:
+            is_capturing = Piece["QUEEN"]
 
-        current = getattr(new_position, move.piece.value)
+        current = getattr(new_position, move.piece)
         current[move.player] = (
             current[move.player] ^ move.from_square
         ) | move.to_square
-        setattr(new_position, move.piece.value, current)
+        setattr(new_position, move.piece, current)
         if is_white:
             new_position.white_pieces = (
                 new_position.white_pieces ^ move.from_square
@@ -295,11 +295,11 @@ class Position:
             new_position.all_pieces ^ move.from_square
         ) | move.to_square
 
-        opposite_player = Player.BLACK if is_white else Player.WHITE
+        opposite_player = Player["BLACK"] if is_white else Player["WHITE"]
         if is_capturing != None:
-            current = getattr(new_position, is_capturing.value)
+            current = getattr(new_position, is_capturing)
             current[opposite_player] ^= move.to_square
-            setattr(new_position, is_capturing.value, current)
+            setattr(new_position, is_capturing, current)
             if is_white:
                 new_position.black_pieces ^= move.to_square
             else:
@@ -311,9 +311,9 @@ class Position:
                 if is_white
                 else get_top_square(move.to_square)
             )
-            current = getattr(new_position, Piece.PAWN.value)
+            current = getattr(new_position, Piece["PAWN"])
             current[opposite_player] ^= captured_square
-            setattr(new_position, Piece.PAWN.value, current)
+            setattr(new_position, Piece["PAWN"], current)
             if is_white:
                 new_position.black_pieces ^= captured_square
             else:
@@ -321,17 +321,17 @@ class Position:
             new_position.all_pieces ^= captured_square
 
         if move.is_promoting_to:
-            current = getattr(new_position, move.is_promoting_to.value)
+            current = getattr(new_position, move.is_promoting_to)
             current[move.player] |= move.to_square
-            setattr(new_position, move.is_promoting_to.value, current)
+            setattr(new_position, move.is_promoting_to, current)
 
-            current = getattr(new_position, Piece.PAWN.value)
+            current = getattr(new_position, Piece["PAWN"])
             current[move.player] ^= move.to_square
-            setattr(new_position, Piece.PAWN.value, current)
+            setattr(new_position, Piece["PAWN"], current)
 
         return new_position, is_capturing
 
-    def attackers(self, player: Player, square: int) -> int:
+    def attackers(self, player: str, square: int) -> int:
         king = self.K[player]
         queen = self.Q[player]
         rook = self.R[player]
@@ -365,23 +365,24 @@ class Position:
             | (PAWN_ATTACKS[player][square] & pawn)
         ) != 0
 
-    def is_check(self, player: Player):
+    def is_check(self, player: str):
         attackers = self.attackers(
-            Player.BLACK if player == Player.WHITE else Player.WHITE, self.K[player]
+            Player["BLACK"] if player == Player["WHITE"] else Player["WHITE"],
+            self.K[player],
         )
         return attackers != 0
 
     def is_dead(self) -> bool:
-        white_queens = split(self.Q[Player.WHITE])
-        white_rooks = split(self.R[Player.WHITE])
-        white_bishops = split(self.B[Player.WHITE])
-        white_knights = split(self.N[Player.WHITE])
-        white_pawns = split(self.P[Player.WHITE])
-        black_queens = split(self.Q[Player.BLACK])
-        black_rooks = split(self.R[Player.BLACK])
-        black_bishops = split(self.B[Player.BLACK])
-        black_knights = split(self.N[Player.BLACK])
-        black_pawns = split(self.P[Player.BLACK])
+        white_queens = split(self.Q[Player["WHITE"]])
+        white_rooks = split(self.R[Player["WHITE"]])
+        white_bishops = split(self.B[Player["WHITE"]])
+        white_knights = split(self.N[Player["WHITE"]])
+        white_pawns = split(self.P[Player["WHITE"]])
+        black_queens = split(self.Q[Player["BLACK"]])
+        black_rooks = split(self.R[Player["BLACK"]])
+        black_bishops = split(self.B[Player["BLACK"]])
+        black_knights = split(self.N[Player["BLACK"]])
+        black_pawns = split(self.P[Player["BLACK"]])
 
         number_of_white_pieces = (
             len(white_queens)
@@ -450,9 +451,9 @@ class Position:
 
 class Game:
     position: Position = None
-    player: Player = None
+    player: str = None
     last_move: Optional[Move] = None
-    possible_castles: dict[Castle, bool] = None
+    possible_castles: dict[str, bool] = None
     en_passant_square: int = None
     position_counts: dict[str, int] = None
     move_counter: int = None
@@ -461,9 +462,9 @@ class Game:
     def __init__(
         self,
         position: Position,
-        player: Player,
+        player: str,
         last_move: Optional[Move],
-        possible_castles: dict[Castle, bool],
+        possible_castles: dict[str, bool],
         en_passant_square: int,
         position_counts: dict[str, int],
         move_counter: int,
@@ -480,36 +481,36 @@ class Game:
 
     def to_string(self) -> str:
         return "%d-%d-%d-%d-%d-%d-%d-%d-%d-%d-%d-%d-%s-%s%s%s%s-%d" % (
-            self.position.K[Player.WHITE],
-            self.position.Q[Player.WHITE],
-            self.position.R[Player.WHITE],
-            self.position.B[Player.WHITE],
-            self.position.N[Player.WHITE],
-            self.position.P[Player.WHITE],
-            self.position.K[Player.BLACK],
-            self.position.Q[Player.BLACK],
-            self.position.R[Player.BLACK],
-            self.position.B[Player.BLACK],
-            self.position.N[Player.BLACK],
-            self.position.P[Player.BLACK],
+            self.position.K[Player["WHITE"]],
+            self.position.Q[Player["WHITE"]],
+            self.position.R[Player["WHITE"]],
+            self.position.B[Player["WHITE"]],
+            self.position.N[Player["WHITE"]],
+            self.position.P[Player["WHITE"]],
+            self.position.K[Player["BLACK"]],
+            self.position.Q[Player["BLACK"]],
+            self.position.R[Player["BLACK"]],
+            self.position.B[Player["BLACK"]],
+            self.position.N[Player["BLACK"]],
+            self.position.P[Player["BLACK"]],
             self.player,
-            Castle.WHITE_KINGSIDE.value
-            if self.possible_castles.get(Castle.WHITE_KINGSIDE)
+            Castle["WHITE_KINGSIDE"]
+            if self.possible_castles.get(Castle["WHITE_KINGSIDE"])
             else "",
-            Castle.WHITE_QUEENSIDE.value
-            if self.possible_castles.get(Castle.WHITE_QUEENSIDE)
+            Castle["WHITE_QUEENSIDE"]
+            if self.possible_castles.get(Castle["WHITE_QUEENSIDE"])
             else "",
-            Castle.BLACK_KINGSIDE.value
-            if self.possible_castles.get(Castle.BLACK_KINGSIDE)
+            Castle["BLACK_KINGSIDE"]
+            if self.possible_castles.get(Castle["BLACK_KINGSIDE"])
             else "",
-            Castle.BLACK_QUEENSIDE.value
-            if self.possible_castles.get(Castle.BLACK_QUEENSIDE)
+            Castle["BLACK_QUEENSIDE"]
+            if self.possible_castles.get(Castle["BLACK_QUEENSIDE"])
             else "",
             self.en_passant_square,
         )
 
     def move(self, move: Move) -> Game:
-        is_white = self.player == Player.WHITE
+        is_white = self.player == Player["WHITE"]
 
         new_position, is_capturing = self.position.move(move)
 
@@ -526,55 +527,63 @@ class Game:
 
         return Game(
             position=new_position,
-            player=Player.BLACK if is_white else Player.WHITE,
+            player=Player["BLACK"] if is_white else Player["WHITE"],
             last_move=move,
             possible_castles={
-                Castle.WHITE_KINGSIDE: self.possible_castles[Castle.WHITE_KINGSIDE]
-                and not (is_white and move.piece == Piece.KING)
+                Castle["WHITE_KINGSIDE"]: self.possible_castles[
+                    Castle["WHITE_KINGSIDE"]
+                ]
+                and not (is_white and move.piece == Piece["KING"])
                 and not (
                     is_white
-                    and move.piece == Piece.ROOK
+                    and move.piece == Piece["ROOK"]
                     and move.from_square == 0x0000_0000_0000_0001
                 )
                 and not (
                     not is_white
-                    and is_capturing == Piece.ROOK
+                    and is_capturing == Piece["ROOK"]
                     and move.to_square == 0x0000_0000_0000_0001
                 ),
-                Castle.WHITE_QUEENSIDE: self.possible_castles[Castle.WHITE_QUEENSIDE]
-                and not (is_white and move.piece == Piece.KING)
+                Castle["WHITE_QUEENSIDE"]: self.possible_castles[
+                    Castle["WHITE_QUEENSIDE"]
+                ]
+                and not (is_white and move.piece == Piece["KING"])
                 and not (
                     is_white
-                    and move.piece == Piece.ROOK
+                    and move.piece == Piece["ROOK"]
                     and move.from_square == 0x0000_0000_0000_0080
                 )
                 and not (
                     not is_white
-                    and is_capturing == Piece.ROOK
+                    and is_capturing == Piece["ROOK"]
                     and move.to_square == 0x0000_0000_0000_0080
                 ),
-                Castle.BLACK_KINGSIDE: self.possible_castles[Castle.BLACK_KINGSIDE]
-                and not (not is_white and move.piece == Piece.KING)
+                Castle["BLACK_KINGSIDE"]: self.possible_castles[
+                    Castle["BLACK_KINGSIDE"]
+                ]
+                and not (not is_white and move.piece == Piece["KING"])
                 and not (
                     not is_white
-                    and move.piece == Piece.ROOK
+                    and move.piece == Piece["ROOK"]
                     and move.from_square == 0x0100_0000_0000_0000
                 )
                 and not (
                     is_white
-                    and is_capturing == Piece.ROOK
+                    and is_capturing == Piece["ROOK"]
                     and move.to_square == 0x0100_0000_0000_0000
                 ),
-                Castle.BLACK_QUEENSIDE: self.possible_castles[Castle.BLACK_QUEENSIDE]
-                and not (not is_white and move.piece == Piece.KING)
+                Castle["BLACK_QUEENSIDE"]: self.possible_castles[
+                    Castle["BLACK_QUEENSIDE"]
+                ]
+                and not (not is_white and move.piece == Piece["KING"])
                 and not (
                     not is_white
-                    and move.piece == Piece.ROOK
+                    and move.piece == Piece["ROOK"]
                     and move.from_square == 0x8000_0000_0000_0000
                 )
                 and not (
                     is_white
-                    and is_capturing == Piece.ROOK
+                    and is_capturing == Piece["ROOK"]
                     and move.to_square == 0x8000_0000_0000_0000
                 ),
             },
@@ -582,7 +591,9 @@ class Game:
             position_counts=new_position_counts,
             move_counter=self.move_counter + (0 if is_white else 1),
             fifty_move_counter=0
-            if move.piece == Piece.PAWN or is_capturing or move.is_capturing_en_passant
+            if move.piece == Piece["PAWN"]
+            or is_capturing
+            or move.is_capturing_en_passant
             else self.fifty_move_counter + 1,
         )
 
@@ -596,10 +607,10 @@ Game(
 --------
     ),
     possible_castles=(
-        K={self.possible_castles.get(Castle.WHITE_KINGSIDE)},
-        Q={self.possible_castles.get(Castle.WHITE_QUEENSIDE)},
-        k={self.possible_castles.get(Castle.BLACK_KINGSIDE)},
-        q={self.possible_castles.get(Castle.BLACK_QUEENSIDE)},
+        K={self.possible_castles.get(Castle["WHITE_KINGSIDE"])},
+        Q={self.possible_castles.get(Castle["WHITE_QUEENSIDE"])},
+        k={self.possible_castles.get(Castle["BLACK_KINGSIDE"])},
+        q={self.possible_castles.get(Castle["BLACK_QUEENSIDE"])},
     ),
     en_passant_square={self.en_passant_square}
 )

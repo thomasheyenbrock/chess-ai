@@ -129,7 +129,7 @@ def game_from_fen(fen: str) -> Game:
             else:
                 current = getattr(position, piece.upper())
                 current[
-                    Player.BLACK if piece == piece.lower() else Player.WHITE
+                    Player["BLACK"] if piece == piece.lower() else Player["WHITE"]
                 ] |= squares[rankIndex][fileIndex]
                 setattr(position, piece, current)
                 if piece == piece.lower():
@@ -141,13 +141,13 @@ def game_from_fen(fen: str) -> Game:
             rank = rank[1:]
     return Game(
         position=position,
-        player=Player.WHITE if player == "w" else Player.BLACK,
+        player=Player["WHITE"] if player == "w" else Player["BLACK"],
         last_move=None,
         possible_castles={
-            Castle.WHITE_KINGSIDE: "K" in castles,
-            Castle.WHITE_QUEENSIDE: "Q" in castles,
-            Castle.BLACK_KINGSIDE: "k" in castles,
-            Castle.BLACK_QUEENSIDE: "q" in castles,
+            Castle["WHITE_KINGSIDE"]: "K" in castles,
+            Castle["WHITE_QUEENSIDE"]: "Q" in castles,
+            Castle["BLACK_KINGSIDE"]: "k" in castles,
+            Castle["BLACK_QUEENSIDE"]: "q" in castles,
         },
         en_passant_square=0x0000_0000_0000_0000
         if en_passant_square == "-"

@@ -98,6 +98,7 @@ class Move:
     piece: Piece = None
     from_square: int = 0
     to_square: int = 0
+    en_passant_square: int = 0
     is_capturing_en_passant: bool = None
     is_castling: Optional[Castle] = None
     is_promoting_to: Optional[PromotionPiece] = None
@@ -108,6 +109,7 @@ class Move:
         piece: Piece,
         from_square: int,
         to_square: int,
+        en_passant_square: int,
         is_capturing_en_passant: bool,
         is_castling: Optional[Castle],
         is_promoting_to: Optional[PromotionPiece],
@@ -116,6 +118,7 @@ class Move:
         self.piece = piece
         self.from_square = from_square
         self.to_square = to_square
+        self.en_passant_square = en_passant_square
         self.is_capturing_en_passant = is_capturing_en_passant
         self.is_castling = is_castling
         self.is_promoting_to = is_promoting_to
@@ -505,16 +508,83 @@ class Game:
             self.en_passant_square,
         )
 
-    def increment_position_count(self, is_capturing: Optional[Piece]):
-        if self.last_move != None and (
+    def move(self, move: Move) -> Game:
+        is_white = self.player == Player.WHITE
+
+        new_position, is_capturing = self.position.move(move)
+
+        if (
             is_capturing != None
-            or self.last_move.is_promoting_to != None
-            or self.last_move.is_castling != None
+            or move.is_promoting_to != None
+            or move.is_castling != None
         ):
-            self.position_counts = {}
+            new_position_counts = {}
         else:
+            new_position_counts = self.position_counts.copy()
             key = self.to_string()
-            self.position_counts[key] = (self.position_counts.get(key) or 0) + 1
+            new_position_counts[key] = (new_position_counts.get(key) or 0) + 1
+
+        return Game(
+            position=new_position,
+            player=Player.BLACK if is_white else Player.WHITE,
+            last_move=move,
+            possible_castles={
+                Castle.WHITE_KINGSIDE: self.possible_castles[Castle.WHITE_KINGSIDE]
+                and not (is_white and move.piece == Piece.KING)
+                and not (
+                    is_white
+                    and move.piece == Piece.ROOK
+                    and move.from_square == 0x0000_0000_0000_0001
+                )
+                and not (
+                    not is_white
+                    and is_capturing == Piece.ROOK
+                    and move.to_square == 0x0000_0000_0000_0001
+                ),
+                Castle.WHITE_QUEENSIDE: self.possible_castles[Castle.WHITE_QUEENSIDE]
+                and not (is_white and move.piece == Piece.KING)
+                and not (
+                    is_white
+                    and move.piece == Piece.ROOK
+                    and move.from_square == 0x0000_0000_0000_0080
+                )
+                and not (
+                    not is_white
+                    and is_capturing == Piece.ROOK
+                    and move.to_square == 0x0000_0000_0000_0080
+                ),
+                Castle.BLACK_KINGSIDE: self.possible_castles[Castle.BLACK_KINGSIDE]
+                and not (not is_white and move.piece == Piece.KING)
+                and not (
+                    not is_white
+                    and move.piece == Piece.ROOK
+                    and move.from_square == 0x0100_0000_0000_0000
+                )
+                and not (
+                    is_white
+                    and is_capturing == Piece.ROOK
+                    and move.to_square == 0x0100_0000_0000_0000
+                ),
+                Castle.BLACK_QUEENSIDE: self.possible_castles[Castle.BLACK_QUEENSIDE]
+                and not (not is_white and move.piece == Piece.KING)
+                and not (
+                    not is_white
+                    and move.piece == Piece.ROOK
+                    and move.from_square == 0x8000_0000_0000_0000
+                )
+                and not (
+                    is_white
+                    and is_capturing == Piece.ROOK
+                    and move.to_square == 0x8000_0000_0000_0000
+                ),
+            },
+            en_passant_square=move.en_passant_square,
+            position_counts=new_position_counts,
+            move_counter=self.move_counter + (0 if is_white else 1),
+            fifty_move_counter=0
+            if move.piece == Piece.PAWN or is_capturing or move.is_capturing_en_passant
+            else self.fifty_move_counter + 1,
+        )
 
     def __str__(self) -> str:
         return f"""

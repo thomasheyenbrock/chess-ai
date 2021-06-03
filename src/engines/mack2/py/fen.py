@@ -44,7 +44,7 @@ def game_from_fen(fen: str) -> Game:
                 fileIndex += emptySquares
             else:
                 square = SQUARES[rankIndex * 8 + fileIndex]
-                position.pieces[piece.upper()][piece != piece.lower()] |= square
+                position.pieces[piece] |= square
                 if piece == piece.lower():
                     position.black_pieces |= square
                 else:

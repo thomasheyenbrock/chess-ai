@@ -100,7 +100,7 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
     )
     non_attacked_squares = 0xFFFF_FFFF_FFFF_FFFF ^ attacked_squares
 
-    king = game.position.pieces["K"][game.player]
+    king = game.position.pieces["K" if game.player else "k"]
     king_moves = KING_MOVES[king] & non_attacked_squares
     king_moves ^= king_moves & friendly_pieces
     for to_square in split(king_moves):
@@ -126,8 +126,8 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
     if number_of_attackers == 1:
         attacker = attackers[0]
         capture_mask = attacker
-        if (attacker & game.position.pieces["N"][not game.player] != 0) or (
-            attacker & game.position.pieces["P"][not game.player] != 0
+        if (attacker & game.position.pieces["n" if game.player else "N"] != 0) or (
+            attacker & game.position.pieces["p" if game.player else "P"] != 0
         ):
             # checked by knight or pawn, this can't be blocked
             push_mask = 0
@@ -146,11 +146,15 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
 
     capture_or_push_mask = capture_mask | push_mask
 
-    enemy_queens = game.position.pieces["Q"][not game.player]
-    enemy_queens_and_rooks = enemy_queens | game.position.pieces["R"][not game.player]
-    enemy_queens_and_bishops = enemy_queens | game.position.pieces["B"][not game.player]
+    enemy_queens = game.position.pieces["q" if game.player else "Q"]
+    enemy_queens_and_rooks = (
+        enemy_queens | game.position.pieces["r" if game.player else "R"]
+    )
+    enemy_queens_and_bishops = (
+        enemy_queens | game.position.pieces["b" if game.player else "B"]
+    )
 
-    for from_square in split(game.position.pieces["Q"][game.player]):
+    for from_square in split(game.position.pieces["Q" if game.player else "q"]):
         moveable_squares = (
             capture_or_push_mask
             & (
@@ -180,7 +184,7 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
                 is_promoting_to=None,
             )
 
-    for from_square in split(game.position.pieces["R"][game.player]):
+    for from_square in split(game.position.pieces["R" if game.player else "r"]):
         moveable_squares = (
             capture_or_push_mask
             & get_rank_and_file_moves(
@@ -205,7 +209,7 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
                 is_promoting_to=None,
             )
 
-    for from_square in split(game.position.pieces["B"][game.player]):
+    for from_square in split(game.position.pieces["B" if game.player else "b"]):
         moveable_squares = (
             capture_or_push_mask
             & get_diagonal_moves(game.position.all_pieces, enemy_pieces, from_square)
@@ -228,7 +232,7 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
                 is_promoting_to=None,
             )
 
-    for from_square in split(game.position.pieces["N"][game.player]):
+    for from_square in split(game.position.pieces["N" if game.player else "n"]):
         moveable_squares = (
             capture_or_push_mask
             & KNIGHT_MOVES[from_square]
@@ -252,7 +256,7 @@ def get_legal_moves(game: Game) -> Iterable[Move]:
                 is_promoting_to=None,
             )
 
-    for from_square in split(game.position.pieces["P"][game.player]):
+    for from_square in split(game.position.pieces["P" if game.player else "p"]):
         pinned_movement = game.position.pinned_movement(
             square=from_square,
             king=king,

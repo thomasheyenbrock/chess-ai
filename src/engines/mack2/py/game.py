@@ -118,10 +118,10 @@ class Move:
         piece: str,
         from_square: int,
         to_square: int,
-        en_passant_square: int,
-        is_capturing_en_passant: bool,
-        is_castling: Optional[str],
-        is_promoting_to: Optional[str],
+        en_passant_square: int = 0,
+        is_capturing_en_passant: bool = False,
+        is_castling: Optional[str] = None,
+        is_promoting_to: Optional[str] = None,
     ):
         self.player = player
         self.piece = piece

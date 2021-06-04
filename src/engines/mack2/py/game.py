@@ -698,13 +698,13 @@ class Position:
         if (
             number_of_white_pieces == 0
             and number_of_black_pieces == 1
-            and black_bishops.length == 1
+            and len(black_bishops) == 1
         ):
             return True
         if (
             number_of_black_pieces == 0
             and number_of_white_pieces == 1
-            and white_bishops.length == 1
+            and len(white_bishops) == 1
         ):
             return True
 
@@ -712,13 +712,13 @@ class Position:
         if (
             number_of_white_pieces == 0
             and number_of_black_pieces == 1
-            and black_knights.length == 1
+            and len(black_knights) == 1
         ):
             return True
         if (
             number_of_black_pieces == 0
             and number_of_white_pieces == 1
-            and white_knights.length == 1
+            and len(white_knights) == 1
         ):
             return True
 
@@ -726,8 +726,8 @@ class Position:
         if (
             number_of_white_pieces == 1
             and number_of_black_pieces == 1
-            and white_bishops.length == 1
-            and black_bishops.length == 1
+            and len(white_bishops) == 1
+            and len(black_bishops) == 1
         ):
             is_white_bishop_on_white_square = (
                 white_bishops[0] & 0xAA55_AA55_AA55_AA55

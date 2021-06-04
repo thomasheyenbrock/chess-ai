@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Iterable, Optional, Tuple
+from typing import Iterable, List, Optional, Tuple
 
 from bitboard import get_bottom_square, get_top_square, split
 from constants import (
@@ -104,6 +104,16 @@ map_square_to_human_notation = {
     0b00100000_00000000_00000000_00000000_00000000_00000000_00000000_00000000: "c8",
     0b01000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000: "b8",
     0b10000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000: "a8",
+}
+
+
+Result = {
+    "WHITE": "White wins",
+    "BLACK": "Black wins",
+    "STALEMATE": "Stalemate",
+    "DEAD_POSITION": "Dead position",
+    "REPITITION": "Third repitition of position",
+    "FIFTY_MOVE_RULE": "Fifty moves without capture or pawn movement",
 }
 
 
@@ -1194,6 +1204,27 @@ class Game:
             sum += add
 
         return sum
+
+    def result(self, legal_moves: Optional[List[Move]]) -> Optional[str]:
+        if not legal_moves:
+            legal_moves = list(self.legal_moves())
+
+        if len(legal_moves) == 0:
+            if self.position.is_check(self.player):
+                return Result["BLACK"] if self.player else Result["WHITE"]
+            return Result["STALEMATE"]
+
+        if self.position.is_dead():
+            return Result["DEAD_POSITION"]
+
+        for count in self.position_counts.values():
+            if count >= 3:
+                return Result["REPITITION"]
+
+        if self.fifty_move_counter >= 100:
+            return Result["FIFTY_MOVE_RULE"]
+
+        return None
 
     def __str__(self) -> str:
         return f"""

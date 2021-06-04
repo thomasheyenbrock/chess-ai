@@ -10,6 +10,10 @@ from constants import (
     NORTH_WEST_MOVES,
     PAWN_ATTACK_MOVES,
     PAWN_ATTACK_MOVES_PROMOTION,
+    PAWN_DOUBLE_MOVES,
+    PAWN_EN_PASSANT_CAPTURES,
+    PAWN_SINGLE_MOVES,
+    PAWN_SINGLE_MOVES_PROMOTION,
     SOUTH_EAST_MOVES,
     SOUTH_MOVES,
     SOUTH_RAY,
@@ -33,6 +37,7 @@ from constants import (
     KNIGHT_MOVES,
     PAWN_ATTACKS,
 )
+
 
 map_square_to_human_notation = {
     0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000001: "h1",
@@ -100,6 +105,50 @@ map_square_to_human_notation = {
     0b01000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000: "b8",
     0b10000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000: "a8",
 }
+
+
+def get_rank_and_file_moves(all_pieces: int, enemy_pieces: int, square: int) -> int:
+    north_pieces = NORTH_RAY[square] & all_pieces
+    south_pieces = SOUTH_RAY[square] & all_pieces
+    west_pieces = WEST_RAY[square] & all_pieces
+    east_pieces = EAST_RAY[square] & all_pieces
+
+    north_moves = NORTH_MOVES[square][north_pieces] ^ (
+        NORTH_ATTACKS[square][north_pieces] & enemy_pieces
+    )
+    south_moves = SOUTH_MOVES[square][south_pieces] ^ (
+        SOUTH_ATTACKS[square][south_pieces] & enemy_pieces
+    )
+    west_moves = WEST_MOVES[square][west_pieces] ^ (
+        WEST_ATTACKS[square][west_pieces] & enemy_pieces
+    )
+    east_moves = EAST_MOVES[square][east_pieces] ^ (
+        EAST_ATTACKS[square][east_pieces] & enemy_pieces
+    )
+
+    return north_moves | south_moves | west_moves | east_moves
+
+
+def get_diagonal_moves(all_pieces: int, enemy_pieces: int, square: int) -> int:
+    north_west_pieces = NORTH_WEST_RAY[square] & all_pieces
+    south_west_pieces = SOUTH_WEST_RAY[square] & all_pieces
+    north_east_pieces = NORTH_EAST_RAY[square] & all_pieces
+    south_east_pieces = SOUTH_EAST_RAY[square] & all_pieces
+
+    north_west_moves = NORTH_WEST_MOVES[square][north_west_pieces] ^ (
+        NORTH_WEST_ATTACKS[square][north_west_pieces] & enemy_pieces
+    )
+    north_east_moves = NORTH_EAST_MOVES[square][north_east_pieces] ^ (
+        NORTH_EAST_ATTACKS[square][north_east_pieces] & enemy_pieces
+    )
+    south_west_moves = SOUTH_WEST_MOVES[square][south_west_pieces] ^ (
+        SOUTH_WEST_ATTACKS[square][south_west_pieces] & enemy_pieces
+    )
+    south_east_moves = SOUTH_EAST_MOVES[square][south_east_pieces] ^ (
+        SOUTH_EAST_ATTACKS[square][south_east_pieces] & enemy_pieces
+    )
+
+    return north_west_moves | north_east_moves | south_west_moves | south_east_moves
 
 
 class Move:
@@ -808,6 +857,343 @@ class Game:
             if move.piece == "P" or is_capturing or move.is_capturing_en_passant
             else self.fifty_move_counter + 1,
         )
+
+    def legal_moves(self) -> Iterable[Move]:
+        friendly_pieces = (
+            self.position.white_pieces if self.player else self.position.black_pieces
+        )
+        enemy_pieces = (
+            self.position.black_pieces if self.player else self.position.white_pieces
+        )
+        empty_squares = 0xFFFF_FFFF_FFFF_FFFF ^ self.position.all_pieces
+        attacked_squares = self.position.attacked_squares(
+            player=not self.player, exclude_king=True
+        )
+
+        king = self.position.pieces["K" if self.player else "k"]
+        king_moves = KING_MOVES[king] & (0xFFFF_FFFF_FFFF_FFFF ^ attacked_squares)
+        king_moves ^= king_moves & friendly_pieces
+        for to_square in split(king_moves):
+            yield Move(
+                player=self.player,
+                piece="K",
+                from_square=king,
+                to_square=to_square,
+            )
+
+        attackers = list(self.position.checkers(player=not self.player, king=king))
+        number_of_attackers = len(attackers)
+        if number_of_attackers > 1:
+            # Multiple pieces are giving check, so the king has to move
+            return
+
+        capture_mask = 0xFFFF_FFFF_FFFF_FFFF
+        push_mask = 0xFFFF_FFFF_FFFF_FFFF
+        if number_of_attackers == 1:
+            attacker = attackers[0]
+            capture_mask = attacker
+            if (attacker & self.position.pieces["n" if self.player else "N"] != 0) or (
+                attacker & self.position.pieces["p" if self.player else "P"] != 0
+            ):
+                # checked by knight or pawn, this can't be blocked
+                push_mask = 0
+            else:
+                # checked by slider, this can be blocked
+                push_mask = (
+                    NORTH_MOVES[king].get(attacker, 0)
+                    | SOUTH_MOVES[king].get(attacker, 0)
+                    | WEST_MOVES[king].get(attacker, 0)
+                    | EAST_MOVES[king].get(attacker, 0)
+                    | NORTH_WEST_MOVES[king].get(attacker, 0)
+                    | NORTH_EAST_MOVES[king].get(attacker, 0)
+                    | SOUTH_WEST_MOVES[king].get(attacker, 0)
+                    | SOUTH_EAST_MOVES[king].get(attacker, 0)
+                )
+
+        capture_or_push_mask = capture_mask | push_mask
+
+        enemy_queens = self.position.pieces["q" if self.player else "Q"]
+        enemy_queens_and_rooks = (
+            enemy_queens | self.position.pieces["r" if self.player else "R"]
+        )
+        enemy_queens_and_bishops = (
+            enemy_queens | self.position.pieces["b" if self.player else "B"]
+        )
+
+        for from_square in split(self.position.pieces["Q" if self.player else "q"]):
+            moveable_squares = (
+                capture_or_push_mask
+                & (
+                    get_rank_and_file_moves(
+                        self.position.all_pieces, enemy_pieces, from_square
+                    )
+                    | get_diagonal_moves(
+                        self.position.all_pieces, enemy_pieces, from_square
+                    )
+                )
+                & self.position.pinned_movement(
+                    square=from_square,
+                    king=king,
+                    enemy_queens_and_rooks=enemy_queens_and_rooks,
+                    enemy_queens_and_bishops=enemy_queens_and_bishops,
+                )
+            )
+            for to_square in split(moveable_squares):
+                yield Move(
+                    player=self.player,
+                    piece="Q",
+                    from_square=from_square,
+                    to_square=to_square,
+                )
+
+        for from_square in split(self.position.pieces["R" if self.player else "r"]):
+            moveable_squares = (
+                capture_or_push_mask
+                & get_rank_and_file_moves(
+                    self.position.all_pieces, enemy_pieces, from_square
+                )
+                & self.position.pinned_movement(
+                    square=from_square,
+                    king=king,
+                    enemy_queens_and_rooks=enemy_queens_and_rooks,
+                    enemy_queens_and_bishops=enemy_queens_and_bishops,
+                )
+            )
+            for to_square in split(moveable_squares):
+                yield Move(
+                    player=self.player,
+                    piece="R",
+                    from_square=from_square,
+                    to_square=to_square,
+                )
+
+        for from_square in split(self.position.pieces["B" if self.player else "b"]):
+            moveable_squares = (
+                capture_or_push_mask
+                & get_diagonal_moves(
+                    self.position.all_pieces, enemy_pieces, from_square
+                )
+                & self.position.pinned_movement(
+                    square=from_square,
+                    king=king,
+                    enemy_queens_and_rooks=enemy_queens_and_rooks,
+                    enemy_queens_and_bishops=enemy_queens_and_bishops,
+                )
+            )
+            for to_square in split(moveable_squares):
+                yield Move(
+                    player=self.player,
+                    piece="B",
+                    from_square=from_square,
+                    to_square=to_square,
+                )
+
+        for from_square in split(self.position.pieces["N" if self.player else "n"]):
+            moveable_squares = (
+                capture_or_push_mask
+                & KNIGHT_MOVES[from_square]
+                & (KNIGHT_MOVES[from_square] ^ friendly_pieces)
+                & self.position.pinned_movement(
+                    square=from_square,
+                    king=king,
+                    enemy_queens_and_rooks=enemy_queens_and_rooks,
+                    enemy_queens_and_bishops=enemy_queens_and_bishops,
+                )
+            )
+            for to_square in split(moveable_squares):
+                yield Move(
+                    player=self.player,
+                    piece="N",
+                    from_square=from_square,
+                    to_square=to_square,
+                )
+
+        for from_square in split(self.position.pieces["P" if self.player else "p"]):
+            pinned_movement = self.position.pinned_movement(
+                square=from_square,
+                king=king,
+                enemy_queens_and_rooks=enemy_queens_and_rooks,
+                enemy_queens_and_bishops=enemy_queens_and_bishops,
+            )
+            to_square = (
+                PAWN_SINGLE_MOVES[self.player][from_square]
+                & empty_squares
+                & pinned_movement
+                & push_mask
+            )
+            if to_square != 0:
+                yield Move(
+                    player=self.player,
+                    piece="P",
+                    from_square=from_square,
+                    to_square=to_square,
+                )
+
+            attacks = [
+                p & enemy_pieces & pinned_movement & capture_mask
+                for p in PAWN_ATTACK_MOVES[self.player][from_square]
+            ]
+            for to_square in attacks:
+                if to_square == 0:
+                    continue
+                yield Move(
+                    player=self.player,
+                    piece="P",
+                    from_square=from_square,
+                    to_square=to_square,
+                )
+
+            to_square = (
+                PAWN_DOUBLE_MOVES[self.player][from_square]
+                & empty_squares
+                & (
+                    get_top_square(empty_squares)
+                    if self.player
+                    else get_bottom_square(empty_squares)
+                )
+                & pinned_movement
+                & push_mask
+            )
+            if to_square:
+                yield Move(
+                    player=self.player,
+                    piece="P",
+                    from_square=from_square,
+                    to_square=to_square,
+                    en_passant_square=get_bottom_square(to_square)
+                    if self.player
+                    else get_top_square(to_square),
+                )
+
+            to_square = (
+                PAWN_EN_PASSANT_CAPTURES[self.player][from_square]
+                & self.en_passant_square
+                & pinned_movement
+                & (
+                    get_top_square(capture_mask)
+                    if self.player
+                    else get_bottom_square(capture_mask)
+                )
+            )
+            if to_square:
+                move = Move(
+                    player=self.player,
+                    piece="P",
+                    from_square=from_square,
+                    to_square=to_square,
+                    is_capturing_en_passant=True,
+                )
+                position = self.position.move(move)[0]
+                if not position.is_check(self.player):
+                    yield move
+
+            single_move_promotions = [
+                p & empty_squares & pinned_movement & push_mask
+                for p in PAWN_SINGLE_MOVES_PROMOTION[self.player][from_square]
+            ]
+            attack_promotions = [
+                p & enemy_pieces & pinned_movement & capture_mask
+                for p in PAWN_ATTACK_MOVES_PROMOTION[self.player][from_square]
+            ]
+            for to_square in single_move_promotions + attack_promotions:
+                if to_square == 0:
+                    continue
+                yield Move(
+                    player=self.player,
+                    piece="P",
+                    from_square=from_square,
+                    to_square=to_square,
+                    is_promoting_to="Q",
+                )
+                yield Move(
+                    player=self.player,
+                    piece="P",
+                    from_square=from_square,
+                    to_square=to_square,
+                    is_promoting_to="R",
+                )
+                yield Move(
+                    player=self.player,
+                    piece="P",
+                    from_square=from_square,
+                    to_square=to_square,
+                    is_promoting_to="B",
+                )
+                yield Move(
+                    player=self.player,
+                    piece="P",
+                    from_square=from_square,
+                    to_square=to_square,
+                    is_promoting_to="N",
+                )
+
+        can_castle_kingside = (
+            self.possible_castles["K" if self.player else "k"]
+            and (
+                self.position.all_pieces
+                & (0x0000_0000_0000_0006 if self.player else 0x0600_0000_0000_0000)
+            )
+            == 0
+            and (
+                attacked_squares
+                & (0x0000_0000_0000_000E if self.player else 0x0E00_0000_0000_0000)
+                == 0
+            )
+        )
+
+        if can_castle_kingside:
+            yield Move(
+                player=self.player,
+                piece="K",
+                from_square=0x0000_0000_0000_0008
+                if self.player
+                else 0x0800_0000_0000_0000,
+                to_square=0x0000_0000_0000_0002
+                if self.player
+                else 0x0200_0000_0000_0000,
+                is_castling="K" if self.player else "k",
+            )
+
+        can_castle_queenside = (
+            self.possible_castles["Q" if self.player else "q"]
+            and (
+                self.position.all_pieces
+                & (0x0000_0000_0000_0070 if self.player else 0x7000_0000_0000_0000)
+            )
+            == 0
+            and (
+                attacked_squares
+                & (0x0000_0000_0000_0038 if self.player else 0x3800_0000_0000_0000)
+                == 0
+            )
+        )
+
+        if can_castle_queenside:
+            yield Move(
+                player=self.player,
+                piece="K",
+                from_square=0x0000_0000_0000_0008
+                if self.player
+                else 0x0800_0000_0000_0000,
+                to_square=0x0000_0000_0000_0020
+                if self.player
+                else 0x2000_0000_0000_0000,
+                is_castling="Q" if self.player else "q",
+            )
+
+    def count_legal_moves(self, depth: int = 1) -> int:
+        if depth == 0:
+            return 1
+
+        sum = 0
+        for move in self.legal_moves():
+            next_game = self.move(move)
+            add = next_game.count_legal_moves(depth - 1)
+            # if depth == 1:
+            #     print(next_game.last_move.__str__() + ":", add)
+            sum += add
+
+        return sum
 
     def __str__(self) -> str:
         return f"""

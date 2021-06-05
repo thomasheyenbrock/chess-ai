@@ -1,7 +1,7 @@
+import hashes
 import nimpy
 import strutils
 import tables
-import times
 
 from nim_bitboard import SQUARES, get_bottom_square, get_top_square, split
 from nim_constants import
@@ -38,74 +38,6 @@ from nim_constants import
     KING_MOVES,
     KNIGHT_MOVES,
     PAWN_ATTACKS
-
-
-const map_square_to_human_notation = {
-    0x0000_0000_0000_0001'u64: "h1",
-    0x0000_0000_0000_0002'u64: "g1",
-    0x0000_0000_0000_0004'u64: "f1",
-    0x0000_0000_0000_0008'u64: "e1",
-    0x0000_0000_0000_0010'u64: "d1",
-    0x0000_0000_0000_0020'u64: "c1",
-    0x0000_0000_0000_0040'u64: "b1",
-    0x0000_0000_0000_0080'u64: "a1",
-    0x0000_0000_0000_0100'u64: "h2",
-    0x0000_0000_0000_0200'u64: "g2",
-    0x0000_0000_0000_0400'u64: "f2",
-    0x0000_0000_0000_0800'u64: "e2",
-    0x0000_0000_0000_1000'u64: "d2",
-    0x0000_0000_0000_2000'u64: "c2",
-    0x0000_0000_0000_4000'u64: "b2",
-    0x0000_0000_0000_8000'u64: "a2",
-    0x0000_0000_0001_0000'u64: "h3",
-    0x0000_0000_0002_0000'u64: "g3",
-    0x0000_0000_0004_0000'u64: "f3",
-    0x0000_0000_0008_0000'u64: "e3",
-    0x0000_0000_0010_0000'u64: "d3",
-    0x0000_0000_0020_0000'u64: "c3",
-    0x0000_0000_0040_0000'u64: "b3",
-    0x0000_0000_0080_0000'u64: "a3",
-    0x0000_0000_0100_0000'u64: "h4",
-    0x0000_0000_0200_0000'u64: "g4",
-    0x0000_0000_0400_0000'u64: "f4",
-    0x0000_0000_0800_0000'u64: "e4",
-    0x0000_0000_1000_0000'u64: "d4",
-    0x0000_0000_2000_0000'u64: "c4",
-    0x0000_0000_4000_0000'u64: "b4",
-    0x0000_0000_8000_0000'u64: "a4",
-    0x0000_0001_0000_0000'u64: "h5",
-    0x0000_0002_0000_0000'u64: "g5",
-    0x0000_0004_0000_0000'u64: "f5",
-    0x0000_0008_0000_0000'u64: "e5",
-    0x0000_0010_0000_0000'u64: "d5",
-    0x0000_0020_0000_0000'u64: "c5",
-    0x0000_0040_0000_0000'u64: "b5",
-    0x0000_0080_0000_0000'u64: "a5",
-    0x0000_0100_0000_0000'u64: "h6",
-    0x0000_0200_0000_0000'u64: "g6",
-    0x0000_0400_0000_0000'u64: "f6",
-    0x0000_0800_0000_0000'u64: "e6",
-    0x0000_1000_0000_0000'u64: "d6",
-    0x0000_2000_0000_0000'u64: "c6",
-    0x0000_4000_0000_0000'u64: "b6",
-    0x0000_8000_0000_0000'u64: "a6",
-    0x0001_0000_0000_0000'u64: "h7",
-    0x0002_0000_0000_0000'u64: "g7",
-    0x0004_0000_0000_0000'u64: "f7",
-    0x0008_0000_0000_0000'u64: "e7",
-    0x0010_0000_0000_0000'u64: "d7",
-    0x0020_0000_0000_0000'u64: "c7",
-    0x0040_0000_0000_0000'u64: "b7",
-    0x0080_0000_0000_0000'u64: "a7",
-    0x0100_0000_0000_0000'u64: "h8",
-    0x0200_0000_0000_0000'u64: "g8",
-    0x0400_0000_0000_0000'u64: "f8",
-    0x0800_0000_0000_0000'u64: "e8",
-    0x1000_0000_0000_0000'u64: "d8",
-    0x2000_0000_0000_0000'u64: "c8",
-    0x4000_0000_0000_0000'u64: "b8",
-    0x8000_0000_0000_0000'u64: "a8",
-}.toTable
 
 
 const Result = {
@@ -195,17 +127,6 @@ proc newMove(
     )
 
 
-proc id(move: Move): string =
-    return $move.from_square & "-" & $move.to_square & "-" & move.is_castling & "-" & move.is_promoting_to
-
-
-proc to_string(move: Move): string =
-    return (
-        map_square_to_human_notation[move.from_square] &
-        map_square_to_human_notation[move.to_square]
-    )
-
-
 type Position = object
     all_pieces: uint64
     white_pieces: uint64
@@ -249,41 +170,6 @@ proc newPosition(
         black_pieces: black_pieces,
         pieces: pieces
     )
-
-
-proc to_string(position: Position): string =
-    var str = ""
-    for i in 0 .. 63:
-        let square = SQUARES[i]
-        if (position.pieces['K'] and square) != 0:
-            str &= "K"
-        elif (position.pieces['Q'] and square) != 0:
-            str &= "Q"
-        elif (position.pieces['R'] and square) != 0:
-            str &= "R"
-        elif (position.pieces['B'] and square) != 0:
-            str &= "B"
-        elif (position.pieces['N'] and square) != 0:
-            str &= "N"
-        elif (position.pieces['P'] and square) != 0:
-            str &= "P"
-        elif (position.pieces['k'] and square) != 0:
-            str &= "k"
-        elif (position.pieces['q'] and square) != 0:
-            str &= "q"
-        elif (position.pieces['r'] and square) != 0:
-            str &= "r"
-        elif (position.pieces['b'] and square) != 0:
-            str &= "b"
-        elif (position.pieces['n'] and square) != 0:
-            str &= "n"
-        elif (position.pieces['p'] and square) != 0:
-            str &= "p"
-        else:
-            str &= " "
-        if (i mod 8 == 7) and (i != 63):
-            str &= "\n"
-    return str
 
 
 proc move(position: Position, move: Move): (Position, char) =
@@ -735,7 +621,7 @@ type Game = object
     last_move: Move
     possible_castles: Table[char, bool]
     en_passant_square: uint64
-    position_counts: Table[string, int]
+    position_counts: Table[int, int]
     move_counter: int
     fifty_move_counter: int
 
@@ -746,10 +632,10 @@ proc newGame(
     last_move: Move,
     possible_castles: Table[char, bool],
     en_passant_square: uint64,
-    position_counts: Table[string, int],
+    position_counts: Table[int, int],
     move_counter: int,
     fifty_move_counter: int,
-): Game {.exportpy.} =
+): Game =
     return Game(
         position: position,
         player: player,
@@ -762,126 +648,125 @@ proc newGame(
     )
 
 
-proc id(game: Game): string =
+proc id(game: Game): int =
     let pieces = game.position.pieces
-    result = $pieces['K']
-    result.add("-")
-    result.add($pieces['Q'])
-    result.add("-")
-    result.add($pieces['R'])
-    result.add("-")
-    result.add($pieces['B'])
-    result.add("-")
-    result.add($pieces['N'])
-    result.add("-")
-    result.add($pieces['P'])
-    result.add("-")
-    result.add($pieces['k'])
-    result.add("-")
-    result.add($pieces['q'])
-    result.add("-")
-    result.add($pieces['r'])
-    result.add("-")
-    result.add($pieces['b'])
-    result.add("-")
-    result.add($pieces['n'])
-    result.add("-")
-    result.add($pieces['p'])
-    result.add("-")
-    result.add($game.player)
-    result.add("-")
-    result.add(if game.possible_castles['K']: "K" else: "")
-    result.add("-")
-    result.add(if game.possible_castles['Q']: "Q" else: "")
-    result.add("-")
-    result.add(if game.possible_castles['k']: "k" else: "")
-    result.add("-")
-    result.add(if game.possible_castles['q']: "q" else: "")
-    result.add("-")
-    result.add($game.en_passant_square)
+    var str = $pieces['K']
+    str.add("-")
+    str.add($pieces['Q'])
+    str.add("-")
+    str.add($pieces['R'])
+    str.add("-")
+    str.add($pieces['B'])
+    str.add("-")
+    str.add($pieces['N'])
+    str.add("-")
+    str.add($pieces['P'])
+    str.add("-")
+    str.add($pieces['k'])
+    str.add("-")
+    str.add($pieces['q'])
+    str.add("-")
+    str.add($pieces['r'])
+    str.add("-")
+    str.add($pieces['b'])
+    str.add("-")
+    str.add($pieces['n'])
+    str.add("-")
+    str.add($pieces['p'])
+    str.add("-")
+    str.add($game.player)
+    str.add("-")
+    str.add(if game.possible_castles['K']: "K" else: "")
+    str.add("-")
+    str.add(if game.possible_castles['Q']: "Q" else: "")
+    str.add("-")
+    str.add(if game.possible_castles['k']: "k" else: "")
+    str.add("-")
+    str.add(if game.possible_castles['q']: "q" else: "")
+    str.add("-")
+    str.add($game.en_passant_square)
+    return hash(str)
 
 
 proc move(game: Game, move: Move): Game {.exportpy.} =
-    var s = cpuTime()
-    var new_game = game
-
     let (new_position, is_capturing) = game.position.move(move)
-    new_game.position = new_position
 
-    new_game.player = not game.player
+    let possible_castles = {
+        'K': game.possible_castles['K'] and
+            not (game.player and move.piece == 'K') and
+            not (
+                game.player and
+                move.piece == 'R' and
+                move.from_square == 0x0000_0000_0000_0001'u64
+            ) and
+            not (
+                not game.player and
+                is_capturing == 'R' and
+                move.to_square == 0x0000_0000_0000_0001'u64
+            ),
+        'Q': game.possible_castles['Q'] and
+            not (game.player and move.piece == 'K') and
+            not (
+                game.player and
+                move.piece == 'R' and
+                move.from_square == 0x0000_0000_0000_0080'u64
+            ) and
+            not (
+                not game.player and
+                is_capturing == 'R' and
+                move.to_square == 0x0000_0000_0000_0080'u64
+            ),
+        'k': game.possible_castles['k'] and
+            not (not game.player and move.piece == 'K') and
+            not (
+                not game.player and
+                move.piece == 'R' and
+                move.from_square == 0x0100_0000_0000_0000'u64
+            ) and
+            not (
+                game.player and
+                is_capturing == 'R' and
+                move.to_square == 0x0100_0000_0000_0000'u64
+            ),
+        'q': game.possible_castles['q'] and
+            not (not game.player and move.piece == 'K') and
+            not (
+                not game.player and
+                move.piece == 'R' and
+                move.from_square == 0x8000_0000_0000_0000'u64
+            ) and
+            not (
+                game.player and
+                is_capturing == 'R' and
+                move.to_square == 0x8000_0000_0000_0000'u64
+            )
+    }.toTable
 
-    new_game.last_move = move
-
-    new_game.possible_castles['K'] = game.possible_castles['K'] and
-        not (game.player and move.piece == 'K') and
-        not (
-            game.player and
-            move.piece == 'R' and
-            move.from_square == 0x0000_0000_0000_0001'u64
-        ) and
-        not (
-            not game.player and
-            is_capturing == 'R' and
-            move.to_square == 0x0000_0000_0000_0001'u64
-        )
-    new_game.possible_castles['Q'] = game.possible_castles['Q'] and
-        not (game.player and move.piece == 'K') and
-        not (
-            game.player and
-            move.piece == 'R' and
-            move.from_square == 0x0000_0000_0000_0080'u64
-        ) and
-        not (
-            not game.player and
-            is_capturing == 'R' and
-            move.to_square == 0x0000_0000_0000_0080'u64
-        )
-    new_game.possible_castles['k'] = game.possible_castles['k'] and
-        not (not game.player and move.piece == 'K') and
-        not (
-            not game.player and
-            move.piece == 'R' and
-            move.from_square == 0x0100_0000_0000_0000'u64
-        ) and
-        not (
-            game.player and
-            is_capturing == 'R' and
-            move.to_square == 0x0100_0000_0000_0000'u64
-        )
-    new_game.possible_castles['q'] = game.possible_castles['q'] and
-        not (not game.player and move.piece == 'K') and
-        not (
-            not game.player and
-            move.piece == 'R' and
-            move.from_square == 0x8000_0000_0000_0000'u64
-        ) and
-        not (
-            game.player and
-            is_capturing == 'R' and
-            move.to_square == 0x8000_0000_0000_0000'u64
-        )
-
-    new_game.en_passant_square=move.en_passant_square
-
-    if (
+    var position_counts: Table[int, int]
+    if not (
         is_capturing != '0' or
         move.is_promoting_to != '0' or
         move.is_castling != '0'
     ):
-        new_game.position_counts = initTable[string, int]()
+        position_counts = initTable[int, int]()
     else:
         let key = game.id()
-        new_game.position_counts[key] = game.position_counts.getOrDefault(key, 0) + 1
+        position_counts = game.position_counts
+        position_counts[key] = game.position_counts.getOrDefault(key, 0) + 1
 
-    new_game.move_counter = game.move_counter + (if game.player: 0 else: 1)
-
-    new_game.fifty_move_counter = (
-        if move.piece == 'P' or is_capturing != '0' or move.is_capturing_en_passant: 0
-        else: game.fifty_move_counter + 1
+    result = newGame(
+        position=new_position,
+        player=not game.player,
+        last_move=move,
+        possible_castles=possible_castles,
+        en_passant_square=move.en_passant_square,
+        position_counts=position_counts,
+        move_counter=game.move_counter + (if game.player: 0 else: 1),
+        fifty_move_counter=(
+            if move.piece == 'P' or is_capturing != '0' or move.is_capturing_en_passant: 0
+            else: game.fifty_move_counter + 1
+        )
     )
-
-    result = new_game
-    t_move_game += cpuTime() - s
 
 
 proc legal_moves(game: Game): seq[Move] {.exportpy.} =
@@ -917,6 +802,7 @@ proc legal_moves(game: Game): seq[Move] {.exportpy.} =
 
     let number_of_attackers = len(attackers)
     if number_of_attackers > 1:
+        # Multiple pieces are giving check, so the king has to move
         return
 
     var capture_mask = 0xFFFF_FFFF_FFFF_FFFF'u64
@@ -1231,6 +1117,7 @@ proc legal_moves(game: Game): seq[Move] {.exportpy.} =
             )
         )
 
+
 proc count_legal_moves(game: Game, depth: int = 1): int {.exportpy.} =
     if depth == 0:
         return 1
@@ -1324,7 +1211,7 @@ proc game_from_fen(fen: string): Game {.exportpy.} =
             if fen_parts[3] == "-": 0x0000_0000_0000_0000'u64
             else: SQUARES[map_rank_to_rank_index[fen_parts[3][1]] * 8 + map_file_to_file_index[fen_parts[3][0]]]
         ),
-        position_counts=initTable[string, int](),
+        position_counts=initTable[int, int](),
         move_counter=fen_parts[5].parseInt,
         fifty_move_counter=fen_parts[4].parseInt
     )

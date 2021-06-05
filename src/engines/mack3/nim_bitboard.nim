@@ -66,14 +66,19 @@ const SQUARES*: array[0..63, uint64] = [
 ]
 
 iterator split*(bitboard: uint64): uint64 =
-    var c = 0
-    var bb = bitboard
-    while bb != 0:
-        let bit = bb and 0x0000_0000_0000_0001'u64
-        if bit != 0:
-            yield bit shl c
-        c += 1
-        bb = bb shr 1
+    if bitboard != 0:
+        if (bitboard and (bitboard - 1)) == 0:
+            # It's a power of two
+            yield bitboard
+        else:
+            var c = 0
+            var bb = bitboard
+            while bb != 0:
+                let bit = bb and 0x0000_0000_0000_0001'u64
+                if bit != 0:
+                    yield bit shl c
+                c += 1
+                bb = bb shr 1
 
 
 proc get_left_square*(bitboard: uint64): uint64 =

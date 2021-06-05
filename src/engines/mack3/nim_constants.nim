@@ -39,24 +39,18 @@ var KING_MOVES* = initTable[uint64, uint64]()
 var KNIGHT_MOVES* = initTable[uint64, uint64]()
 var PAWN_ATTACKS* = initTable[bool, Table[uint64, uint64]]()
 var PAWN_SINGLE_MOVES* = initTable[bool, Table[uint64, uint64]]()
-var PAWN_SINGLE_MOVES_PROMOTION* = initTable[bool, Table[uint64, seq[uint64]]]()
 var PAWN_DOUBLE_MOVES* = initTable[bool, Table[uint64, uint64]]()
 var PAWN_ATTACK_MOVES* = initTable[bool, Table[uint64, seq[uint64]]]()
-var PAWN_ATTACK_MOVES_PROMOTION* = initTable[bool, Table[uint64, seq[uint64]]]()
 var PAWN_EN_PASSANT_CAPTURES* = initTable[bool, Table[uint64, uint64]]()
 
 PAWN_ATTACKS[true] = initTable[uint64, uint64]()
 PAWN_ATTACKS[false] = initTable[uint64, uint64]()
 PAWN_SINGLE_MOVES[true] = initTable[uint64, uint64]()
 PAWN_SINGLE_MOVES[false] = initTable[uint64, uint64]()
-PAWN_SINGLE_MOVES_PROMOTION[true] = initTable[uint64, seq[uint64]]()
-PAWN_SINGLE_MOVES_PROMOTION[false] = initTable[uint64, seq[uint64]]()
 PAWN_DOUBLE_MOVES[true] = initTable[uint64, uint64]()
 PAWN_DOUBLE_MOVES[false] = initTable[uint64, uint64]()
 PAWN_ATTACK_MOVES[true] = initTable[uint64, seq[uint64]]()
 PAWN_ATTACK_MOVES[false] = initTable[uint64, seq[uint64]]()
-PAWN_ATTACK_MOVES_PROMOTION[true] = initTable[uint64, seq[uint64]]()
-PAWN_ATTACK_MOVES_PROMOTION[false] = initTable[uint64, seq[uint64]]()
 PAWN_EN_PASSANT_CAPTURES[true] = initTable[uint64, uint64]()
 PAWN_EN_PASSANT_CAPTURES[false] = initTable[uint64, uint64]()
 
@@ -252,19 +246,8 @@ for rank in 0'u64 .. 7'u64:
         PAWN_ATTACKS[true][square] = bottom_left or bottom_right
         PAWN_ATTACKS[false][square] = top_left or top_right
 
-        if (square and 0x00FF_0000_0000_0000'u64) == 0:
-            PAWN_SINGLE_MOVES[true][square] = top
-            PAWN_SINGLE_MOVES_PROMOTION[true][square] = @[]
-        else:
-            PAWN_SINGLE_MOVES[true][square] = 0
-            PAWN_SINGLE_MOVES_PROMOTION[true][square] = @[top]
-
-        if (square and 0x0000_0000_0000_FF00'u64) == 0:
-            PAWN_SINGLE_MOVES[false][square] = bottom
-            PAWN_SINGLE_MOVES_PROMOTION[false][square] = @[]
-        else:
-            PAWN_SINGLE_MOVES[false][square] = 0
-            PAWN_SINGLE_MOVES_PROMOTION[false][square] = @[bottom]
+        PAWN_SINGLE_MOVES[true][square] = top
+        PAWN_SINGLE_MOVES[false][square] = bottom
 
         if (square and 0x0000_0000_0000_FF00'u64) == 0:
             PAWN_DOUBLE_MOVES[true][square] = 0
@@ -281,24 +264,14 @@ for rank in 0'u64 .. 7'u64:
             white_pawn_attacks.add(top_left)
         if top_right != 0:
             white_pawn_attacks.add(top_right)
-        if (square and 0x00FF_0000_0000_0000'u64) == 0:
-            PAWN_ATTACK_MOVES[true][square] = white_pawn_attacks
-            PAWN_ATTACK_MOVES_PROMOTION[true][square] = @[]
-        else:
-            PAWN_ATTACK_MOVES[true][square] = @[]
-            PAWN_ATTACK_MOVES_PROMOTION[true][square] = white_pawn_attacks
+        PAWN_ATTACK_MOVES[true][square] = white_pawn_attacks
 
         var black_pawn_attacks: seq[uint64] = @[]
         if bottom_left != 0:
             black_pawn_attacks.add(bottom_left)
         if bottom_right != 0:
             black_pawn_attacks.add(bottom_right)
-        if (square and 0x0000_0000_0000_FF00'u64) == 0:
-            PAWN_ATTACK_MOVES[false][square] = black_pawn_attacks
-            PAWN_ATTACK_MOVES_PROMOTION[false][square] = @[]
-        else:
-            PAWN_ATTACK_MOVES[false][square] = @[]
-            PAWN_ATTACK_MOVES_PROMOTION[false][square] = black_pawn_attacks
+        PAWN_ATTACK_MOVES[false][square] = black_pawn_attacks
 
         if (square and 0x0000_00FF_0000_0000'u64) == 0:
             PAWN_EN_PASSANT_CAPTURES[true][square] = 0

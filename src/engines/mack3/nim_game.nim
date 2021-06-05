@@ -12,11 +12,9 @@ from nim_constants import
     NORTH_RAY,
     NORTH_WEST_MOVES,
     PAWN_ATTACK_MOVES,
-    PAWN_ATTACK_MOVES_PROMOTION,
     PAWN_DOUBLE_MOVES,
     PAWN_EN_PASSANT_CAPTURES,
     PAWN_SINGLE_MOVES,
-    PAWN_SINGLE_MOVES_PROMOTION,
     SOUTH_EAST_MOVES,
     SOUTH_MOVES,
     SOUTH_RAY,
@@ -397,8 +395,6 @@ proc attacked_squares(position: Position, player: bool, exclude_king: bool = fal
 
     for pawn in split(position.pieces[pawn_key]):
         for s in PAWN_ATTACK_MOVES[player][pawn]:
-            attacked = attacked or s
-        for s in PAWN_ATTACK_MOVES_PROMOTION[player][pawn]:
             attacked = attacked or s
 
     return attacked
@@ -954,14 +950,55 @@ proc legal_moves(game: Game): seq[Move] {.exportpy.} =
             push_mask
         )
         if to_square != 0:
-            result.add(
-                newMove(
-                    player=game.player,
-                    piece='P',
-                    from_square=from_square,
-                    to_square=to_square
+            if (to_square and (
+                if game.player: 0xFF00_0000_0000_0000'u64
+                else: 0x0000_0000_0000_00FF'u64
+            )) != 0:
+                result.add(
+                    newMove(
+                        player=game.player,
+                        piece='P',
+                        from_square=from_square,
+                        to_square=to_square,
+                        is_promoting_to='Q'
+                    )
                 )
-            )
+                result.add(
+                    newMove(
+                        player=game.player,
+                        piece='P',
+                        from_square=from_square,
+                        to_square=to_square,
+                        is_promoting_to='R'
+                    )
+                )
+                result.add(
+                    newMove(
+                        player=game.player,
+                        piece='P',
+                        from_square=from_square,
+                        to_square=to_square,
+                        is_promoting_to='B'
+                    )
+                )
+                result.add(
+                    newMove(
+                        player=game.player,
+                        piece='P',
+                        from_square=from_square,
+                        to_square=to_square,
+                        is_promoting_to='N'
+                    )
+                )
+            else:
+                result.add(
+                    newMove(
+                        player=game.player,
+                        piece='P',
+                        from_square=from_square,
+                        to_square=to_square
+                    )
+                )
 
         var attacks: seq[uint64] = @[]
         for p in PAWN_ATTACK_MOVES[game.player][from_square]:
@@ -969,14 +1006,55 @@ proc legal_moves(game: Game): seq[Move] {.exportpy.} =
         for to_square in attacks:
             if to_square == 0:
                 continue
-            result.add(
-                newMove(
-                    player=game.player,
-                    piece='P',
-                    from_square=from_square,
-                    to_square=to_square
+            if (to_square and (
+                if game.player: 0xFF00_0000_0000_0000'u64
+                else: 0x0000_0000_0000_00FF'u64
+            )) != 0:
+                result.add(
+                    newMove(
+                        player=game.player,
+                        piece='P',
+                        from_square=from_square,
+                        to_square=to_square,
+                        is_promoting_to='Q'
+                    )
                 )
-            )
+                result.add(
+                    newMove(
+                        player=game.player,
+                        piece='P',
+                        from_square=from_square,
+                        to_square=to_square,
+                        is_promoting_to='R'
+                    )
+                )
+                result.add(
+                    newMove(
+                        player=game.player,
+                        piece='P',
+                        from_square=from_square,
+                        to_square=to_square,
+                        is_promoting_to='B'
+                    )
+                )
+                result.add(
+                    newMove(
+                        player=game.player,
+                        piece='P',
+                        from_square=from_square,
+                        to_square=to_square,
+                        is_promoting_to='N'
+                    )
+                )
+            else:
+                result.add(
+                    newMove(
+                        player=game.player,
+                        piece='P',
+                        from_square=from_square,
+                        to_square=to_square
+                    )
+                )
 
         to_square = (
             PAWN_DOUBLE_MOVES[game.player][from_square] and
@@ -1022,51 +1100,6 @@ proc legal_moves(game: Game): seq[Move] {.exportpy.} =
             let position = game.position.move(move)[0]
             if not position.is_check(game.player):
                 result.add(move)
-
-        var promotions: seq[uint64] = @[]
-        for p in PAWN_SINGLE_MOVES_PROMOTION[game.player][from_square]:
-            promotions.add(p and empty_squares and pinned_movement and push_mask)
-        for p in PAWN_ATTACK_MOVES_PROMOTION[game.player][from_square]:
-            promotions.add(p and enemy_pieces and pinned_movement and capture_mask)
-        for to_square in promotions:
-            if to_square == 0:
-                continue
-            result.add(
-                newMove(
-                    player=game.player,
-                    piece='P',
-                    from_square=from_square,
-                    to_square=to_square,
-                    is_promoting_to='Q'
-                )
-            )
-            result.add(
-                newMove(
-                    player=game.player,
-                    piece='P',
-                    from_square=from_square,
-                    to_square=to_square,
-                    is_promoting_to='R'
-                )
-            )
-            result.add(
-                newMove(
-                    player=game.player,
-                    piece='P',
-                    from_square=from_square,
-                    to_square=to_square,
-                    is_promoting_to='B'
-                )
-            )
-            result.add(
-                newMove(
-                    player=game.player,
-                    piece='P',
-                    from_square=from_square,
-                    to_square=to_square,
-                    is_promoting_to='N'
-                )
-            )
 
     let can_castle_kingside = (
         game.possible_castles[if game.player: 'K' else: 'k'] and

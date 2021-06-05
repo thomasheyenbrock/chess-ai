@@ -1,3 +1,5 @@
+import tables
+
 const SQUARES*: array[0..63, uint64] = [
     0x8000_0000_0000_0000'u64,
     0x4000_0000_0000_0000'u64,

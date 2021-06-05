@@ -1,7 +1,7 @@
 import math
 import tables
 
-from nim_bitboard import
+from bitboard import
     get_top_square,
     get_bottom_square,
     get_left_square,

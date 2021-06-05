@@ -4,8 +4,8 @@ import sequtils
 import strutils
 import tables
 
-from nim_bitboard import SQUARES, get_bottom_square, get_top_square, split
-from nim_constants import
+from bitboard import SQUARES, get_bottom_square, get_top_square, split
+from constants import
     EAST_MOVES,
     NORTH_EAST_MOVES,
     NORTH_MOVES,

@@ -7,3 +7,4 @@ pairings.txt
 script.js
 script.js.map
 *.pyc
+__pycache__

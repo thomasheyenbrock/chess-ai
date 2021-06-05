@@ -1,0 +1,3 @@
+{
+  "python.analysis.extraPaths": ["src/engines/mack2/py", "src/engines/mack3"]
+}

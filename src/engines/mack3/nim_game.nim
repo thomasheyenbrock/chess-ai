@@ -1143,15 +1143,15 @@ proc result(game: Game, legal_moves: int): string {.exportpy.} =
             return if game.player: Result["BLACK"] else: Result["WHITE"]
         return Result["STALEMATE"]
 
-    if game.position.is_dead():
-        return Result["DEAD_POSITION"]
+    if game.fifty_move_counter >= 100:
+        return Result["FIFTY_MOVE_RULE"]
 
     for count in game.position_counts.values:
         if count >= 3:
             return Result["REPITITION"]
 
-    if game.fifty_move_counter >= 100:
-        return Result["FIFTY_MOVE_RULE"]
+    if game.position.is_dead():
+        return Result["DEAD_POSITION"]
 
     return ""
 

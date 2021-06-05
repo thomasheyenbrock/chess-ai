@@ -1,5 +1,6 @@
 import hashes
 import nimpy
+import sequtils
 import strutils
 import tables
 
@@ -518,52 +519,56 @@ proc pinned_movement(
 
 
 proc is_dead(position: Position): bool =
-    var white_queens: seq[uint64] = @[]
-    var white_rooks: seq[uint64] = @[]
-    var white_bishops: seq[uint64] = @[]
-    var white_knights: seq[uint64] = @[]
-    var white_pawns: seq[uint64] = @[]
-    var black_queens: seq[uint64] = @[]
-    var black_rooks: seq[uint64] = @[]
-    var black_bishops: seq[uint64] = @[]
-    var black_knights: seq[uint64] = @[]
-    var black_pawns: seq[uint64] = @[]
+    let white_queens = toSeq(split(position.pieces['Q'])).len
+    if white_queens > 0:
+        return false
 
-    for square in split(position.pieces['Q']):
-        white_queens.add(square)
-    for square in split(position.pieces['R']):
-        white_rooks.add(square)
-    for square in split(position.pieces['B']):
-        white_bishops.add(square)
-    for square in split(position.pieces['N']):
-        white_knights.add(square)
-    for square in split(position.pieces['P']):
-        white_pawns.add(square)
-    for square in split(position.pieces['q']):
-        black_queens.add(square)
-    for square in split(position.pieces['r']):
-        black_rooks.add(square)
-    for square in split(position.pieces['b']):
-        black_bishops.add(square)
-    for square in split(position.pieces['n']):
-        black_knights.add(square)
-    for square in split(position.pieces['p']):
-        black_pawns.add(square)
+    let black_queens = toSeq(split(position.pieces['q'])).len
+    if black_queens > 0:
+        return false
 
-    let number_of_white_pieces = (
-        white_queens.len +
-        white_rooks.len +
+    let white_rooks = toSeq(split(position.pieces['R'])).len
+    if white_rooks > 0:
+        return false
+
+    let black_rooks = toSeq(split(position.pieces['r'])).len
+    if black_rooks > 0:
+        return false
+
+    let white_pawns = toSeq(split(position.pieces['P'])).len
+    if white_pawns > 0:
+        return false
+
+    let black_pawns = toSeq(split(position.pieces['p'])).len
+    if black_pawns > 0:
+        return false
+
+    let white_bishops = toSeq(split(position.pieces['B']))
+    if white_bishops.len > 1:
+        return false
+
+    let black_bishops = toSeq(split(position.pieces['b']))
+    if black_bishops.len > 1:
+        return false
+
+    let white_knights = toSeq(split(position.pieces['N'])).len
+    if white_knights > 1:
+        return false
+
+    let black_knights = toSeq(split(position.pieces['n'])).len
+    if black_knights > 1:
+        return false
+
+    let number_of_white_pieces = white_queens +
+        white_rooks +
         white_bishops.len +
-        white_knights.len +
-        white_pawns.len
-    )
-    let number_of_black_pieces = (
-        black_queens.len +
-        black_rooks.len +
+        white_knights +
+        white_pawns
+    let number_of_black_pieces = black_queens +
+        black_rooks +
         black_bishops.len +
-        black_knights.len +
-        black_pawns.len
-    )
+        black_knights +
+        black_pawns
 
     # king against king
     if number_of_white_pieces + number_of_black_pieces == 0:
@@ -587,13 +592,13 @@ proc is_dead(position: Position): bool =
     if (
         number_of_white_pieces == 0 and
         number_of_black_pieces == 1 and
-        black_knights.len == 1
+        black_knights == 1
     ):
         return true
     if (
         number_of_black_pieces == 0 and
         number_of_white_pieces == 1 and
-        white_knights.len == 1
+        white_knights == 1
     ):
         return true
 

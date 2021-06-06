@@ -162,17 +162,14 @@ function drawBoard() {
   });
 }
 
-function move(
-  from: Bitboard,
-  to: Bitboard,
-  isPromotingTo: PromotionPiece | null
-) {
+function move(from: Bitboard, to: Bitboard, isPromotingTo: string | null) {
   const legalMove = Object.values(game.possibleMoves).find(
     (possibleGame) =>
       possibleGame.lastMove &&
       equals([from, possibleGame.lastMove.from]) &&
       equals([to, possibleGame.lastMove.to]) &&
-      isPromotingTo === possibleGame.lastMove.isPromotingTo
+      (isPromotingTo?.toUpperCase() || null) ===
+        (possibleGame.lastMove.isPromotingTo?.toUpperCase() || null)
   );
   if (!legalMove) {
     return;

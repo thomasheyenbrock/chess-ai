@@ -178,7 +178,7 @@ export type Game = {
 
 function incrementPositionCount(game: Game) {
   const positionCounts = Object.assign({}, game.positionCounts);
-  const key = gameToFen(game);
+  const key = gameToFen(game).split(" ").slice(0, 4).join(" ");
   positionCounts[key] = (positionCounts[key] || 0) + 1;
   game.positionCounts = positionCounts;
   return game;

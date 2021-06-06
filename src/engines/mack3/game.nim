@@ -227,15 +227,15 @@ proc get_diagonal_moves(all_pieces: uint64, enemy_pieces: uint64, square: uint64
     return north_west_moves or north_east_moves or south_west_moves or south_east_moves
 
 
-type Move = object
-    player: bool
-    piece: char
-    from_square: uint64
-    to_square: uint64
-    en_passant_square: uint64
-    is_capturing_en_passant: bool
-    is_castling: char
-    is_promoting_to: char
+type Move* = object
+    player*: bool
+    piece*: char
+    from_square*: uint64
+    to_square*: uint64
+    en_passant_square*: uint64
+    is_capturing_en_passant*: bool
+    is_castling*: char
+    is_promoting_to*: char
 
 
 proc newMove(
@@ -267,10 +267,10 @@ proc to_string*(move: Move): string =
 
 
 type Position = object
-    all_pieces: uint64
-    white_pieces: uint64
-    black_pieces: uint64
-    pieces: Table[char, uint64]
+    all_pieces*: uint64
+    white_pieces*: uint64
+    black_pieces*: uint64
+    pieces*: Table[char, uint64]
 
 
 proc newPosition(
@@ -756,15 +756,15 @@ proc is_dead(position: Position): bool =
     return false
 
 
-type Game = object
-    position: Position
-    player: bool
-    last_move: Move
-    possible_castles: Table[char, bool]
-    en_passant_square: uint64
-    position_counts: Table[int, int]
-    move_counter: int
-    fifty_move_counter: int
+type Game* = object
+    position*: Position
+    player*: bool
+    last_move*: Move
+    possible_castles*: Table[char, bool]
+    en_passant_square*: uint64
+    position_counts*: Table[int, int]
+    move_counter*: int
+    fifty_move_counter*: int
 
 
 proc newGame(
@@ -829,7 +829,7 @@ proc id(game: Game): int =
     return hash(str)
 
 
-proc move(game: Game, move: Move): Game {.exportpy.} =
+proc move*(game: Game, move: Move): Game {.exportpy.} =
     let (new_position, is_capturing) = game.position.move(move)
 
     let possible_castles = {
@@ -910,7 +910,7 @@ proc move(game: Game, move: Move): Game {.exportpy.} =
     )
 
 
-proc legal_moves(game: Game): seq[Move] {.exportpy.} =
+proc legal_moves*(game: Game): seq[Move] {.exportpy.} =
     let friendly_pieces = (
         if game.player: game.position.white_pieces
         else: game.position.black_pieces
@@ -1310,7 +1310,7 @@ proc count_legal_moves(game: Game, depth: int = 1): int {.exportpy.} =
 
     return sum
 
-proc result(game: Game, legal_moves: int): string {.exportpy.} =
+proc result*(game: Game, legal_moves: int): string {.exportpy.} =
     if legal_moves == 0:
         if game.position.is_check(game.player):
             return if game.player: RESULT_BLACK else: RESULT_WHITE
@@ -1329,31 +1329,7 @@ proc result(game: Game, legal_moves: int): string {.exportpy.} =
     return ""
 
 
-const map_rank_to_rank_index = {
-    '1': 7,
-    '2': 6,
-    '3': 5,
-    '4': 4,
-    '5': 3,
-    '6': 2,
-    '7': 1,
-    '8': 0,
-}.toTable
-
-
-const map_file_to_file_index = {
-    'a': 0,
-    'b': 1,
-    'c': 2,
-    'd': 3,
-    'e': 4,
-    'f': 5,
-    'g': 6,
-    'h': 7,
-}.toTable
-
-
-proc game_from_fen(fen: string): Game {.exportpy.} =
+proc game_from_fen*(fen: string): Game {.exportpy.} =
     let fen_parts = fen.split(" ")
     var position = newPosition(K=0, Q=0, R=0, B=0, N=0, P=0, k=0, q=0, r=0, b=0, n=0, p=0)
 

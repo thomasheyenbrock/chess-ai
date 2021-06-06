@@ -1,7 +1,7 @@
 from random import randint
 from typing import Optional, Tuple
 
-from engines.mack1.fen import game_from_fen
+from py.fen import game_from_fen
 
 
 def mack1(fen: str) -> Tuple[int, int, Optional[str]]:

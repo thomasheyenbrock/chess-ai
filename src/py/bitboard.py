@@ -70,10 +70,13 @@ SQUARES = [
 
 
 def split(bitboard: int) -> Iterable[int]:
+    c = 0
     while bitboard != 0:
-        square = SQUARES[64 - bitboard.bit_length()]
-        yield square
-        bitboard ^= square
+        bit = bitboard & 1
+        if bit:
+            yield bit << c
+        c += 1
+        bitboard = bitboard >> 1
 
 
 def get_left_square(bitboard: int) -> int:

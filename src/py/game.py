@@ -1,8 +1,8 @@
 from __future__ import annotations
 from typing import Iterable, List, Optional, Tuple
 
-from engines.mack1.bitboard import get_bottom_square, get_top_square, split
-from engines.mack1.constants import (
+from py.bitboard import get_bottom_square, get_top_square, split
+from py.constants import (
     EAST_MOVES,
     NORTH_EAST_MOVES,
     NORTH_MOVES,

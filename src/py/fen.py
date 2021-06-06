@@ -1,5 +1,5 @@
-from engines.mack1.bitboard import SQUARES
-from engines.mack1.game import Game, Position
+from py.bitboard import SQUARES
+from py.game import Game, Position
 
 
 map_rank_to_rank_index = {

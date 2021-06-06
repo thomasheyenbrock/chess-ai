@@ -1,6 +1,6 @@
 from typing import Callable, List
 
-from bitboard import (
+from engines.mack1.bitboard import (
     get_top_square,
     get_bottom_square,
     get_left_square,

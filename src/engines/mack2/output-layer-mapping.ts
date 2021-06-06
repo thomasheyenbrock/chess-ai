@@ -16,13 +16,13 @@ import {
   getRightSquare,
   getTopSquare,
   split,
-} from "../../bitboard";
+} from "../../scripts/bitboard";
 import {
   Castle,
   generateMoveId,
   Piece,
   PromotionPiece,
-} from "../../move-generator";
+} from "../../scripts/move-generator";
 
 function getQueenMoves(from: Bitboard) {
   const moveableSquares = bitwiseAnd([

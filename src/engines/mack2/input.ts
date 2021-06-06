@@ -1,5 +1,5 @@
-import { Bitboard, bitwiseAnd, isNull } from "../../bitboard";
-import { Castle, Game, Piece, Player } from "../../move-generator";
+import { Bitboard, bitwiseAnd, isNull } from "../../scripts/bitboard";
+import { Castle, Game, Piece, Player } from "../../scripts/move-generator";
 
 function getActivationsFromBitboard(bitboard: Bitboard) {
   return [

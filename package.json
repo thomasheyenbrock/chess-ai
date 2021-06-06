@@ -4,7 +4,7 @@
   "license": "MIT",
   "scripts": {
     "test": "jest",
-    "transpile": "esbuild src/index.ts --outfile=script.js --watch --bundle --sourcemap"
+    "transpile": "esbuild src/scripts/index.ts --outfile=src/static/script.js --watch --bundle --sourcemap"
   },
   "devDependencies": {
     "@babel/core": "^7.14.2",

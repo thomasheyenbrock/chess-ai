@@ -20,7 +20,7 @@ import {
   isNull,
   split,
 } from "./bitboard";
-import { gameToString } from "./fen";
+import { gameToFen } from "./fen";
 
 export const squares: Bitboard[][] = [
   [
@@ -178,7 +178,7 @@ export type Game = {
 
 function incrementPositionCount(game: Game) {
   const positionCounts = Object.assign({}, game.positionCounts);
-  const key = gameToString(game);
+  const key = gameToFen(game);
   positionCounts[key] = (positionCounts[key] || 0) + 1;
   game.positionCounts = positionCounts;
   return game;
@@ -1393,17 +1393,4 @@ export function setGameResult(game: Game) {
   }
 
   return game;
-}
-
-export function countLegalMoves(game: Game, depth: number = 1) {
-  if (depth === 0) {
-    return 1;
-  }
-
-  const possibleGames = getLegalMoves(game);
-  let sum = 0;
-  for (const moveId in possibleGames) {
-    sum += countLegalMoves(possibleGames[moveId], depth - 1);
-  }
-  return sum;
 }

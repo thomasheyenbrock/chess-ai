@@ -1,7 +1,5 @@
 import { Bitboard, bitwiseAnd, equals, isNull } from "./bitboard";
-import * as engines from "./engines";
-import { PickMove } from "./engines/type";
-import { gameFromFen } from "./fen";
+import { gameFromFen, gameToFen } from "./fen";
 import {
   Piece,
   Player,
@@ -210,6 +208,47 @@ function move(
 
 drawBoard();
 
+function choosePromotionPiece(to: Bitboard) {
+  const isWhitePromotion =
+    selectedPiece.element?.id.startsWith("P-") &&
+    !isNull(bitwiseAnd([to, [0xff000000, 0x00000000]]));
+  const isBlackPromotion =
+    selectedPiece.element?.id.startsWith("p-") &&
+    !isNull(bitwiseAnd([to, [0x00000000, 0x000000ff]]));
+  if (!isWhitePromotion && !isBlackPromotion) {
+    return null;
+  }
+  const promotionCycle: Record<PromotionPiece, PromotionPiece> = {
+    [Piece.WHITE_QUEEN]: Piece.WHITE_ROOK,
+    [Piece.WHITE_ROOK]: Piece.WHITE_BISHOP,
+    [Piece.WHITE_BISHOP]: Piece.WHITE_KNIGHT,
+    [Piece.WHITE_KNIGHT]: Piece.WHITE_QUEEN,
+    [Piece.BLACK_QUEEN]: Piece.BLACK_ROOK,
+    [Piece.BLACK_ROOK]: Piece.BLACK_BISHOP,
+    [Piece.BLACK_BISHOP]: Piece.BLACK_KNIGHT,
+    [Piece.BLACK_KNIGHT]: Piece.BLACK_QUEEN,
+  };
+  const pieceName = {
+    [Piece.WHITE_QUEEN]: "queen",
+    [Piece.WHITE_ROOK]: "rook",
+    [Piece.WHITE_BISHOP]: "bishop",
+    [Piece.WHITE_KNIGHT]: "knight",
+    [Piece.BLACK_QUEEN]: "queen",
+    [Piece.BLACK_ROOK]: "rook",
+    [Piece.BLACK_BISHOP]: "bishop",
+    [Piece.BLACK_KNIGHT]: "knight",
+  };
+  let current: PromotionPiece = isWhitePromotion
+    ? Piece.WHITE_QUEEN
+    : Piece.BLACK_QUEEN;
+  while (true) {
+    if (confirm(`Do you want to promote to a ${pieceName[current]}?`)) {
+      return current;
+    }
+    current = promotionCycle[current];
+  }
+}
+
 // Click handlers for pieces
 Object.values(Piece).forEach((pieceName) => {
   for (let count = 1; count <= maxPieces[pieceName]; count++) {
@@ -243,7 +282,11 @@ Object.values(Piece).forEach((pieceName) => {
       }
 
       if (selectedPiece.square) {
-        move(selectedPiece.square, squares[rankIndex][fileIndex], null);
+        move(
+          selectedPiece.square,
+          squares[rankIndex][fileIndex],
+          choosePromotionPiece(squares[rankIndex][fileIndex])
+        );
       }
     });
   }
@@ -281,57 +324,36 @@ for (const element of document.getElementsByClassName("square")) {
     if (game.result || !selectedPiece.square) {
       return;
     }
-    move(selectedPiece.square, square, null);
+    move(selectedPiece.square, square, choosePromotionPiece(square));
   });
 }
 
-function makeMove(pickMove: PickMove, humanPlayer?: Player) {
+async function makeMove(white: string, black: string) {
   if (game.result || Object.keys(game.possibleMoves).length === 0) {
     return;
   }
 
-  if (game.player !== humanPlayer) {
-    const nextGame = pickMove(game);
-    if (nextGame.lastMove) {
-      move(
-        nextGame.lastMove.from,
-        nextGame.lastMove.to,
-        nextGame.lastMove.isPromotingTo
-      );
-    }
+  const fen = gameToFen(game);
+  const engine = game.player === Player.WHITE ? white : black;
+  if (engine !== "human") {
+    const data = await fetch(`/${engine}?fen=${encodeURI(fen)}`).then((res) =>
+      res.json()
+    );
+    move(data.from, data.to, data.isPromotingTo);
   }
 
   setTimeout(() => {
-    makeMove(pickMove, humanPlayer);
+    makeMove(white, black);
   }, 100);
 }
 
+const searchParams = new URLSearchParams(location.search);
+const white = searchParams.get("white");
+const black = searchParams.get("black");
+if (white && black) {
+  makeMove(white, black);
+}
+
 document.getElementById("button-reset")!.addEventListener("click", () => {
-  game = gameFromFen(startingPositionFen);
-  result.innerText = "";
-  drawBoard();
-});
-
-document.getElementById("button-mack1")!.addEventListener("click", () => {
-  makeMove(engines.mack1);
-});
-
-document.getElementById("button-mack1-white")!.addEventListener("click", () => {
-  makeMove(engines.mack1, Player.WHITE);
-});
-
-document.getElementById("button-mack1-black")!.addEventListener("click", () => {
-  makeMove(engines.mack1, Player.BLACK);
-});
-
-document.getElementById("button-mack2")!.addEventListener("click", () => {
-  makeMove(engines.mack2);
-});
-
-document.getElementById("button-mack2-white")!.addEventListener("click", () => {
-  makeMove(engines.mack2, Player.WHITE);
-});
-
-document.getElementById("button-mack2-black")!.addEventListener("click", () => {
-  makeMove(engines.mack2, Player.BLACK);
+  location.href = "/";
 });

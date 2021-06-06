@@ -4,7 +4,7 @@ import sequtils
 import strutils
 import tables
 
-from bitboard import SQUARES, get_bottom_square, get_top_square, split
+from bitboard import get_bottom_square, get_top_square, split
 from constants import
     EAST_MOVES,
     NORTH_EAST_MOVES,
@@ -39,14 +39,148 @@ from constants import
     PAWN_ATTACKS
 
 
-const Result = {
-    "WHITE": "White wins",
-    "BLACK": "Black wins",
-    "STALEMATE": "Stalemate",
-    "DEAD_POSITION": "Dead position",
-    "REPITITION": "Third repitition of position",
-    "FIFTY_MOVE_RULE": "Fifty moves without capture or pawn movement",
+const SQUARES = [
+    0x8000_0000_0000_0000'u64,
+    0x4000_0000_0000_0000'u64,
+    0x2000_0000_0000_0000'u64,
+    0x1000_0000_0000_0000'u64,
+    0x0800_0000_0000_0000'u64,
+    0x0400_0000_0000_0000'u64,
+    0x0200_0000_0000_0000'u64,
+    0x0100_0000_0000_0000'u64,
+    0x0080_0000_0000_0000'u64,
+    0x0040_0000_0000_0000'u64,
+    0x0020_0000_0000_0000'u64,
+    0x0010_0000_0000_0000'u64,
+    0x0008_0000_0000_0000'u64,
+    0x0004_0000_0000_0000'u64,
+    0x0002_0000_0000_0000'u64,
+    0x0001_0000_0000_0000'u64,
+    0x0000_8000_0000_0000'u64,
+    0x0000_4000_0000_0000'u64,
+    0x0000_2000_0000_0000'u64,
+    0x0000_1000_0000_0000'u64,
+    0x0000_0800_0000_0000'u64,
+    0x0000_0400_0000_0000'u64,
+    0x0000_0200_0000_0000'u64,
+    0x0000_0100_0000_0000'u64,
+    0x0000_0080_0000_0000'u64,
+    0x0000_0040_0000_0000'u64,
+    0x0000_0020_0000_0000'u64,
+    0x0000_0010_0000_0000'u64,
+    0x0000_0008_0000_0000'u64,
+    0x0000_0004_0000_0000'u64,
+    0x0000_0002_0000_0000'u64,
+    0x0000_0001_0000_0000'u64,
+    0x0000_0000_8000_0000'u64,
+    0x0000_0000_4000_0000'u64,
+    0x0000_0000_2000_0000'u64,
+    0x0000_0000_1000_0000'u64,
+    0x0000_0000_0800_0000'u64,
+    0x0000_0000_0400_0000'u64,
+    0x0000_0000_0200_0000'u64,
+    0x0000_0000_0100_0000'u64,
+    0x0000_0000_0080_0000'u64,
+    0x0000_0000_0040_0000'u64,
+    0x0000_0000_0020_0000'u64,
+    0x0000_0000_0010_0000'u64,
+    0x0000_0000_0008_0000'u64,
+    0x0000_0000_0004_0000'u64,
+    0x0000_0000_0002_0000'u64,
+    0x0000_0000_0001_0000'u64,
+    0x0000_0000_0000_8000'u64,
+    0x0000_0000_0000_4000'u64,
+    0x0000_0000_0000_2000'u64,
+    0x0000_0000_0000_1000'u64,
+    0x0000_0000_0000_0800'u64,
+    0x0000_0000_0000_0400'u64,
+    0x0000_0000_0000_0200'u64,
+    0x0000_0000_0000_0100'u64,
+    0x0000_0000_0000_0080'u64,
+    0x0000_0000_0000_0040'u64,
+    0x0000_0000_0000_0020'u64,
+    0x0000_0000_0000_0010'u64,
+    0x0000_0000_0000_0008'u64,
+    0x0000_0000_0000_0004'u64,
+    0x0000_0000_0000_0002'u64,
+    0x0000_0000_0000_0001'u64
+]
+
+
+const SQUARES_TO_HUMAN = {
+    0x8000_0000_0000_0000'u64: "a8",
+    0x4000_0000_0000_0000'u64: "b8",
+    0x2000_0000_0000_0000'u64: "c8",
+    0x1000_0000_0000_0000'u64: "d8",
+    0x0800_0000_0000_0000'u64: "e8",
+    0x0400_0000_0000_0000'u64: "f8",
+    0x0200_0000_0000_0000'u64: "g8",
+    0x0100_0000_0000_0000'u64: "h8",
+    0x0080_0000_0000_0000'u64: "a7",
+    0x0040_0000_0000_0000'u64: "b7",
+    0x0020_0000_0000_0000'u64: "c7",
+    0x0010_0000_0000_0000'u64: "d7",
+    0x0008_0000_0000_0000'u64: "e7",
+    0x0004_0000_0000_0000'u64: "f7",
+    0x0002_0000_0000_0000'u64: "g7",
+    0x0001_0000_0000_0000'u64: "h7",
+    0x0000_8000_0000_0000'u64: "a6",
+    0x0000_4000_0000_0000'u64: "b6",
+    0x0000_2000_0000_0000'u64: "c6",
+    0x0000_1000_0000_0000'u64: "d6",
+    0x0000_0800_0000_0000'u64: "e6",
+    0x0000_0400_0000_0000'u64: "f6",
+    0x0000_0200_0000_0000'u64: "g6",
+    0x0000_0100_0000_0000'u64: "h6",
+    0x0000_0080_0000_0000'u64: "a5",
+    0x0000_0040_0000_0000'u64: "b5",
+    0x0000_0020_0000_0000'u64: "c5",
+    0x0000_0010_0000_0000'u64: "d5",
+    0x0000_0008_0000_0000'u64: "e5",
+    0x0000_0004_0000_0000'u64: "f5",
+    0x0000_0002_0000_0000'u64: "g5",
+    0x0000_0001_0000_0000'u64: "h5",
+    0x0000_0000_8000_0000'u64: "a4",
+    0x0000_0000_4000_0000'u64: "b4",
+    0x0000_0000_2000_0000'u64: "c4",
+    0x0000_0000_1000_0000'u64: "d4",
+    0x0000_0000_0800_0000'u64: "e4",
+    0x0000_0000_0400_0000'u64: "f4",
+    0x0000_0000_0200_0000'u64: "g4",
+    0x0000_0000_0100_0000'u64: "h4",
+    0x0000_0000_0080_0000'u64: "a3",
+    0x0000_0000_0040_0000'u64: "b3",
+    0x0000_0000_0020_0000'u64: "c3",
+    0x0000_0000_0010_0000'u64: "d3",
+    0x0000_0000_0008_0000'u64: "e3",
+    0x0000_0000_0004_0000'u64: "f3",
+    0x0000_0000_0002_0000'u64: "g3",
+    0x0000_0000_0001_0000'u64: "h3",
+    0x0000_0000_0000_8000'u64: "a2",
+    0x0000_0000_0000_4000'u64: "b2",
+    0x0000_0000_0000_2000'u64: "c2",
+    0x0000_0000_0000_1000'u64: "d2",
+    0x0000_0000_0000_0800'u64: "e2",
+    0x0000_0000_0000_0400'u64: "f2",
+    0x0000_0000_0000_0200'u64: "g2",
+    0x0000_0000_0000_0100'u64: "h2",
+    0x0000_0000_0000_0080'u64: "a1",
+    0x0000_0000_0000_0040'u64: "b1",
+    0x0000_0000_0000_0020'u64: "c1",
+    0x0000_0000_0000_0010'u64: "d1",
+    0x0000_0000_0000_0008'u64: "e1",
+    0x0000_0000_0000_0004'u64: "f1",
+    0x0000_0000_0000_0002'u64: "g1",
+    0x0000_0000_0000_0001'u64: "h1"
 }.toTable
+
+
+const RESULT_WHITE* = "White wins"
+const RESULT_BLACK* = "Black wins"
+const RESULT_STALEMATE* = "Stalemate"
+const RESULT_DEAD_POSITION* = "Dead position"
+const RESULT_REPITITION* = "Third repitition of position"
+const RESULT_FIFTY_MOVE_RULE* = "Fifty moves without capture or pawn movement"
 
 
 proc get_rank_and_file_moves(all_pieces: uint64, enemy_pieces: uint64, square: uint64): uint64 =
@@ -124,6 +258,12 @@ proc newMove(
         is_castling: is_castling,
         is_promoting_to: is_promoting_to
     )
+
+
+proc to_string*(move: Move): string =
+    result = SQUARES_TO_HUMAN[move.from_square] & SQUARES_TO_HUMAN[move.to_square]
+    if move.is_promoting_to != '0':
+        result &= $move.is_promoting_to
 
 
 type Position = object
@@ -1173,18 +1313,18 @@ proc count_legal_moves(game: Game, depth: int = 1): int {.exportpy.} =
 proc result(game: Game, legal_moves: int): string {.exportpy.} =
     if legal_moves == 0:
         if game.position.is_check(game.player):
-            return if game.player: Result["BLACK"] else: Result["WHITE"]
-        return Result["STALEMATE"]
+            return if game.player: RESULT_BLACK else: RESULT_WHITE
+        return RESULT_STALEMATE
 
     if game.fifty_move_counter >= 100:
-        return Result["FIFTY_MOVE_RULE"]
+        return RESULT_FIFTY_MOVE_RULE
 
     for count in game.position_counts.values:
         if count >= 3:
-            return Result["REPITITION"]
+            return RESULT_REPITITION
 
     if game.position.is_dead():
-        return Result["DEAD_POSITION"]
+        return RESULT_DEAD_POSITION
 
     return ""
 
@@ -1235,6 +1375,12 @@ proc game_from_fen(fen: string): Game {.exportpy.} =
                 position.all_pieces = position.all_pieces or square
                 fileIndex += 1
             r = r[1 .. r.len - 1]
+
+    var en_passant_square = 0x0000_0000_0000_0000'u64
+    for (square, human) in SQUARES_TO_HUMAN.pairs:
+        if human == fen_parts[3]:
+            en_passant_square = square
+
     return newGame(
         position=position,
         player=fen_parts[1] == "w",
@@ -1245,10 +1391,7 @@ proc game_from_fen(fen: string): Game {.exportpy.} =
             'k': "k" in fen_parts[2],
             'q': "q" in fen_parts[2],
         }.toTable,
-        en_passant_square=(
-            if fen_parts[3] == "-": 0x0000_0000_0000_0000'u64
-            else: SQUARES[map_rank_to_rank_index[fen_parts[3][1]] * 8 + map_file_to_file_index[fen_parts[3][0]]]
-        ),
+        en_passant_square=en_passant_square,
         position_counts=initTable[int, int](),
         move_counter=fen_parts[5].parseInt,
         fifty_move_counter=fen_parts[4].parseInt

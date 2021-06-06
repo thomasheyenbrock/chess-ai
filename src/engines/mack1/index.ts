@@ -1,4 +1,4 @@
-import { PickMove } from "./type";
+import { PickMove } from "../type";
 
 const pickMove: PickMove = function (game) {
   const possibleMoves = Object.values(game.possibleMoves);

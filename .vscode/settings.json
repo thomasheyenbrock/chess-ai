@@ -1,3 +1,6 @@
 {
-  "python.analysis.extraPaths": ["src/engines/mack1", "src/engines/mack2"]
+  "python.analysis.extraPaths": ["src/engines/mack1", "src/engines/mack2"],
+  "[julia]": {
+    "editor.defaultFormatter": "singularitti.vscode-julia-formatter"
+  }
 }

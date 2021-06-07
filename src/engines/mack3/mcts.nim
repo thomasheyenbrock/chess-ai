@@ -122,15 +122,16 @@ proc iterate(node: var Node, runs: int) =
 
 
 proc find_best_move(fen: string): Move {.exportpy.} =
-    var node = newNode(state=game_from_fen(fen))
+    let game = game_from_fen(fen)
+    var node = newNode(state=game)
     node.expand()
     iterate(node, 1000)
 
-    var max = low(float)
+    var opt = if game.player: low(float) else: high(float)
     var best: Node
     for child in node.children:
-        if child.value > max:
-            max = child.value
+        if (game.player and child.value > opt) or (not game.player and child.value < opt):
+            opt = child.value
             best = child
             # echo(child.state.last_move.to_string(), ": ", child.value, " (", child.visits, " visits)")
 

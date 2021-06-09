@@ -7,6 +7,7 @@ from urllib.parse import urlparse, parse_qs
 from engines.mack1.index import mack1
 from engines.mack2.index import mack2
 from engines.mack3.index import mack3
+from engines.mack5.index import mack5
 
 
 def split_int(i: int):
@@ -17,55 +18,60 @@ class MyHttpRequestHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         parsed = urlparse(self.path)
 
-        try:
-            json = ""
-            if parsed.path == "/mack1":
-                fen = parse_qs(parsed.query).get("fen")[0]
-                from_square, to_square, is_promoting_to = mack1(fen)
-                json = dumps(
-                    {
-                        "from": split_int(from_square),
-                        "to": split_int(to_square),
-                        "isPromotingTo": is_promoting_to,
-                    }
-                )
+        json = ""
+        if parsed.path == "/mack1":
+            fen = parse_qs(parsed.query).get("fen")[0]
+            from_square, to_square, is_promoting_to = mack1(fen)
+            json = dumps(
+                {
+                    "from": split_int(from_square),
+                    "to": split_int(to_square),
+                    "isPromotingTo": is_promoting_to,
+                }
+            )
 
-            if parsed.path == "/mack2":
-                fen = parse_qs(parsed.query).get("fen")[0]
-                from_square, to_square, is_promoting_to = mack2(fen)
-                json = dumps(
-                    {
-                        "from": split_int(from_square),
-                        "to": split_int(to_square),
-                        "isPromotingTo": is_promoting_to,
-                    }
-                )
+        if parsed.path == "/mack2":
+            fen = parse_qs(parsed.query).get("fen")[0]
+            from_square, to_square, is_promoting_to = mack2(fen)
+            json = dumps(
+                {
+                    "from": split_int(from_square),
+                    "to": split_int(to_square),
+                    "isPromotingTo": is_promoting_to,
+                }
+            )
 
-            if parsed.path == "/mack3":
-                fen = parse_qs(parsed.query).get("fen")[0]
-                from_square, to_square, is_promoting_to = mack3(fen)
-                json = dumps(
-                    {
-                        "from": split_int(from_square),
-                        "to": split_int(to_square),
-                        "isPromotingTo": is_promoting_to,
-                    }
-                )
+        if parsed.path == "/mack3":
+            fen = parse_qs(parsed.query).get("fen")[0]
+            from_square, to_square, is_promoting_to = mack3(fen)
+            json = dumps(
+                {
+                    "from": split_int(from_square),
+                    "to": split_int(to_square),
+                    "isPromotingTo": is_promoting_to,
+                }
+            )
 
-            if json != "":
-                self.send_response(200)
-                self.send_header("Content-type", "application/json")
-                self.send_header("Cache-Control", "no-cache")
-                self.end_headers()
+        if parsed.path == "/mack5":
+            query_parameters = parse_qs(parsed.query)
+            id = query_parameters.get("id")[0]
+            fen = query_parameters.get("fen")[0]
+            from_square, to_square, is_promoting_to = mack5(id, fen)
+            json = dumps(
+                {
+                    "from": split_int(from_square),
+                    "to": split_int(to_square),
+                    "isPromotingTo": is_promoting_to,
+                }
+            )
 
-                self.wfile.write(bytes(json, "utf8"))
-                return
-        except:
-            self.send_response(500)
+        if json != "":
+            self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.send_header("Cache-Control", "no-cache")
             self.end_headers()
-            self.wfile.write(bytes("Internal server error", "utf8"))
+
+            self.wfile.write(bytes(json, "utf8"))
             return
 
         if parsed.path == "/":

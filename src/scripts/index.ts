@@ -325,6 +325,8 @@ for (const element of document.getElementsByClassName("square")) {
   });
 }
 
+const id = Math.random().toString(36).slice(2);
+
 async function makeMove(white: string, black: string) {
   if (game.result || Object.keys(game.possibleMoves).length === 0) {
     return;
@@ -333,8 +335,8 @@ async function makeMove(white: string, black: string) {
   const fen = gameToFen(game);
   const engine = game.player === Player.WHITE ? white : black;
   if (engine !== "human") {
-    const data = await fetch(`/${engine}?fen=${encodeURI(fen)}`).then((res) =>
-      res.json()
+    const data = await fetch(`/${engine}?id=${id}&fen=${encodeURI(fen)}`).then(
+      (res) => res.json()
     );
     move(data.from, data.to, data.isPromotingTo);
   }

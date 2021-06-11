@@ -772,7 +772,7 @@ type Game* = object
     last_move*: Move
     possible_castles*: Table[char, bool]
     en_passant_square*: uint64
-    position_counts*: Table[int, int]
+    position_counts*: CountTable[int]
     move_counter*: int
     fifty_move_counter*: int
 
@@ -823,7 +823,7 @@ proc newGame(
     last_move: Move,
     possible_castles: Table[char, bool],
     en_passant_square: uint64,
-    position_counts: Table[int, int],
+    position_counts: CountTable[int],
     move_counter: int,
     fifty_move_counter: int,
     is_capturing: char = '0'
@@ -834,16 +834,14 @@ proc newGame(
         last_move: last_move,
         possible_castles: possible_castles,
         en_passant_square: en_passant_square,
-        position_counts: initTable[int, int](),
+        position_counts: initCountTable[int](1),
         move_counter: move_counter,
         fifty_move_counter: fifty_move_counter
     )
     let key = result.id()
     if (is_capturing == '0') and (last_move.is_promoting_to == '0') and (last_move.is_castling == '0'):
         result.position_counts = position_counts
-        result.position_counts[key] = result.position_counts.getOrDefault(key, 0) + 1
-    else:
-        result.position_counts[key] = 1
+    result.position_counts.inc(key)
 
 
 
@@ -1426,7 +1424,7 @@ proc game_from_fen*(fen: string): Game =
             'q': "q" in fen_parts[2],
         }.toTable,
         en_passant_square=en_passant_square,
-        position_counts=initTable[int, int](),
+        position_counts=initCountTable[int](0),
         move_counter=fen_parts[5].parseInt,
         fifty_move_counter=fen_parts[4].parseInt
     )

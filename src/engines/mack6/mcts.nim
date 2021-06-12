@@ -70,6 +70,7 @@ proc expand(self: var Node) =
 
     let input = policy_network_ctx.variable(self.input)
     let all_priors = predict_policy_network(input).value.softmax
+    policy_network_ctx.nodes = @[]
 
     var legal_priors = newTensor[float32](moves.len)
     for i in 0..<moves.len:
@@ -105,7 +106,8 @@ proc get_value(self: var Node): float32 =
             self.terminal_value = result_to_float(game_result)
             return self.terminal_value
 
-    return predict_value_network(value_network_ctx.variable(self.input))
+    result = predict_value_network(value_network_ctx.variable(self.input))
+    value_network_ctx.nodes = @[]
 
 
 proc iteration(self: var Node) =

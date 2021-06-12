@@ -1,8 +1,4 @@
-import random
-
-import arraymancer, strformat, strutils, sequtils
-
-randomize()
+import arraymancer, strutils, sequtils
 
 # ##################################################################
 # Define the model.
@@ -25,12 +21,13 @@ let optim = value_network.optimizerSGD(learning_rate = 1e-4'f32)
 # ##################################################################
 # Training
 
-proc train_value_network*(x: Variable, y: Tensor) =
-    for t in 0 ..< 500:
+proc train_value_network*(x: Variable, y: Tensor, epochs: int = 200) =
+    echo "Training value network for ", epochs, " epochs"
+    for e in 1..epochs:
         let y_pred = value_network.forward(x)
         let loss = y_pred.mse_loss(y)
 
-        echo &"Epoch {t}: loss {loss.value[0]}"
+        echo "  Epoch ", e, ": loss ", loss.value[0]
 
         loss.backprop()
         optim.update()
@@ -45,38 +42,6 @@ proc predict_value_network*(x: Variable): float32 =
 
 
 # ##################################################################
-# Restore weights and biases
-
-proc parseAsFloat(x: string): float32 =
-    return x.parseFloat
-
-proc load_value_network*() =
-    value_network.fc1.weight.value = readFile("value.fc1.weight")
-        .replace("@[", "").replace("]", "")
-        .split(", ").map(parseAsFloat).toTensor.reshape(628, 837)
-    value_network.fc1.bias.value = readFile("value.fc1.bias")
-        .replace("@[", "").replace("]", "")
-        .split(", ").map(parseAsFloat).toTensor.reshape(1, 628)
-    value_network.fc2.weight.value = readFile("value.fc2.weight")
-        .replace("@[", "").replace("]", "")
-        .split(", ").map(parseAsFloat).toTensor.reshape(419, 628)
-    value_network.fc2.bias.value = readFile("value.fc2.bias")
-        .replace("@[", "").replace("]", "")
-        .split(", ").map(parseAsFloat).toTensor.reshape(1, 419)
-    value_network.fc3.weight.value = readFile("value.fc3.weight")
-        .replace("@[", "").replace("]", "")
-        .split(", ").map(parseAsFloat).toTensor.reshape(210, 419)
-    value_network.fc3.bias.value = readFile("value.fc3.bias")
-        .replace("@[", "").replace("]", "")
-        .split(", ").map(parseAsFloat).toTensor.reshape(1, 210)
-    value_network.fc4.weight.value = readFile("value.fc4.weight")
-        .replace("@[", "").replace("]", "")
-        .split(", ").map(parseAsFloat).toTensor.reshape(1, 210)
-    value_network.fc4.bias.value = readFile("value.fc4.bias")
-        .replace("@[", "").replace("]", "")
-        .split(", ").map(parseAsFloat).toTensor.reshape(1, 1)
-
-# ##################################################################
 # Storing weights and biases
 
 proc save_value_network*() =
@@ -88,3 +53,41 @@ proc save_value_network*() =
     writeFile("value.fc3.bias", $toSeq(value_network.fc3.bias.value))
     writeFile("value.fc4.weight", $toSeq(value_network.fc4.weight.value))
     writeFile("value.fc4.bias", $toSeq(value_network.fc4.bias.value))
+
+
+# ##################################################################
+# Restore weights and biases
+
+proc parseAsFloat(x: string): float32 =
+    return x.parseFloat
+
+proc load_value_network*() =
+    try:
+        value_network.fc1.weight.value = readFile("value.fc1.weight")
+            .replace("@[", "").replace("]", "")
+            .split(", ").map(parseAsFloat).toTensor.reshape(628, 837)
+        value_network.fc1.bias.value = readFile("value.fc1.bias")
+            .replace("@[", "").replace("]", "")
+            .split(", ").map(parseAsFloat).toTensor.reshape(1, 628)
+        value_network.fc2.weight.value = readFile("value.fc2.weight")
+            .replace("@[", "").replace("]", "")
+            .split(", ").map(parseAsFloat).toTensor.reshape(419, 628)
+        value_network.fc2.bias.value = readFile("value.fc2.bias")
+            .replace("@[", "").replace("]", "")
+            .split(", ").map(parseAsFloat).toTensor.reshape(1, 419)
+        value_network.fc3.weight.value = readFile("value.fc3.weight")
+            .replace("@[", "").replace("]", "")
+            .split(", ").map(parseAsFloat).toTensor.reshape(210, 419)
+        value_network.fc3.bias.value = readFile("value.fc3.bias")
+            .replace("@[", "").replace("]", "")
+            .split(", ").map(parseAsFloat).toTensor.reshape(1, 210)
+        value_network.fc4.weight.value = readFile("value.fc4.weight")
+            .replace("@[", "").replace("]", "")
+            .split(", ").map(parseAsFloat).toTensor.reshape(1, 210)
+        value_network.fc4.bias.value = readFile("value.fc4.bias")
+            .replace("@[", "").replace("]", "")
+            .split(", ").map(parseAsFloat).toTensor.reshape(1, 1)
+        echo "Loaded value network"
+    except:
+        echo "No value network saved, saving the current one"
+        save_value_network()

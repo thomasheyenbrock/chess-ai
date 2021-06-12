@@ -1,9 +1,10 @@
 import arraymancer
 import math
+import os
 import random
 import sequtils
-import strutils
 import tables
+import times
 
 import game
 import policy_network
@@ -13,8 +14,13 @@ import value_network
 randomize()
 
 
+let now = getTime()
+var r = initRand(now.toUnix * 1_000_000_000 + now.nanosecond)
+
+
 type Node = ref object
     state: Game
+    input: Tensor[float32]
     children: seq[Node]
     is_expanded: bool
     has_checked_for_terminal: bool
@@ -29,6 +35,7 @@ type Node = ref object
 proc newNode(state: Game, prior: float32): Node =
     return Node(
         state: state,
+        input: state.get_input().toTensor.reshape(1, 837),
         children: @[],
         is_expanded: false,
         has_checked_for_terminal: false,
@@ -61,13 +68,13 @@ proc choose_child(self: Node): Node =
 proc expand(self: var Node) =
     let moves = self.state.legal_moves()
 
-    let input = policy_network_ctx.variable(self.state.get_input().toTensor.reshape(1, 837))
+    let input = policy_network_ctx.variable(self.input)
     let all_priors = predict_policy_network(input).value.softmax
 
-    var legal_priors = newTensor[float32](@[1, moves.len])
+    var legal_priors = newTensor[float32](moves.len)
     for i in 0..<moves.len:
-        legal_priors[0, i] = all_priors[0, OUTPUT_LAYER_MAPPING[moves[i].id]]
-    var priors_seq = toSeq(legal_priors.softmax)
+        legal_priors[i] = all_priors[0, OUTPUT_LAYER_MAPPING[moves[i].id]]
+    var priors_seq = toSeq(legal_priors / legal_priors.sum)
 
     for i in 0..<moves.len:
         self.children.add(newNode(state=self.state.move(moves[i]), prior=priors_seq[i]))
@@ -98,8 +105,7 @@ proc get_value(self: var Node): float32 =
             self.terminal_value = result_to_float(game_result)
             return self.terminal_value
 
-    let input = value_network_ctx.variable(self.state.get_input().toTensor.reshape(1, 837))
-    return predict_value_network(input)
+    return predict_value_network(value_network_ctx.variable(self.input))
 
 
 proc iteration(self: var Node) =
@@ -126,39 +132,55 @@ proc iteration(self: var Node) =
         search_path[i].value = search_path[i].total_value / search_path[i].visits
 
 
-proc find_best_move(node: var Node, runs: int = 1000): Node =
+proc find_best_move(node: var Node, greedy: bool = false, runs: int = 1600): (Node, Tensor[float32]) =
     if not node.is_expanded:
         node.expand()
     for i in 1 .. runs:
         node.iteration()
 
     var best = node.children[0]
+    var policy = newTensor[float32](1972)
+    policy[OUTPUT_LAYER_MAPPING[node.children[0].state.last_move.id]] = node.value
+    var cdf = newTensor[float32]([1, node.children.len])
+    cdf[_, _] = -999_999_999
+    cdf[0, 0] = best.value
+
     for i in 1..<node.children.len:
         let child = node.children[i]
-        if (node.state.player and child.value > best.value) or (not node.state.player and child.value < best.value):
+        policy[OUTPUT_LAYER_MAPPING[child.state.last_move.id]] = child.value
+        cdf[0, i] = child.value
+        if (
+            (node.state.player and child.value > best.value) or
+            (not node.state.player and child.value < best.value)
+        ):
             best = child
 
-    return best
+    if greedy:
+        return (best, policy / policy.sum)
+    return (r.sample(node.children, cdf.softmax.toSeq.cumsummed), policy / policy.sum)
 
-proc traverse(node: Node, depth: int = 0) =
-    echo " ".repeat(depth * 2), node.state.last_move.id, " (", node.total_value, " / ", node.visits, ")"
-    for i in 0..<node.children.len:
-        traverse(node.children[i], depth + 1)
 
-proc size(node: Node): int =
-    if not node.is_expanded:
-        return 1
-    result = 0
-    for i in 0..<node.children.len:
-        result += size(node.children[i])
+load_value_network()
+load_policy_network()
 
+var inputs: seq[string] = @[]
+var policies: seq[string] = @[]
 var root = newNode(
     state=game_from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"),
     prior=0
 )
 root.expand()
-echo root.size()
 while not root.is_terminal:
-    root = root.find_best_move()
-    echo root.state.last_move.id, " ", root.size()
-echo root.terminal_value
+    var (new_root, policy) = root.find_best_move()
+    root = new_root
+    inputs.add($root.input.toSeq)
+    policies.add($policy.toSeq)
+echo "Result: ", root.terminal_value
+
+let value_network_data_file = open("value." & paramStr(1) & ".txt", fmAppend)
+let policy_network_data_file = open("policy." & paramStr(1) & ".txt", fmAppend)
+for i in 0..<inputs.len:
+    value_network_data_file.write(inputs[i] & ";" & $root.terminal_value & "\n")
+    policy_network_data_file.write(inputs[i] & ";" & policies[i] & "\n")
+value_network_data_file.close()
+policy_network_data_file.close()

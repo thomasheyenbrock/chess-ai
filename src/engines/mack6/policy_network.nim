@@ -1,4 +1,4 @@
-import arraymancer, strformat, strutils, sequtils
+import arraymancer, strutils, sequtils
 
 # ##################################################################
 # Define the model.
@@ -21,12 +21,13 @@ let optim = policy_network.optimizerSGD(learning_rate = 1e-4'f32)
 # ##################################################################
 # Training
 
-proc train_policy_network*(x: Variable, y: Tensor) =
-    for t in 0 ..< 500:
+proc train_policy_network*(x: Variable, y: Tensor, epochs: int = 100) =
+    echo "Training value network for ", epochs, " epochs"
+    for e in 1..epochs:
         let y_pred = policy_network.forward(x)
         let loss = y_pred.mse_loss(y)
 
-        echo &"Epoch {t}: loss {loss.value[0]}"
+        echo "  Epoch ", e, ": loss ", loss.value[0]
 
         loss.backprop()
         optim.update()
@@ -41,38 +42,6 @@ proc predict_policy_network*(x: Variable): Variable[Tensor[float32]] =
 
 
 # ##################################################################
-# Restore weights and biases
-
-proc parseAsFloat(x: string): float32 =
-    return x.parseFloat
-
-proc load_policy_network*() =
-    policy_network.fc1.weight.value = readFile("policy.fc1.weight")
-        .replace("@[", "").replace("]", "")
-        .split(", ").map(parseAsFloat).toTensor.reshape(1121, 837)
-    policy_network.fc1.bias.value = readFile("policy.fc1.bias")
-        .replace("@[", "").replace("]", "")
-        .split(", ").map(parseAsFloat).toTensor.reshape(1, 1121)
-    policy_network.fc2.weight.value = readFile("policy.fc2.weight")
-        .replace("@[", "").replace("]", "")
-        .split(", ").map(parseAsFloat).toTensor.reshape(1405, 1121)
-    policy_network.fc2.bias.value = readFile("policy.fc2.bias")
-        .replace("@[", "").replace("]", "")
-        .split(", ").map(parseAsFloat).toTensor.reshape(1, 1405)
-    policy_network.fc3.weight.value = readFile("policy.fc3.weight")
-        .replace("@[", "").replace("]", "")
-        .split(", ").map(parseAsFloat).toTensor.reshape(1689, 1405)
-    policy_network.fc3.bias.value = readFile("policy.fc3.bias")
-        .replace("@[", "").replace("]", "")
-        .split(", ").map(parseAsFloat).toTensor.reshape(1, 1689)
-    policy_network.fc4.weight.value = readFile("policy.fc4.weight")
-        .replace("@[", "").replace("]", "")
-        .split(", ").map(parseAsFloat).toTensor.reshape(1972, 1689)
-    policy_network.fc4.bias.value = readFile("policy.fc4.bias")
-        .replace("@[", "").replace("]", "")
-        .split(", ").map(parseAsFloat).toTensor.reshape(1, 1972)
-
-# ##################################################################
 # Storing weights and biases
 
 proc save_policy_network*() =
@@ -84,3 +53,41 @@ proc save_policy_network*() =
     writeFile("policy.fc3.bias", $toSeq(policy_network.fc3.bias.value))
     writeFile("policy.fc4.weight", $toSeq(policy_network.fc4.weight.value))
     writeFile("policy.fc4.bias", $toSeq(policy_network.fc4.bias.value))
+
+
+# ##################################################################
+# Restore weights and biases
+
+proc parseAsFloat(x: string): float32 =
+    return x.parseFloat
+
+proc load_policy_network*() =
+    try:
+        policy_network.fc1.weight.value = readFile("policy.fc1.weight")
+            .replace("@[", "").replace("]", "")
+            .split(", ").map(parseAsFloat).toTensor.reshape(1121, 837)
+        policy_network.fc1.bias.value = readFile("policy.fc1.bias")
+            .replace("@[", "").replace("]", "")
+            .split(", ").map(parseAsFloat).toTensor.reshape(1, 1121)
+        policy_network.fc2.weight.value = readFile("policy.fc2.weight")
+            .replace("@[", "").replace("]", "")
+            .split(", ").map(parseAsFloat).toTensor.reshape(1405, 1121)
+        policy_network.fc2.bias.value = readFile("policy.fc2.bias")
+            .replace("@[", "").replace("]", "")
+            .split(", ").map(parseAsFloat).toTensor.reshape(1, 1405)
+        policy_network.fc3.weight.value = readFile("policy.fc3.weight")
+            .replace("@[", "").replace("]", "")
+            .split(", ").map(parseAsFloat).toTensor.reshape(1689, 1405)
+        policy_network.fc3.bias.value = readFile("policy.fc3.bias")
+            .replace("@[", "").replace("]", "")
+            .split(", ").map(parseAsFloat).toTensor.reshape(1, 1689)
+        policy_network.fc4.weight.value = readFile("policy.fc4.weight")
+            .replace("@[", "").replace("]", "")
+            .split(", ").map(parseAsFloat).toTensor.reshape(1972, 1689)
+        policy_network.fc4.bias.value = readFile("policy.fc4.bias")
+            .replace("@[", "").replace("]", "")
+            .split(", ").map(parseAsFloat).toTensor.reshape(1, 1972)
+        echo "Loaded policy network"
+    except:
+        echo "No policy network saved, saving the current one"
+        save_policy_network()

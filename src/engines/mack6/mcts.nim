@@ -3,6 +3,7 @@ import math
 import os
 import random
 import sequtils
+import strutils
 import tables
 import times
 
@@ -165,25 +166,29 @@ proc find_best_move(node: var Node, greedy: bool = false, runs: int = 1600): (No
 load_value_network()
 load_policy_network()
 
-var inputs: seq[string] = @[]
-var policies: seq[string] = @[]
-var root = newNode(
-    state=game_from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"),
-    prior=0
-)
-root.expand()
-while not root.is_terminal:
-    var (new_root, policy) = root.find_best_move()
-    root = new_root
-    inputs.add($root.input.toSeq)
-    policies.add($policy.toSeq)
-    echo root.state.last_move.id
-echo "Result: ", root.terminal_value
-
 let value_network_data_file = open("value." & paramStr(1) & ".txt", fmAppend)
 let policy_network_data_file = open("policy." & paramStr(1) & ".txt", fmAppend)
-for i in 0..<inputs.len:
-    value_network_data_file.write(inputs[i] & ";" & $root.terminal_value & "\n")
-    policy_network_data_file.write(inputs[i] & ";" & policies[i] & "\n")
+
+for i in 1..paramStr(2).parseInt:
+    echo "Playing game ", i
+    var inputs: seq[string] = @[]
+    var policies: seq[string] = @[]
+    var root = newNode(
+        state=game_from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"),
+        prior=0
+    )
+    root.expand()
+    while not root.is_terminal:
+        var (new_root, policy) = root.find_best_move()
+        root = new_root
+        inputs.add($root.input.toSeq)
+        policies.add($policy.toSeq)
+        echo root.state.last_move.id
+    echo "Result: ", root.terminal_value
+
+    for i in 0..<inputs.len:
+        value_network_data_file.write(inputs[i] & ";" & $root.terminal_value & "\n")
+        policy_network_data_file.write(inputs[i] & ";" & policies[i] & "\n")
+
 value_network_data_file.close()
 policy_network_data_file.close()

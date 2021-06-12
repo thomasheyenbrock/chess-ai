@@ -118,10 +118,10 @@ proc iteration(self: var Node) =
         node = node.choose_child()
         search_path.add(node)
 
-    # If already visited and not terminal, then expand and choose a random child
+    # If already visited and not terminal, then expand and choose one of the children
     if node.visits > 0 and not node.is_terminal:
         node.expand()
-        node = node.children[rand(0 .. node.children.len - 1)]
+        node = node.choose_child()
         search_path.add(node)
 
     # Find the value
@@ -177,6 +177,7 @@ while not root.is_terminal:
     root = new_root
     inputs.add($root.input.toSeq)
     policies.add($policy.toSeq)
+    echo root.state.last_move.id
 echo "Result: ", root.terminal_value
 
 let value_network_data_file = open("value." & paramStr(1) & ".txt", fmAppend)

@@ -50,7 +50,7 @@ for i in 1..value_input.len*4:
     policy_output.del(index)
     policy_output.add(policy_output_item)
 
-let data_points = if value_input.len < 2048: value_input.len else: 2048
+let data_points = if value_input.len < 1024: value_input.len else: 1024
 
 load_value_network()
 train_value_network(

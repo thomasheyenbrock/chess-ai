@@ -30,7 +30,6 @@ type Node = ref object
     prior: float32
     visits: float32
     total_value: float32
-    value: float32
 
 
 proc newNode(state: Game, prior: float32): Node =
@@ -49,8 +48,9 @@ proc newNode(state: Game, prior: float32): Node =
 
 
 proc ucb_score(self: Node, parent_visits: float32): float32 =
+    let value = self.total_value / self.visits
     return (
-        (if self.state.player: 1 - self.value else: self.value) +
+        (if self.state.player: 1 - value else: value) +
         sqrt(2.0) * self.prior * sqrt(parent_visits) / (self.visits + 1)
     )
 
@@ -132,7 +132,6 @@ proc iteration(self: var Node) =
     for i in 0..<search_path.len:
         search_path[i].total_value += value
         search_path[i].visits += 1
-        search_path[i].value = search_path[i].total_value / search_path[i].visits
 
 
 proc find_best_move(node: var Node, greedy: bool = false, runs: int = 1600): (Node, Tensor[float32]) =
@@ -143,24 +142,22 @@ proc find_best_move(node: var Node, greedy: bool = false, runs: int = 1600): (No
 
     var best = node.children[0]
     var policy = newTensor[float32](1972)
-    policy[OUTPUT_LAYER_MAPPING[node.children[0].state.last_move.id]] = node.value
-    var cdf = newTensor[float32]([1, node.children.len])
-    cdf[_, _] = -999_999_999
-    cdf[0, 0] = best.value
+    policy[OUTPUT_LAYER_MAPPING[node.children[0].state.last_move.id]] = node.visits
+    var cdf = @[best.visits]
 
     for i in 1..<node.children.len:
         let child = node.children[i]
-        policy[OUTPUT_LAYER_MAPPING[child.state.last_move.id]] = child.value
-        cdf[0, i] = child.value
+        policy[OUTPUT_LAYER_MAPPING[child.state.last_move.id]] = child.visits
+        cdf.add(child.visits)
         if (
-            (node.state.player and child.value > best.value) or
-            (not node.state.player and child.value < best.value)
+            (node.state.player and child.visits > best.visits) or
+            (not node.state.player and child.visits < best.visits)
         ):
             best = child
 
     if greedy:
         return (best, policy / policy.sum)
-    return (r.sample(node.children, cdf.softmax.toSeq.cumsummed), policy / policy.sum)
+    return (r.sample(node.children, cdf.cumsummed), policy / policy.sum)
 
 
 load_value_network()

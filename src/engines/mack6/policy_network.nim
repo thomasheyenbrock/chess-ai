@@ -13,10 +13,10 @@ network policy_network_ctx, Policy_Network:
         fc3: Linear(1405, 1689)
         fc4: Linear(1689, 1972)
     forward x:
-        x.fc1.relu.fc2.relu.fc3.relu.fc4.sigmoid
+        x.fc1.relu.fc2.relu.fc3.relu.fc4
 
 let policy_network* = policy_network_ctx.init(Policy_Network)
-let optim = policy_network.optimizerSGD(learning_rate = 1e-4'f32)
+let optim = policy_network.optimizerSGD(learning_rate = 1e-1'f32)
 
 # ##################################################################
 # Training
@@ -26,7 +26,7 @@ proc train_policy_network*(x: Variable, y: Tensor, epochs: int = 200) =
     var prev_loss = 0'f
     for e in 1..epochs:
         let y_pred = policy_network.forward(x)
-        let loss = y_pred.mse_loss(y)
+        let loss = y_pred.softmax_cross_entropy(y)
 
         echo "  Epoch ", e, ": loss ", loss.value[0]
 

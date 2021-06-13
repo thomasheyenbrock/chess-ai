@@ -1,4 +1,4 @@
-import arraymancer, strutils, sequtils
+import arraymancer, strutils, sequtils,times
 
 # ##################################################################
 # Define the model.
@@ -97,3 +97,12 @@ proc load_policy_network*() =
     except:
         echo "No policy network saved, saving the current one"
         save_policy_network()
+
+
+var t=0'f
+for i in 1..1000:
+    var x = policy_network_ctx.variable( randomTensor(1, 837, 1'f))
+    var s = cpuTime()
+    var y = policy_network.forward(x)
+    t += cpuTime() - s
+echo t

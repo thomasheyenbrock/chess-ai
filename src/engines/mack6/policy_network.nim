@@ -37,8 +37,7 @@ proc train_policy_network*(x: Variable, y: Tensor, epochs: int = 200) =
 # Prediction
 
 proc predict_policy_network*(x: Variable): Variable[Tensor[float32]] =
-    let y_pred = policy_network.forward(x)
-    return y_pred
+    return policy_network.forward(x)
 
 
 # ##################################################################

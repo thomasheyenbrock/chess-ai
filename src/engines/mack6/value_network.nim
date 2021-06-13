@@ -36,9 +36,8 @@ proc train_value_network*(x: Variable, y: Tensor, epochs: int = 500) =
 # ##################################################################
 # Prediction
 
-proc predict_value_network*(x: Variable): float32 =
-    let y_pred = value_network.forward(x)
-    return toSeq(y_pred.value)[0]
+proc predict_value_network*(x: Variable): Variable[Tensor[float32]] =
+    return value_network.forward(x)
 
 
 # ##################################################################

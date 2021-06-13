@@ -23,7 +23,6 @@ let optim = policy_network.optimizerSGD(learning_rate = 1e-1'f32)
 
 proc train_policy_network*(x: Variable, y: Tensor, epochs: int = 200) =
     echo "Training value network for ", epochs, " epochs"
-    var prev_loss = 0'f
     for e in 1..epochs:
         let y_pred = policy_network.forward(x)
         let loss = y_pred.softmax_cross_entropy(y)
@@ -32,11 +31,6 @@ proc train_policy_network*(x: Variable, y: Tensor, epochs: int = 200) =
 
         loss.backprop()
         optim.update()
-
-        if abs(loss.value[0] - prev_loss) < 0.000_001:
-            echo "Loss reduction less than 1e-6, end training early"
-            break
-        prev_loss = loss.value[0]
 
 
 # ##################################################################

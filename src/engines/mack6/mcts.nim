@@ -56,7 +56,7 @@ proc ucb_score(self: Node, parent_visits: float32): float32 =
             if self.state.player: 1 - self.total_value / self.visits
             else: self.total_value / self.visits
         )
-    return value + sqrt(2.0) * self.prior * sqrt(parent_visits) / (self.visits + 1)
+    return value + 5 * self.prior * sqrt(parent_visits) / (self.visits + 1e-6)
 
 
 proc choose_child(self: Node): Node =
@@ -187,8 +187,10 @@ proc find_best_moves(nodes: seq[Node], greedy: bool = false, runs: int = 1600): 
         policy[OUTPUT_LAYER_MAPPING[node.children[0].state.last_move.id]] = node.visits
         var cdf = @[best.visits]
 
+        # echo best.state.last_move.id, "\t", best.prior, "\t", best.visits, "\t", best.total_value
         for i in 1..<node.children.len:
             let child = node.children[i]
+            # echo child.state.last_move.id, "\t", child.prior, "\t", child.visits, "\t", child.total_value
             policy[OUTPUT_LAYER_MAPPING[child.state.last_move.id]] = child.visits
             cdf.add(child.visits)
             if (

@@ -21,7 +21,7 @@ let optim = policy_network.optimizerSGD(learning_rate = 1e-1'f32)
 # ##################################################################
 # Training
 
-proc train_policy_network*(x: Variable, y: Tensor, epochs: int = 200) =
+proc train_policy_network*(x: Variable, y: Tensor, epochs: int = 1000) =
     echo "Training value network for ", epochs, " epochs"
     for e in 1..epochs:
         let y_pred = policy_network.forward(x)

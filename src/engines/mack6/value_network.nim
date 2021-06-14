@@ -21,7 +21,7 @@ let optim = value_network.optimizerSGD(learning_rate = 1e-4'f32)
 # ##################################################################
 # Training
 
-proc train_value_network*(x: Variable, y: Tensor, epochs: int = 500) =
+proc train_value_network*(x: Variable, y: Tensor, epochs: int = 1000) =
     echo "Training value network for ", epochs, " epochs"
     for e in 1..epochs:
         let y_pred = value_network.forward(x)

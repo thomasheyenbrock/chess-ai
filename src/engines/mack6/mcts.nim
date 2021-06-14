@@ -156,9 +156,9 @@ proc iteration(nodes: seq[Node]) =
         evaluation_nodes.add(node)
 
     # Try to expand notes where possible and choose one of the children
-    nodes.expand()
+    evaluation_nodes.expand()
     for i in 0..<num_nodes:
-        var node = nodes[i]
+        var node = evaluation_nodes[i]
         if node.is_expanded:
             node = node.choose_child()
             search_paths[i].add(node)

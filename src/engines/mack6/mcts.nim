@@ -206,12 +206,15 @@ proc find_best_moves(nodes: seq[Node], greedy: bool = false, runs: int = 1600): 
         policies.add(policy / policy.sum)
     return (new_nodes, policies)
 
+proc size(self: Node): int =
+    if not self.is_expanded:
+        return 1
+    result = 0
+    for child in self.children:
+        result += child.size
 
 load_value_network()
 load_policy_network()
-
-let value_network_data_file = open("value." & paramStr(1) & ".txt", fmAppend)
-let policy_network_data_file = open("policy." & paramStr(1) & ".txt", fmAppend)
 
 var input_strings: seq[seq[string]] = @[]
 var policy_strings: seq[seq[string]] = @[]
@@ -240,12 +243,21 @@ while roots.len > 0:
             terminal_values[root.treeId] = root.terminal_value
         else:
             roots.add(root)
-    echo roots.map(proc (root: Node): string = return root.state.last_move.id).join("\t")
+    echo roots.map(proc (root: Node): string = return root.state.last_move.id & "(" & $root.size & ")").join("\t")
+
+let value_network_data_file = open("value." & paramStr(1) & ".txt", fmAppend)
+let policy_network_data_file = open("policy." & paramStr(1) & ".txt", fmAppend)
 
 for i in 0..<input_strings.len:
     for j in 0..<input_strings[i].len:
-        value_network_data_file.write(input_strings[i][j] & ";" & $terminal_values[i] & "\n")
-        policy_network_data_file.write(input_strings[i][j] & ";" & policy_strings[i][j] & "\n")
+        value_network_data_file.write(input_strings[i][j])
+        value_network_data_file.write(";")
+        value_network_data_file.write(terminal_values[i])
+        value_network_data_file.write("\n")
+        policy_network_data_file.write(input_strings[i][j])
+        policy_network_data_file.write(";")
+        policy_network_data_file.write(policy_strings[i][j])
+        policy_network_data_file.write("\n")
 
 value_network_data_file.close()
 policy_network_data_file.close()

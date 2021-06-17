@@ -206,12 +206,6 @@ proc find_best_moves(nodes: seq[Node], greedy: bool = false, runs: int = 1600): 
         policies.add(policy / policy.sum)
     return (new_nodes, policies)
 
-proc size(self: Node): int =
-    if not self.is_expanded:
-        return 1
-    result = 0
-    for child in self.children:
-        result += child.size
 
 load_value_network()
 load_policy_network()
@@ -219,11 +213,14 @@ load_policy_network()
 var input_strings: seq[seq[string]] = @[]
 var policy_strings: seq[seq[string]] = @[]
 var terminal_values: seq[float32] = @[]
+var logs: seq[string] = @[]
 var roots: seq[Node] = @[]
+
 for i in 0..<paramStr(2).parseInt:
     input_strings.add(@[])
     policy_strings.add(@[])
     terminal_values.add(-1)
+    logs.add("")
     roots.add(newNode(
         treeId=i,
         state=game_from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"),
@@ -231,6 +228,7 @@ for i in 0..<paramStr(2).parseInt:
     ))
 roots.expand(force=true)
 
+var counter = 0
 while roots.len > 0:
     var (new_roots, policies) = roots.find_best_moves()
     for i in 0..<new_roots.len:
@@ -241,9 +239,13 @@ while roots.len > 0:
     for root in new_roots:
         if root.is_terminal:
             terminal_values[root.treeId] = root.terminal_value
+            logs[root.treeId] = $root.terminal_value
         else:
             roots.add(root)
-    echo roots.map(proc (root: Node): string = return root.state.last_move.id & "(" & $root.size & ")").join("\t")
+            logs[root.treeId] = root.state.last_move.id
+ 
+    counter += 1
+    echo counter, "\t", logs.join("\t")
 
 let value_network_data_file = open("value." & paramStr(1) & ".txt", fmAppend)
 let policy_network_data_file = open("policy." & paramStr(1) & ".txt", fmAppend)

@@ -93,7 +93,12 @@ proc expand(nodes: seq[Node], force: bool = false) =
         var legal_priors = newTensor[float32](moves.len)
         for j in 0..<moves.len:
             legal_priors[j] = all_priors[i, OUTPUT_LAYER_MAPPING[moves[j].id]]
-        var priors_seq = toSeq(legal_priors / legal_priors.sum)
+        var priors_seq: seq[float32]
+        if legal_priors.sum == 0:
+            for j in 0..<moves.len:
+                priors_seq.add(1 / moves.len)
+        else:
+            priors_seq = toSeq(legal_priors / legal_priors.sum)
 
         for j in 0..<moves.len:
             node.children.add(newNode(
@@ -240,7 +245,7 @@ while roots.len > 0:
         else:
             roots.add(root)
             logs[root.treeId] = root.state.last_move.id
- 
+
     counter += 1
     echo counter, "\t", logs.join("\t")
 

@@ -193,10 +193,7 @@ proc find_best_moves(nodes: seq[Node], greedy: bool = false, runs: int = 1600): 
             # echo child.state.last_move.id, "\t", child.prior, "\t", child.visits, "\t", child.total_value
             policy[OUTPUT_LAYER_MAPPING[child.state.last_move.id]] = child.visits
             cdf.add(child.visits)
-            if (
-                (node.state.player and child.visits > best.visits) or
-                (not node.state.player and child.visits < best.visits)
-            ):
+            if child.visits > best.visits:
                 best = child
 
         if greedy:

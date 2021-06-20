@@ -68,9 +68,9 @@ proc choose_child(self: Node): Node =
 proc expand*(nodes: seq[Node], force: bool = false) =
     let num_nodes = nodes.len
 
-    var inputs = newTensor[float32](num_nodes, 42)
+    var inputs = newTensor[float32](num_nodes, 3, 7, 6)
     for i in 0..<num_nodes:
-        inputs[i, _] = nodes[i].input
+        inputs[i, _, _, _] = nodes[i].input
     let all_priors = predict_policy_network(policy_network_ctx.variable(inputs)).value.softmax
     policy_network_ctx.nodes = @[]
 
@@ -119,7 +119,7 @@ proc result_to_float(game_result: string): float32 =
 proc get_values(nodes: seq[Node]): Tensor[float32] =
     let num_nodes = nodes.len
 
-    var inputs = newTensor[float32](nodes.len, 42)
+    var inputs = newTensor[float32](nodes.len, 3, 7, 6)
     for i in 0..<num_nodes:
         inputs[i, _] = nodes[i].input
     var values = predict_value_network(value_network_ctx.variable(inputs)).value

@@ -8,12 +8,14 @@ let policy_network_ctx* = newContext Tensor[float32]
 
 network policy_network_ctx, Policy_Network:
     layers:
-        fc1: Linear(42, 37)
-        fc2: Linear(37, 29)
-        fc3: Linear(29, 15)
-        fc4: Linear(15, 7)
+        x: Input([3, 7, 6])
+        cv1: Conv2D(x.out_shape, 32, 3, 3)
+        cv2: Conv2D(cv1.out_shape, 16, 3, 3)
+        fl: Flatten(cv2.out_shape)
+        hidden: Linear(fl.out_shape, 48)
+        output: Linear(48, 7)
     forward x:
-        x.fc1.relu.fc2.relu.fc3.relu.fc4
+        x.cv1.relu.cv2.relu.fl.hidden.relu.output
 
 let policy_network* = policy_network_ctx.init(Policy_Network)
 let optim = policy_network.optimizerSGD(learning_rate = 1e-1'f32)
@@ -45,14 +47,14 @@ proc predict_policy_network*(x: Variable): Variable[Tensor[float32]] =
 # Storing weights and biases
 
 proc save_policy_network*() =
-    writeFile("policy.fc1.weight", $toSeq(policy_network.fc1.weight.value))
-    writeFile("policy.fc1.bias", $toSeq(policy_network.fc1.bias.value))
-    writeFile("policy.fc2.weight", $toSeq(policy_network.fc2.weight.value))
-    writeFile("policy.fc2.bias", $toSeq(policy_network.fc2.bias.value))
-    writeFile("policy.fc3.weight", $toSeq(policy_network.fc3.weight.value))
-    writeFile("policy.fc3.bias", $toSeq(policy_network.fc3.bias.value))
-    writeFile("policy.fc4.weight", $toSeq(policy_network.fc4.weight.value))
-    writeFile("policy.fc4.bias", $toSeq(policy_network.fc4.bias.value))
+    writeFile("policy.cv1.weight", $toSeq(policy_network.cv1.weight.value))
+    writeFile("policy.cv1.bias", $toSeq(policy_network.cv1.bias.value))
+    writeFile("policy.cv2.weight", $toSeq(policy_network.cv2.weight.value))
+    writeFile("policy.cv2.bias", $toSeq(policy_network.cv2.bias.value))
+    writeFile("policy.hidden.weight", $toSeq(policy_network.hidden.weight.value))
+    writeFile("policy.hidden.bias", $toSeq(policy_network.hidden.bias.value))
+    writeFile("policy.output.weight", $toSeq(policy_network.output.weight.value))
+    writeFile("policy.output.bias", $toSeq(policy_network.output.bias.value))
 
 
 # ##################################################################
@@ -63,28 +65,28 @@ proc parseAsFloat(x: string): float32 =
 
 proc load_policy_network*() =
     try:
-        policy_network.fc1.weight.value = readFile("policy.fc1.weight")
+        policy_network.cv1.weight.value = readFile("policy.cv1.weight")
             .replace("@[", "").replace("]", "")
-            .split(", ").map(parseAsFloat).toTensor.reshape(37, 42)
-        policy_network.fc1.bias.value = readFile("policy.fc1.bias")
+            .split(", ").map(parseAsFloat).toTensor.reshape(32, 3, 3, 3)
+        policy_network.cv1.bias.value = readFile("policy.cv1.bias")
             .replace("@[", "").replace("]", "")
-            .split(", ").map(parseAsFloat).toTensor.reshape(1, 37)
-        policy_network.fc2.weight.value = readFile("policy.fc2.weight")
+            .split(", ").map(parseAsFloat).toTensor.reshape(32, 1, 1)
+        policy_network.cv2.weight.value = readFile("policy.cv2.weight")
             .replace("@[", "").replace("]", "")
-            .split(", ").map(parseAsFloat).toTensor.reshape(29, 37)
-        policy_network.fc2.bias.value = readFile("policy.fc2.bias")
+            .split(", ").map(parseAsFloat).toTensor.reshape(16, 32, 3, 3)
+        policy_network.cv2.bias.value = readFile("policy.cv2.bias")
             .replace("@[", "").replace("]", "")
-            .split(", ").map(parseAsFloat).toTensor.reshape(1, 29)
-        policy_network.fc3.weight.value = readFile("policy.fc3.weight")
+            .split(", ").map(parseAsFloat).toTensor.reshape(16, 1, 1)
+        policy_network.hidden.weight.value = readFile("policy.hidden.weight")
             .replace("@[", "").replace("]", "")
-            .split(", ").map(parseAsFloat).toTensor.reshape(15, 29)
-        policy_network.fc3.bias.value = readFile("policy.fc3.bias")
+            .split(", ").map(parseAsFloat).toTensor.reshape(48, 96)
+        policy_network.hidden.bias.value = readFile("policy.hidden.bias")
             .replace("@[", "").replace("]", "")
-            .split(", ").map(parseAsFloat).toTensor.reshape(1, 15)
-        policy_network.fc4.weight.value = readFile("policy.fc4.weight")
+            .split(", ").map(parseAsFloat).toTensor.reshape(1, 48)
+        policy_network.output.weight.value = readFile("policy.output.weight")
             .replace("@[", "").replace("]", "")
-            .split(", ").map(parseAsFloat).toTensor.reshape(7, 15)
-        policy_network.fc4.bias.value = readFile("policy.fc4.bias")
+            .split(", ").map(parseAsFloat).toTensor.reshape(7, 48)
+        policy_network.output.bias.value = readFile("policy.output.bias")
             .replace("@[", "").replace("]", "")
             .split(", ").map(parseAsFloat).toTensor.reshape(1, 7)
         echo "Loaded policy network"

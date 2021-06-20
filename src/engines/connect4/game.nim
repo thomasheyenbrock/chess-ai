@@ -194,7 +194,10 @@ proc result*(game: Game, legal_moves: int): string =
 
 
 proc get_input*(game: Game): Tensor[float32] =
-    return (game.position.red_pieces.toTensor - game.position.yellow_pieces.toTensor).reshape(1, 42)
+    result = newTensor[float32](1, 3, 7, 6)
+    result[0, 0, _, _] = game.position.red_pieces.toTensor.reshape(1, 1, 7, 6)
+    result[0, 1, _, _] = game.position.yellow_pieces.toTensor.reshape(1, 1, 7, 6)
+    result[0, 2, _, _] = if game.player: 1 else: 0
 
 
 proc empty_game*(): Game =

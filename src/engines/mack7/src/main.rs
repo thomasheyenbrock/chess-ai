@@ -12,7 +12,9 @@ fn main() {
         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
         &c,
     );
-    let now = Instant::now();
-    println!("{}", game.count_legal_moves(5, &c));
-    println!("{}", now.elapsed().as_millis());
+    for _ in 0..10 {
+        let now = Instant::now();
+        game.count_legal_moves(5, &c);
+        println!("{}", now.elapsed().as_millis());
+    }
 }

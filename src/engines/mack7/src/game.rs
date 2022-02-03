@@ -1,4 +1,5 @@
 use crate::bitboard::Bitboard;
+use crate::constants;
 use crate::constants::Constants;
 use rayon::prelude::*;
 use std::collections::HashMap;
@@ -420,7 +421,7 @@ impl Position {
             | (*constants.pawn_attacks.get(&player).unwrap().get(square) & pieces.pawn)
     }
 
-    fn checkers(self, player: bool, king: Bitboard, constants: &Constants) -> Vec<Bitboard> {
+    fn checkers(self, player: bool, king: Bitboard, constants: &Constants) -> Bitboard {
         let pieces = if player { self.white } else { self.black };
 
         let queen_and_rook = pieces.queen | pieces.rook;
@@ -435,7 +436,7 @@ impl Position {
         let north_east_pieces = *constants.north_east_ray.get(king) & self.all;
         let south_east_pieces = *constants.south_east_ray.get(king) & self.all;
 
-        ((*constants.north_attacks.get(king).get(north_pieces) & queen_and_rook)
+        (*constants.north_attacks.get(king).get(north_pieces) & queen_and_rook)
             | (*constants.south_attacks.get(king).get(south_pieces) & queen_and_rook)
             | (*constants.west_attacks.get(king).get(west_pieces) & queen_and_rook)
             | (*constants.east_attacks.get(king).get(east_pieces) & queen_and_rook)
@@ -460,8 +461,7 @@ impl Position {
                 .get(south_east_pieces)
                 & queen_and_bishop)
             | (*constants.knight_moves.get(king) & pieces.knight)
-            | (*constants.pawn_attacks.get(&player).unwrap().get(king) & pieces.pawn))
-            .split()
+            | (*constants.pawn_attacks.get(&player).unwrap().get(king) & pieces.pawn)
     }
 
     fn attacked_squares(
@@ -826,60 +826,60 @@ impl Position {
     }
 
     fn is_dead(self) -> bool {
-        let white_queens = self.white.queen.split().len();
+        let white_queens = self.white.queen.count_ones();
         if white_queens > 0 {
             return false;
         }
 
-        let black_queens = self.black.queen.split().len();
+        let black_queens = self.black.queen.count_ones();
         if black_queens > 0 {
             return false;
         }
 
-        let white_rooks = self.white.rook.split().len();
+        let white_rooks = self.white.rook.count_ones();
         if white_rooks > 0 {
             return false;
         }
 
-        let black_rooks = self.black.rook.split().len();
+        let black_rooks = self.black.rook.count_ones();
         if black_rooks > 0 {
             return false;
         }
 
-        let white_pawns = self.white.pawn.split().len();
+        let white_pawns = self.white.pawn.count_ones();
         if white_pawns > 0 {
             return false;
         }
 
-        let black_pawns = self.black.pawn.split().len();
+        let black_pawns = self.black.pawn.count_ones();
         if black_pawns > 0 {
             return false;
         }
 
-        let white_bishops = self.white.bishop.split();
-        if white_bishops.len() > 1 {
+        let white_bishops = self.white.bishop.count_ones();
+        if white_bishops > 1 {
             return false;
         }
 
-        let black_bishops = self.black.bishop.split();
-        if black_bishops.len() > 1 {
+        let black_bishops = self.black.bishop.count_ones();
+        if black_bishops > 1 {
             return false;
         }
 
-        let white_knights = self.white.knight.split().len();
+        let white_knights = self.white.knight.count_ones();
         if white_knights > 1 {
             return false;
         }
 
-        let black_knights = self.black.knight.split().len();
+        let black_knights = self.black.knight.count_ones();
         if black_knights > 1 {
             return false;
         }
 
         let number_of_white_pieces =
-            white_queens + white_rooks + white_bishops.len() + white_knights + white_pawns;
+            white_queens + white_rooks + white_bishops + white_knights + white_pawns;
         let number_of_black_pieces =
-            black_queens + black_rooks + black_bishops.len() + black_knights + black_pawns;
+            black_queens + black_rooks + black_bishops + black_knights + black_pawns;
 
         // king against king
         if number_of_white_pieces + number_of_black_pieces == 0 {
@@ -887,10 +887,10 @@ impl Position {
         }
 
         // king against king and bishop
-        if number_of_white_pieces == 0 && number_of_black_pieces == 1 && black_bishops.len() == 1 {
+        if number_of_white_pieces == 0 && number_of_black_pieces == 1 && black_bishops == 1 {
             return true;
         }
-        if number_of_black_pieces == 0 && number_of_white_pieces == 1 && white_bishops.len() == 1 {
+        if number_of_black_pieces == 0 && number_of_white_pieces == 1 && white_bishops == 1 {
             return true;
         }
 
@@ -905,13 +905,13 @@ impl Position {
         // king and bishop against king and bishop, with both bishops on squares of the same color
         if number_of_white_pieces == 1
             && number_of_black_pieces == 1
-            && white_bishops.len() == 1
-            && black_bishops.len() == 1
+            && white_bishops == 1
+            && black_bishops == 1
         {
             let is_white_bishop_on_white_square =
-                (white_bishops[0] & Bitboard::new(0xAA55_AA55_AA55_AA55)).is_empty();
+                (self.white.bishop & Bitboard::new(0xAA55_AA55_AA55_AA55)).is_empty();
             let is_black_bishop_on_white_square =
-                (black_bishops[0] & Bitboard::new(0xAA55_AA55_AA55_AA55)).is_empty();
+                (self.black.bishop & Bitboard::new(0xAA55_AA55_AA55_AA55)).is_empty();
             return is_white_bishop_on_white_square == is_black_bishop_on_white_square;
         }
 
@@ -1094,7 +1094,7 @@ impl Game {
 
         let attackers = self.position.checkers(!self.player, king, constants);
 
-        let number_of_attackers = attackers.len();
+        let number_of_attackers = attackers.count_ones();
         if number_of_attackers > 1 {
             // Multiple pieces are giving check, so the king has to move
             return result;
@@ -1103,8 +1103,7 @@ impl Game {
         let mut capture_mask = Bitboard::new(0xFFFF_FFFF_FFFF_FFFF);
         let mut push_mask = Bitboard::new(0xFFFF_FFFF_FFFF_FFFF);
         if number_of_attackers == 1 {
-            let attacker = attackers[0];
-            capture_mask = attacker;
+            capture_mask = attackers;
 
             let knight = if self.player {
                 self.position.black.knight
@@ -1116,7 +1115,7 @@ impl Game {
             } else {
                 self.position.white.pawn
             };
-            if (!(attacker & knight).is_empty()) || (!(attacker & pawn).is_empty()) {
+            if (!(attackers & knight).is_empty()) || (!(attackers & pawn).is_empty()) {
                 // checked by knight or pawn, this can't be blocked
                 push_mask = Bitboard::new(0);
             } else {
@@ -1125,35 +1124,35 @@ impl Game {
                 push_mask = *constants
                     .north_moves
                     .get(king)
-                    .get_or_default(attacker, &Bitboard::new(0))
+                    .get_or_default(attackers, &Bitboard::new(0))
                     | *constants
                         .south_moves
                         .get(king)
-                        .get_or_default(attacker, &Bitboard::new(0))
+                        .get_or_default(attackers, &Bitboard::new(0))
                     | *constants
                         .west_moves
                         .get(king)
-                        .get_or_default(attacker, &Bitboard::new(0))
+                        .get_or_default(attackers, &Bitboard::new(0))
                     | *constants
                         .east_moves
                         .get(king)
-                        .get_or_default(attacker, &Bitboard::new(0))
+                        .get_or_default(attackers, &Bitboard::new(0))
                     | *constants
                         .north_west_moves
                         .get(king)
-                        .get_or_default(attacker, &Bitboard::new(0))
+                        .get_or_default(attackers, &Bitboard::new(0))
                     | *constants
                         .north_east_moves
                         .get(king)
-                        .get_or_default(attacker, &Bitboard::new(0))
+                        .get_or_default(attackers, &Bitboard::new(0))
                     | *constants
                         .south_west_moves
                         .get(king)
-                        .get_or_default(attacker, &Bitboard::new(0))
+                        .get_or_default(attackers, &Bitboard::new(0))
                     | *constants
                         .south_east_moves
                         .get(king)
-                        .get_or_default(attacker, &Bitboard::new(0))
+                        .get_or_default(attackers, &Bitboard::new(0))
             }
         }
 
@@ -1741,82 +1740,82 @@ pub fn game_from_fen(fen: &str, constants: &Constants) -> Game {
 //         game1.possible_castles == game2.possible_castles and
 //         game1.position == game2.position
 
-// #[cfg(test)]
-// mod lexer {
-//     use super::*;
+#[cfg(test)]
+mod lexer {
+    use super::*;
 
-//     #[test]
-//     fn test_position_1() {
-//         let c1 = constants::get();
-//         let cases = [(1, 20), (2, 400), (3, 8902), (4, 197281), (5, 4865609)];
-//         for (depth, moves) in cases {
-//             let game = game_from_fen(
-//                 "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-//                 &c1,
-//             );
-//             assert_eq!(game.count_legal_moves(depth, &c1), moves);
-//         }
-//     }
+    #[test]
+    fn test_position_1() {
+        let c1 = constants::get();
+        let cases = [(1, 20), (2, 400), (3, 8902), (4, 197281), (5, 4865609)];
+        for (depth, moves) in cases {
+            let game = game_from_fen(
+                "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                &c1,
+            );
+            assert_eq!(game.count_legal_moves(depth, &c1), moves);
+        }
+    }
 
-//     #[test]
-//     fn test_position_2() {
-//         let c = constants::get();
-//         let cases = [(1, 48), (2, 2039), (3, 97862), (4, 4085603)];
-//         for (depth, moves) in cases {
-//             let game = game_from_fen(
-//                 "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
-//                 &c,
-//             );
-//             assert_eq!(game.count_legal_moves(depth, &c), moves)
-//         }
-//     }
+    #[test]
+    fn test_position_2() {
+        let c = constants::get();
+        let cases = [(1, 48), (2, 2039), (3, 97862), (4, 4085603)];
+        for (depth, moves) in cases {
+            let game = game_from_fen(
+                "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+                &c,
+            );
+            assert_eq!(game.count_legal_moves(depth, &c), moves)
+        }
+    }
 
-//     #[test]
-//     fn test_position_3() {
-//         let c = constants::get();
-//         let cases = [(1, 14), (2, 191), (3, 2812), (4, 43238), (5, 674624)];
-//         for (depth, moves) in cases {
-//             let game = game_from_fen("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1", &c);
-//             assert_eq!(game.count_legal_moves(depth, &c), moves)
-//         }
-//     }
+    #[test]
+    fn test_position_3() {
+        let c = constants::get();
+        let cases = [(1, 14), (2, 191), (3, 2812), (4, 43238), (5, 674624)];
+        for (depth, moves) in cases {
+            let game = game_from_fen("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1", &c);
+            assert_eq!(game.count_legal_moves(depth, &c), moves)
+        }
+    }
 
-//     #[test]
-//     fn test_position_4() {
-//         let c = constants::get();
-//         let cases = [(1, 6), (2, 264), (3, 9467), (4, 422333)];
-//         for (depth, moves) in cases {
-//             let game = game_from_fen(
-//                 "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1",
-//                 &c,
-//             );
-//             assert_eq!(game.count_legal_moves(depth, &c), moves)
-//         }
-//     }
+    #[test]
+    fn test_position_4() {
+        let c = constants::get();
+        let cases = [(1, 6), (2, 264), (3, 9467), (4, 422333)];
+        for (depth, moves) in cases {
+            let game = game_from_fen(
+                "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1",
+                &c,
+            );
+            assert_eq!(game.count_legal_moves(depth, &c), moves)
+        }
+    }
 
-//     #[test]
-//     fn test_position_5() {
-//         let c = constants::get();
-//         let cases = [(1, 44), (2, 1486), (3, 62379), (4, 2103487)];
-//         for (depth, moves) in cases {
-//             let game = game_from_fen(
-//                 "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
-//                 &c,
-//             );
-//             assert_eq!(game.count_legal_moves(depth, &c), moves)
-//         }
-//     }
+    #[test]
+    fn test_position_5() {
+        let c = constants::get();
+        let cases = [(1, 44), (2, 1486), (3, 62379), (4, 2103487)];
+        for (depth, moves) in cases {
+            let game = game_from_fen(
+                "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
+                &c,
+            );
+            assert_eq!(game.count_legal_moves(depth, &c), moves)
+        }
+    }
 
-//     #[test]
-//     fn test_position_6() {
-//         let c = constants::get();
-//         let cases = [(1, 46), (2, 2079), (3, 89890), (4, 3894594)];
-//         for (depth, moves) in cases {
-//             let game = game_from_fen(
-//                 "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10",
-//                 &c,
-//             );
-//             assert_eq!(game.count_legal_moves(depth, &c), moves)
-//         }
-//     }
-// }
+    #[test]
+    fn test_position_6() {
+        let c = constants::get();
+        let cases = [(1, 46), (2, 2079), (3, 89890), (4, 3894594)];
+        for (depth, moves) in cases {
+            let game = game_from_fen(
+                "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10",
+                &c,
+            );
+            assert_eq!(game.count_legal_moves(depth, &c), moves)
+        }
+    }
+}

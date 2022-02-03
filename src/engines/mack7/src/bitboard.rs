@@ -258,4 +258,8 @@ impl Bitboard {
             Direction::BottomRight => self.get_bottom_right_square(),
         }
     }
+
+    pub fn count_ones(self) -> u32 {
+        self.n.count_ones()
+    }
 }

@@ -2,16 +2,10 @@ use std::time::Instant;
 
 mod bitboard;
 
-mod constants;
-
 mod game;
 
 fn main() {
-    let c = constants::get();
-    let game = game::game_from_fen(
-        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-        &c,
-    );
+    let game = game::game_from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 
     let runs = 10;
     let mut total_nps = 0.0;
@@ -19,7 +13,7 @@ fn main() {
         let now = Instant::now();
         let mut nodes = 0;
         for depth in 1..7 {
-            let moves = game.count_legal_moves(depth, &c);
+            let moves = game.count_legal_moves(depth);
             nodes += moves;
             println!("Depth {}: {} moves", depth, moves);
         }
@@ -35,5 +29,5 @@ fn main() {
     }
 
     println!("Average NPS: {}", (total_nps / runs as f64) as u64);
-    // To beat: 56_405_410
+    // To beat: 68_485_356
 }

@@ -265,4 +265,33 @@ impl Bitboard {
     pub fn count_ones(self) -> u32 {
         self.n.count_ones()
     }
+
+    pub fn king_moves(self) -> Bitboard {
+        let top = self.get_top_square();
+        let bottom = self.get_bottom_square();
+        let left = self.get_left_square();
+        let right = self.get_right_square();
+        top | top.get_left_square()
+            | top.get_right_square()
+            | bottom
+            | bottom.get_left_square()
+            | bottom.get_right_square()
+            | left
+            | right
+    }
+
+    pub fn knight_moves(self) -> Bitboard {
+        let top = self.get_top_square().get_top_square();
+        let bottom = self.get_bottom_square().get_bottom_square();
+        let left = self.get_left_square().get_left_square();
+        let right = self.get_right_square().get_right_square();
+        top.get_left_square()
+            | top.get_right_square()
+            | bottom.get_left_square()
+            | bottom.get_right_square()
+            | left.get_top_square()
+            | left.get_bottom_square()
+            | right.get_top_square()
+            | right.get_bottom_square()
+    }
 }

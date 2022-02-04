@@ -1,7 +1,6 @@
 // TODO: calculate pinned pieces once based on the king position instead of redoing it for every piece
 
 use crate::bitboard::{Bitboard, Direction};
-use crate::constants::Constants;
 use rayon::prelude::*;
 use std::collections::HashMap;
 
@@ -345,7 +344,7 @@ impl Position {
         attackers
     }
 
-    fn attackers(self, player: bool, square: Bitboard, constants: &Constants) -> Bitboard {
+    fn attackers(self, player: bool, square: Bitboard) -> Bitboard {
         let forward_square = if player {
             square.get_bottom_square()
         } else {
@@ -357,7 +356,7 @@ impl Position {
         let queen_and_rook = pieces.queen | pieces.rook;
         let queen_and_bishop = pieces.queen | pieces.bishop;
 
-        let attackers = (*constants.king_moves.get(square) & pieces.king)
+        let attackers = (square.king_moves() & pieces.king)
             | self.attackers_in_direction(square, queen_and_rook, Direction::Top)
             | self.attackers_in_direction(square, queen_and_rook, Direction::Bottom)
             | self.attackers_in_direction(square, queen_and_rook, Direction::Left)
@@ -366,7 +365,7 @@ impl Position {
             | self.attackers_in_direction(square, queen_and_bishop, Direction::TopRight)
             | self.attackers_in_direction(square, queen_and_bishop, Direction::BottomLeft)
             | self.attackers_in_direction(square, queen_and_bishop, Direction::BottomRight)
-            | (*constants.knight_moves.get(square) & pieces.knight)
+            | (square.knight_moves() & pieces.knight)
             | (forward_square.get_left_square() & pieces.pawn)
             | (forward_square.get_right_square() & pieces.pawn);
 
@@ -394,7 +393,7 @@ impl Position {
         attacked_squares
     }
 
-    fn attacked_squares(self, player: bool, constants: &Constants) -> Bitboard {
+    fn attacked_squares(self, player: bool) -> Bitboard {
         let all_pieces = self.all
             ^ if player {
                 self.black.king
@@ -402,11 +401,11 @@ impl Position {
                 self.white.king
             };
 
-        let mut attacked = *constants.king_moves.get(if player {
-            self.white.king
+        let mut attacked = if player {
+            self.white.king.king_moves()
         } else {
-            self.black.king
-        });
+            self.black.king.king_moves()
+        };
 
         let queen_pieces = if player {
             self.white.queen
@@ -457,7 +456,7 @@ impl Position {
             self.black.knight
         };
         for knight in knight_pieces.split().iter() {
-            attacked |= *constants.knight_moves.get(*knight);
+            attacked |= knight.knight_moves();
         }
 
         let pawn_pieces = if player {
@@ -477,13 +476,13 @@ impl Position {
         attacked
     }
 
-    fn is_check(self, player: bool, constants: &Constants) -> bool {
+    fn is_check(self, player: bool) -> bool {
         let king = if player {
             self.white.king
         } else {
             self.black.king
         };
-        !self.attackers(!player, king, constants).is_empty()
+        !self.attackers(!player, king).is_empty()
     }
 
     fn pinned_movement_in_direction(
@@ -913,7 +912,7 @@ impl Game {
         result
     }
 
-    fn legal_moves(&self, constants: &Constants) -> Vec<Move> {
+    fn legal_moves(&self) -> Vec<Move> {
         let mut result: Vec<Move> = vec![];
 
         let friendly_pieces = if self.player {
@@ -927,15 +926,15 @@ impl Game {
             self.position.white.all
         };
         let empty_squares = Bitboard::new(0xFFFF_FFFF_FFFF_FFFF) ^ self.position.all;
-        let attacked_squares = self.position.attacked_squares(!self.player, constants);
+        let attacked_squares = self.position.attacked_squares(!self.player);
 
         let king = if self.player {
             self.position.white.king
         } else {
             self.position.black.king
         };
-        let mut king_moves = *constants.king_moves.get(king)
-            & (Bitboard::new(0xFFFF_FFFF_FFFF_FFFF) ^ attacked_squares);
+        let mut king_moves =
+            king.king_moves() & (Bitboard::new(0xFFFF_FFFF_FFFF_FFFF) ^ attacked_squares);
         king_moves = king_moves ^ (king_moves & friendly_pieces);
         for to_square in king_moves.split() {
             result.push(Move {
@@ -950,7 +949,7 @@ impl Game {
             })
         }
 
-        let attackers = self.position.attackers(!self.player, king, constants);
+        let attackers = self.position.attackers(!self.player, king);
 
         let number_of_attackers = attackers.count_ones();
         if number_of_attackers > 1 {
@@ -1129,9 +1128,10 @@ impl Game {
             self.position.black.knight
         };
         for from_square in knight.split() {
+            let knight_moves = from_square.knight_moves();
             let moveable_squares = capture_or_push_mask
-                & *constants.knight_moves.get(from_square)
-                & (*constants.knight_moves.get(from_square) ^ friendly_pieces)
+                & knight_moves
+                & (knight_moves ^ friendly_pieces)
                 & self.position.pinned_movement(
                     from_square,
                     king,
@@ -1307,7 +1307,7 @@ impl Game {
                     is_promoting_to: None,
                 };
                 let position = self.position.make_move(&m).0;
-                if !position.is_check(self.player, constants) {
+                if !position.is_check(self.player) {
                     result.push(m);
                 }
             }
@@ -1399,20 +1399,20 @@ impl Game {
         result
     }
 
-    pub fn count_legal_moves(&self, depth: u64, constants: &Constants) -> u64 {
+    pub fn count_legal_moves(&self, depth: u64) -> u64 {
         if depth == 0 {
             return 1;
         }
 
-        self.legal_moves(&constants)
+        self.legal_moves()
             .par_iter()
-            .map(|m| self.make_move(m).count_legal_moves(depth - 1, constants))
+            .map(|m| self.make_move(m).count_legal_moves(depth - 1))
             .sum()
     }
 
-    fn result(&self, legal_moves: u64, constants: &Constants) -> Option<Result> {
+    fn result(&self, legal_moves: u64) -> Option<Result> {
         if legal_moves == 0 {
-            if self.position.is_check(self.player, constants) {
+            if self.position.is_check(self.player) {
                 return if self.player {
                     Some(Result::Black)
                 } else {
@@ -1440,7 +1440,7 @@ impl Game {
     }
 }
 
-pub fn game_from_fen(fen: &str, constants: &Constants) -> Game {
+pub fn game_from_fen(fen: &str) -> Game {
     let fen_parts: Vec<&str> = fen.split(" ").collect();
     let mut position = Position::new(
         Bitboard::new(0),
@@ -1607,80 +1607,63 @@ pub fn game_from_fen(fen: &str, constants: &Constants) -> Game {
 #[cfg(test)]
 mod lexer {
     use super::*;
-    use crate::constants;
 
     #[test]
     fn test_position_1() {
-        let c1 = constants::get();
         let cases = [(1, 20), (2, 400), (3, 8902), (4, 197281), (5, 4865609)];
         for (depth, moves) in cases {
-            let game = game_from_fen(
-                "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-                &c1,
-            );
-            assert_eq!(game.count_legal_moves(depth, &c1), moves);
+            let game = game_from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+            assert_eq!(game.count_legal_moves(depth,), moves);
         }
     }
 
     #[test]
     fn test_position_2() {
-        let c = constants::get();
         let cases = [(1, 48), (2, 2039), (3, 97862), (4, 4085603)];
         for (depth, moves) in cases {
             let game = game_from_fen(
                 "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
-                &c,
             );
-            assert_eq!(game.count_legal_moves(depth, &c), moves)
+            assert_eq!(game.count_legal_moves(depth,), moves)
         }
     }
 
     #[test]
     fn test_position_3() {
-        let c = constants::get();
         let cases = [(1, 14), (2, 191), (3, 2812), (4, 43238), (5, 674624)];
         for (depth, moves) in cases {
-            let game = game_from_fen("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1", &c);
-            assert_eq!(game.count_legal_moves(depth, &c), moves)
+            let game = game_from_fen("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1");
+            assert_eq!(game.count_legal_moves(depth,), moves)
         }
     }
 
     #[test]
     fn test_position_4() {
-        let c = constants::get();
         let cases = [(1, 6), (2, 264), (3, 9467), (4, 422333)];
         for (depth, moves) in cases {
-            let game = game_from_fen(
-                "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1",
-                &c,
-            );
-            assert_eq!(game.count_legal_moves(depth, &c), moves)
+            let game =
+                game_from_fen("r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1");
+            assert_eq!(game.count_legal_moves(depth,), moves)
         }
     }
 
     #[test]
     fn test_position_5() {
-        let c = constants::get();
         let cases = [(1, 44), (2, 1486), (3, 62379), (4, 2103487)];
         for (depth, moves) in cases {
-            let game = game_from_fen(
-                "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
-                &c,
-            );
-            assert_eq!(game.count_legal_moves(depth, &c), moves)
+            let game = game_from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8");
+            assert_eq!(game.count_legal_moves(depth,), moves)
         }
     }
 
     #[test]
     fn test_position_6() {
-        let c = constants::get();
         let cases = [(1, 46), (2, 2079), (3, 89890), (4, 3894594)];
         for (depth, moves) in cases {
             let game = game_from_fen(
                 "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10",
-                &c,
             );
-            assert_eq!(game.count_legal_moves(depth, &c), moves)
+            assert_eq!(game.count_legal_moves(depth,), moves)
         }
     }
 }

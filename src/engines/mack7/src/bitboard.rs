@@ -133,24 +133,27 @@ impl hash::Hash for Bitboard {
 impl ops::BitAnd for Bitboard {
     type Output = Self;
 
-    fn bitand(self, rhs: Self) -> Self::Output {
-        Self { n: self.n & rhs.n }
+    fn bitand(mut self, rhs: Self) -> Self::Output {
+        self.n &= rhs.n;
+        self
     }
 }
 
 impl ops::BitOr for Bitboard {
     type Output = Self;
 
-    fn bitor(self, rhs: Self) -> Self::Output {
-        Self { n: self.n | rhs.n }
+    fn bitor(mut self, rhs: Self) -> Self::Output {
+        self.n |= rhs.n;
+        self
     }
 }
 
 impl ops::BitXor for Bitboard {
     type Output = Self;
 
-    fn bitxor(self, rhs: Self) -> Self::Output {
-        Self { n: self.n ^ rhs.n }
+    fn bitxor(mut self, rhs: Self) -> Self::Output {
+        self.n ^= rhs.n;
+        self
     }
 }
 

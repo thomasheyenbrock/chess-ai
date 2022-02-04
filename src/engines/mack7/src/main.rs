@@ -35,5 +35,5 @@ fn main() {
     }
 
     println!("Average NPS: {}", (total_nps / runs as f64) as u64);
-    // To beat: 12_413_253
+    // To beat: 56_405_410
 }

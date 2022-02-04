@@ -1,5 +1,6 @@
-use crate::bitboard::Bitboard;
-use crate::constants;
+// TODO: calculate pinned pieces once based on the king position instead of redoing it for every piece
+
+use crate::bitboard::{Bitboard, Direction};
 use crate::constants::Constants;
 use rayon::prelude::*;
 use std::collections::HashMap;
@@ -13,78 +14,46 @@ enum Result {
     FiftyMoveRule,
 }
 
+fn get_moves_in_direction(
+    all_pieces: Bitboard,
+    enemy_pieces: Bitboard,
+    square: Bitboard,
+    direction: Direction,
+) -> Bitboard {
+    let mut moves = Bitboard::new(0);
+    let mut running = square.get_square_in_direction(direction);
+
+    while !running.is_empty() {
+        if (all_pieces & running).is_empty() {
+            moves |= running;
+            running = running.get_square_in_direction(direction);
+        } else if !(enemy_pieces & running).is_empty() {
+            moves |= running;
+            running = Bitboard::new(0);
+        } else {
+            running = Bitboard::new(0);
+        }
+    }
+
+    moves
+}
+
 fn get_rank_and_file_moves(
     all_pieces: Bitboard,
     enemy_pieces: Bitboard,
     square: Bitboard,
-    constants: &Constants,
 ) -> Bitboard {
-    let north_pieces = *constants.north_ray.get(square) & all_pieces;
-    let south_pieces = *constants.south_ray.get(square) & all_pieces;
-    let west_pieces = *constants.west_ray.get(square) & all_pieces;
-    let east_pieces = *constants.east_ray.get(square) & all_pieces;
-
-    let north_moves = *constants.north_moves.get(square).get(north_pieces)
-        ^ (*constants.north_attacks.get(square).get(north_pieces) & enemy_pieces);
-    let south_moves = *constants.south_moves.get(square).get(south_pieces)
-        ^ (*constants.south_attacks.get(square).get(south_pieces) & enemy_pieces);
-    let west_moves = *constants.west_moves.get(square).get(west_pieces)
-        ^ (*constants.west_attacks.get(square).get(west_pieces) & enemy_pieces);
-    let east_moves = *constants.east_moves.get(square).get(east_pieces)
-        ^ (*constants.east_attacks.get(square).get(east_pieces) & enemy_pieces);
-
-    return north_moves | south_moves | west_moves | east_moves;
+    get_moves_in_direction(all_pieces, enemy_pieces, square, Direction::Top)
+        | get_moves_in_direction(all_pieces, enemy_pieces, square, Direction::Bottom)
+        | get_moves_in_direction(all_pieces, enemy_pieces, square, Direction::Left)
+        | get_moves_in_direction(all_pieces, enemy_pieces, square, Direction::Right)
 }
 
-fn get_diagonal_moves(
-    all_pieces: Bitboard,
-    enemy_pieces: Bitboard,
-    square: Bitboard,
-    constants: &Constants,
-) -> Bitboard {
-    let north_west_pieces = *constants.north_west_ray.get(square) & all_pieces;
-    let south_west_pieces = *constants.south_west_ray.get(square) & all_pieces;
-    let north_east_pieces = *constants.north_east_ray.get(square) & all_pieces;
-    let south_east_pieces = *constants.south_east_ray.get(square) & all_pieces;
-
-    let north_west_moves = *constants
-        .north_west_moves
-        .get(square)
-        .get(north_west_pieces)
-        ^ (*constants
-            .north_west_attacks
-            .get(square)
-            .get(north_west_pieces)
-            & enemy_pieces);
-    let north_east_moves = *constants
-        .north_east_moves
-        .get(square)
-        .get(north_east_pieces)
-        ^ (*constants
-            .north_east_attacks
-            .get(square)
-            .get(north_east_pieces)
-            & enemy_pieces);
-    let south_west_moves = *constants
-        .south_west_moves
-        .get(square)
-        .get(south_west_pieces)
-        ^ (*constants
-            .south_west_attacks
-            .get(square)
-            .get(south_west_pieces)
-            & enemy_pieces);
-    let south_east_moves = *constants
-        .south_east_moves
-        .get(square)
-        .get(south_east_pieces)
-        ^ (*constants
-            .south_east_attacks
-            .get(square)
-            .get(south_east_pieces)
-            & enemy_pieces);
-
-    return north_west_moves | north_east_moves | south_west_moves | south_east_moves;
+fn get_diagonal_moves(all_pieces: Bitboard, enemy_pieces: Bitboard, square: Bitboard) -> Bitboard {
+    get_moves_in_direction(all_pieces, enemy_pieces, square, Direction::TopLeft)
+        | get_moves_in_direction(all_pieces, enemy_pieces, square, Direction::TopRight)
+        | get_moves_in_direction(all_pieces, enemy_pieces, square, Direction::BottomLeft)
+        | get_moves_in_direction(all_pieces, enemy_pieces, square, Direction::BottomRight)
 }
 
 #[derive(PartialEq)]
@@ -353,107 +322,85 @@ impl Position {
         (next, is_capturing)
     }
 
-    fn attackers(self, player: bool, square: Bitboard, constants: &Constants) -> Bitboard {
-        let pieces = if player { self.white } else { self.black };
-
-        let queen_and_rook = pieces.queen | pieces.rook;
-        let queen_and_bishop = pieces.queen | pieces.bishop;
-
-        let north_pieces = *constants.north_ray.get(square) & self.all;
-        let south_pieces = *constants.south_ray.get(square) & self.all;
-        let west_pieces = *constants.west_ray.get(square) & self.all;
-        let east_pieces = *constants.east_ray.get(square) & self.all;
-        let north_west_pieces = *constants.north_west_ray.get(square) & self.all;
-        let south_west_pieces = *constants.south_west_ray.get(square) & self.all;
-        let north_east_pieces = *constants.north_east_ray.get(square) & self.all;
-        let south_east_pieces = *constants.south_east_ray.get(square) & self.all;
-
-        (*constants.king_moves.get(square) & pieces.king)
-            | (*constants.north_attacks.get(square).get(north_pieces) & queen_and_rook)
-            | (*constants.south_attacks.get(square).get(south_pieces) & queen_and_rook)
-            | (*constants.west_attacks.get(square).get(west_pieces) & queen_and_rook)
-            | (*constants.east_attacks.get(square).get(east_pieces) & queen_and_rook)
-            | (*constants
-                .north_west_attacks
-                .get(square)
-                .get(north_west_pieces)
-                & queen_and_bishop)
-            | (*constants
-                .south_west_attacks
-                .get(square)
-                .get(south_west_pieces)
-                & queen_and_bishop)
-            | (*constants
-                .north_east_attacks
-                .get(square)
-                .get(north_east_pieces)
-                & queen_and_bishop)
-            | (*constants
-                .south_east_attacks
-                .get(square)
-                .get(south_east_pieces)
-                & queen_and_bishop)
-            | (*constants.knight_moves.get(square) & pieces.knight)
-            | (*constants.pawn_attacks.get(&player).unwrap().get(square) & pieces.pawn)
-    }
-
-    fn checkers(self, player: bool, king: Bitboard, constants: &Constants) -> Bitboard {
-        let pieces = if player { self.white } else { self.black };
-
-        let queen_and_rook = pieces.queen | pieces.rook;
-        let queen_and_bishop = pieces.queen | pieces.bishop;
-
-        let north_pieces = *constants.north_ray.get(king) & self.all;
-        let south_pieces = *constants.south_ray.get(king) & self.all;
-        let west_pieces = *constants.west_ray.get(king) & self.all;
-        let east_pieces = *constants.east_ray.get(king) & self.all;
-        let north_west_pieces = *constants.north_west_ray.get(king) & self.all;
-        let south_west_pieces = *constants.south_west_ray.get(king) & self.all;
-        let north_east_pieces = *constants.north_east_ray.get(king) & self.all;
-        let south_east_pieces = *constants.south_east_ray.get(king) & self.all;
-
-        (*constants.north_attacks.get(king).get(north_pieces) & queen_and_rook)
-            | (*constants.south_attacks.get(king).get(south_pieces) & queen_and_rook)
-            | (*constants.west_attacks.get(king).get(west_pieces) & queen_and_rook)
-            | (*constants.east_attacks.get(king).get(east_pieces) & queen_and_rook)
-            | (*constants
-                .north_west_attacks
-                .get(king)
-                .get(north_west_pieces)
-                & queen_and_bishop)
-            | (*constants
-                .south_west_attacks
-                .get(king)
-                .get(south_west_pieces)
-                & queen_and_bishop)
-            | (*constants
-                .north_east_attacks
-                .get(king)
-                .get(north_east_pieces)
-                & queen_and_bishop)
-            | (*constants
-                .south_east_attacks
-                .get(king)
-                .get(south_east_pieces)
-                & queen_and_bishop)
-            | (*constants.knight_moves.get(king) & pieces.knight)
-            | (*constants.pawn_attacks.get(&player).unwrap().get(king) & pieces.pawn)
-    }
-
-    fn attacked_squares(
+    fn attackers_in_direction(
         self,
-        player: bool,
-        exclude_king: bool, // = false
-        constants: &Constants,
+        square: Bitboard,
+        pieces: Bitboard,
+        direction: Direction,
     ) -> Bitboard {
-        let mut all_pieces = self.all;
-        if exclude_king {
-            all_pieces ^= if player {
+        let mut attackers = Bitboard::new(0);
+        let mut running = square.get_square_in_direction(direction);
+
+        while !running.is_empty() {
+            if !(pieces & running).is_empty() {
+                attackers |= running;
+                running = Bitboard::new(0);
+            } else if (self.all & running).is_empty() {
+                running = running.get_square_in_direction(direction);
+            } else {
+                running = Bitboard::new(0);
+            }
+        }
+
+        attackers
+    }
+
+    fn attackers(self, player: bool, square: Bitboard, constants: &Constants) -> Bitboard {
+        let forward_square = if player {
+            square.get_bottom_square()
+        } else {
+            square.get_top_square()
+        };
+
+        let pieces = if player { self.white } else { self.black };
+
+        let queen_and_rook = pieces.queen | pieces.rook;
+        let queen_and_bishop = pieces.queen | pieces.bishop;
+
+        let attackers = (*constants.king_moves.get(square) & pieces.king)
+            | self.attackers_in_direction(square, queen_and_rook, Direction::Top)
+            | self.attackers_in_direction(square, queen_and_rook, Direction::Bottom)
+            | self.attackers_in_direction(square, queen_and_rook, Direction::Left)
+            | self.attackers_in_direction(square, queen_and_rook, Direction::Right)
+            | self.attackers_in_direction(square, queen_and_bishop, Direction::TopLeft)
+            | self.attackers_in_direction(square, queen_and_bishop, Direction::TopRight)
+            | self.attackers_in_direction(square, queen_and_bishop, Direction::BottomLeft)
+            | self.attackers_in_direction(square, queen_and_bishop, Direction::BottomRight)
+            | (*constants.knight_moves.get(square) & pieces.knight)
+            | (forward_square.get_left_square() & pieces.pawn)
+            | (forward_square.get_right_square() & pieces.pawn);
+
+        attackers
+    }
+
+    fn attacked_squares_in_direction(
+        self,
+        square: Bitboard,
+        all_pieces: Bitboard,
+        direction: Direction,
+    ) -> Bitboard {
+        let mut attacked_squares = Bitboard::new(0);
+        let mut running = square.get_square_in_direction(direction);
+
+        while !running.is_empty() {
+            attacked_squares |= running;
+            running = if (all_pieces & running).is_empty() {
+                running.get_square_in_direction(direction)
+            } else {
+                Bitboard::new(0)
+            };
+        }
+
+        attacked_squares
+    }
+
+    fn attacked_squares(self, player: bool, constants: &Constants) -> Bitboard {
+        let all_pieces = self.all
+            ^ if player {
                 self.black.king
             } else {
                 self.white.king
             };
-        }
 
         let mut attacked = *constants.king_moves.get(if player {
             self.white.king
@@ -467,79 +414,15 @@ impl Position {
             self.black.queen
         };
         for queen in queen_pieces.split().iter() {
-            let north_pieces = *constants.north_ray.get(*queen) & all_pieces;
-            let north_moves = *constants.north_moves.get(*queen).get(north_pieces);
-            let north_attacks = *constants.north_attacks.get(*queen).get(north_pieces);
-
-            let south_pieces = *constants.south_ray.get(*queen) & all_pieces;
-            let south_moves = *constants.south_moves.get(*queen).get(south_pieces);
-            let south_attacks = *constants.south_attacks.get(*queen).get(south_pieces);
-
-            let west_pieces = *constants.west_ray.get(*queen) & all_pieces;
-            let west_moves = *constants.west_moves.get(*queen).get(west_pieces);
-            let west_attacks = *constants.west_attacks.get(*queen).get(west_pieces);
-
-            let east_pieces = *constants.east_ray.get(*queen) & all_pieces;
-            let east_moves = *constants.east_moves.get(*queen).get(east_pieces);
-            let east_attacks = *constants.east_attacks.get(*queen).get(east_pieces);
-
-            let north_west_pieces = *constants.north_west_ray.get(*queen) & all_pieces;
-            let north_west_moves = *constants
-                .north_west_moves
-                .get(*queen)
-                .get(north_west_pieces);
-            let north_west_attacks = *constants
-                .north_west_attacks
-                .get(*queen)
-                .get(north_west_pieces);
-
-            let north_east_pieces = *constants.north_east_ray.get(*queen) & all_pieces;
-            let north_east_moves = *constants
-                .north_east_moves
-                .get(*queen)
-                .get(north_east_pieces);
-            let north_east_attacks = *constants
-                .north_east_attacks
-                .get(*queen)
-                .get(north_east_pieces);
-
-            let south_west_pieces = *constants.south_west_ray.get(*queen) & all_pieces;
-            let south_west_moves = *constants
-                .south_west_moves
-                .get(*queen)
-                .get(south_west_pieces);
-            let south_west_attacks = *constants
-                .south_west_attacks
-                .get(*queen)
-                .get(south_west_pieces);
-
-            let south_east_pieces = *constants.south_east_ray.get(*queen) & all_pieces;
-            let south_east_moves = *constants
-                .south_east_moves
-                .get(*queen)
-                .get(south_east_pieces);
-            let south_east_attacks = *constants
-                .south_east_attacks
-                .get(*queen)
-                .get(south_east_pieces);
-
             attacked = attacked
-                | north_moves
-                | north_attacks
-                | south_moves
-                | south_attacks
-                | west_moves
-                | west_attacks
-                | east_moves
-                | east_attacks
-                | north_west_moves
-                | north_west_attacks
-                | north_east_moves
-                | north_east_attacks
-                | south_west_moves
-                | south_west_attacks
-                | south_east_moves
-                | south_east_attacks;
+                | self.attacked_squares_in_direction(*queen, all_pieces, Direction::Top)
+                | self.attacked_squares_in_direction(*queen, all_pieces, Direction::Bottom)
+                | self.attacked_squares_in_direction(*queen, all_pieces, Direction::Left)
+                | self.attacked_squares_in_direction(*queen, all_pieces, Direction::Right)
+                | self.attacked_squares_in_direction(*queen, all_pieces, Direction::TopLeft)
+                | self.attacked_squares_in_direction(*queen, all_pieces, Direction::TopRight)
+                | self.attacked_squares_in_direction(*queen, all_pieces, Direction::BottomLeft)
+                | self.attacked_squares_in_direction(*queen, all_pieces, Direction::BottomRight);
         }
 
         let rook_pieces = if player {
@@ -548,31 +431,11 @@ impl Position {
             self.black.rook
         };
         for rook in rook_pieces.split().iter() {
-            let north_pieces = *constants.north_ray.get(*rook) & all_pieces;
-            let north_moves = *constants.north_moves.get(*rook).get(north_pieces);
-            let north_attacks = *constants.north_attacks.get(*rook).get(north_pieces);
-
-            let south_pieces = *constants.south_ray.get(*rook) & all_pieces;
-            let south_moves = *constants.south_moves.get(*rook).get(south_pieces);
-            let south_attacks = *constants.south_attacks.get(*rook).get(south_pieces);
-
-            let west_pieces = *constants.west_ray.get(*rook) & all_pieces;
-            let west_moves = *constants.west_moves.get(*rook).get(west_pieces);
-            let west_attacks = *constants.west_attacks.get(*rook).get(west_pieces);
-
-            let east_pieces = *constants.east_ray.get(*rook) & all_pieces;
-            let east_moves = *constants.east_moves.get(*rook).get(east_pieces);
-            let east_attacks = *constants.east_attacks.get(*rook).get(east_pieces);
-
             attacked = attacked
-                | north_moves
-                | north_attacks
-                | south_moves
-                | south_attacks
-                | west_moves
-                | west_attacks
-                | east_moves
-                | east_attacks;
+                | self.attacked_squares_in_direction(*rook, all_pieces, Direction::Top)
+                | self.attacked_squares_in_direction(*rook, all_pieces, Direction::Bottom)
+                | self.attacked_squares_in_direction(*rook, all_pieces, Direction::Left)
+                | self.attacked_squares_in_direction(*rook, all_pieces, Direction::Right);
         }
 
         let bishop_pieces = if player {
@@ -581,55 +444,11 @@ impl Position {
             self.black.bishop
         };
         for bishop in bishop_pieces.split().iter() {
-            let north_west_pieces = *constants.north_west_ray.get(*bishop) & all_pieces;
-            let north_west_moves = *constants
-                .north_west_moves
-                .get(*bishop)
-                .get(north_west_pieces);
-            let north_west_attacks = *constants
-                .north_west_attacks
-                .get(*bishop)
-                .get(north_west_pieces);
-
-            let north_east_pieces = *constants.north_east_ray.get(*bishop) & all_pieces;
-            let north_east_moves = *constants
-                .north_east_moves
-                .get(*bishop)
-                .get(north_east_pieces);
-            let north_east_attacks = *constants
-                .north_east_attacks
-                .get(*bishop)
-                .get(north_east_pieces);
-
-            let south_west_pieces = *constants.south_west_ray.get(*bishop) & all_pieces;
-            let south_west_moves = *constants
-                .south_west_moves
-                .get(*bishop)
-                .get(south_west_pieces);
-            let south_west_attacks = *constants
-                .south_west_attacks
-                .get(*bishop)
-                .get(south_west_pieces);
-
-            let south_east_pieces = *constants.south_east_ray.get(*bishop) & all_pieces;
-            let south_east_moves = *constants
-                .south_east_moves
-                .get(*bishop)
-                .get(south_east_pieces);
-            let south_east_attacks = *constants
-                .south_east_attacks
-                .get(*bishop)
-                .get(south_east_pieces);
-
             attacked = attacked
-                | north_west_moves
-                | north_west_attacks
-                | north_east_moves
-                | north_east_attacks
-                | south_west_moves
-                | south_west_attacks
-                | south_east_moves
-                | south_east_attacks;
+                | self.attacked_squares_in_direction(*bishop, all_pieces, Direction::TopLeft)
+                | self.attacked_squares_in_direction(*bishop, all_pieces, Direction::TopRight)
+                | self.attacked_squares_in_direction(*bishop, all_pieces, Direction::BottomLeft)
+                | self.attacked_squares_in_direction(*bishop, all_pieces, Direction::BottomRight);
         }
 
         let knight_pieces = if player {
@@ -647,15 +466,12 @@ impl Position {
             self.black.pawn
         };
         for pawn in pawn_pieces.split().iter() {
-            for s in constants
-                .pawn_attack_moves
-                .get(&player)
-                .unwrap()
-                .get(*pawn)
-                .iter()
-            {
-                attacked |= *s;
-            }
+            let forward_square = if player {
+                pawn.get_top_square()
+            } else {
+                pawn.get_bottom_square()
+            };
+            attacked |= forward_square.get_left_square() | forward_square.get_right_square();
         }
 
         attacked
@@ -670,135 +486,138 @@ impl Position {
         !self.attackers(!player, king, constants).is_empty()
     }
 
+    fn pinned_movement_in_direction(
+        self,
+        square: Bitboard,
+        king: Bitboard,
+        attackers: Bitboard,
+        direction: Direction,
+    ) -> Option<Bitboard> {
+        let opposite_direction = match direction {
+            Direction::Top => Direction::Bottom,
+            Direction::Bottom => Direction::Top,
+            Direction::Left => Direction::Right,
+            Direction::Right => Direction::Left,
+            Direction::TopLeft => Direction::BottomRight,
+            Direction::TopRight => Direction::BottomLeft,
+            Direction::BottomLeft => Direction::TopRight,
+            Direction::BottomRight => Direction::TopLeft,
+        };
+        let mut moves = Bitboard::new(0);
+        let mut running = square.get_square_in_direction(direction);
+        let mut found_king = false;
+        let mut found_attacker = false;
+
+        while !running.is_empty() {
+            if !(king & running).is_empty() {
+                found_king = true;
+                running = Bitboard::new(0);
+            } else if !(attackers & running).is_empty() {
+                found_attacker = true;
+                moves |= running;
+                running = Bitboard::new(0);
+            } else if (self.all & running).is_empty() {
+                moves |= running;
+                running = running.get_square_in_direction(direction);
+            } else {
+                // First piece is neither an attacker nor the king
+                return None;
+            }
+        }
+
+        if !(found_king || found_attacker) {
+            // No piece at all found in this direction
+            return None;
+        }
+
+        running = square.get_square_in_direction(opposite_direction);
+        while !running.is_empty() {
+            if !(king & running).is_empty() && found_attacker {
+                return Some(moves);
+            } else if !(attackers & running).is_empty() && found_king {
+                return Some(moves | running);
+            } else if (self.all & running).is_empty() {
+                moves |= running;
+                running = running.get_square_in_direction(opposite_direction);
+            } else {
+                // First piece is neither an attacker nor the king
+                return None;
+            }
+        }
+
+        // No piece at all found in this direction
+        None
+    }
+
     fn pinned_movement(
         self,
         square: Bitboard,
         king: Bitboard,
         enemy_queens_and_rooks: Bitboard,
         enemy_queens_and_bishops: Bitboard,
-        constants: &Constants,
     ) -> Bitboard {
-        let north_pieces = *constants.north_ray.get(square) & self.all;
-        let south_pieces = *constants.south_ray.get(square) & self.all;
-        let first_piece_to_north = *constants.north_attacks.get(square).get(north_pieces);
-        let first_piece_to_south = *constants.south_attacks.get(square).get(south_pieces);
-
-        let is_pinned_from_north = (first_piece_to_south == king)
-            && (!(first_piece_to_north & enemy_queens_and_rooks).is_empty());
-        if is_pinned_from_north {
-            return first_piece_to_north
-                | *constants.north_moves.get(square).get(north_pieces)
-                | *constants.south_moves.get(square).get(south_pieces);
+        match self.pinned_movement_in_direction(
+            square,
+            king,
+            enemy_queens_and_rooks,
+            Direction::Top,
+        ) {
+            Some(moves) => return moves,
+            None => {}
         }
 
-        let is_pinned_from_south = (first_piece_to_north == king)
-            && (!(first_piece_to_south & enemy_queens_and_rooks).is_empty());
-        if is_pinned_from_south {
-            return first_piece_to_south
-                | *constants.south_moves.get(square).get(south_pieces)
-                | *constants.north_moves.get(square).get(north_pieces);
+        match self.pinned_movement_in_direction(
+            square,
+            king,
+            enemy_queens_and_rooks,
+            Direction::Left,
+        ) {
+            Some(moves) => return moves,
+            None => {}
         }
 
-        let west_pieces = *constants.west_ray.get(square) & self.all;
-        let east_pieces = *constants.east_ray.get(square) & self.all;
-        let first_piece_to_west = *constants.west_attacks.get(square).get(west_pieces);
-        let first_piece_to_east = *constants.east_attacks.get(square).get(east_pieces);
-
-        let is_pinned_from_west = (first_piece_to_east == king)
-            && (!(first_piece_to_west & enemy_queens_and_rooks).is_empty());
-        if is_pinned_from_west {
-            return first_piece_to_west
-                | *constants.west_moves.get(square).get(west_pieces)
-                | *constants.east_moves.get(square).get(east_pieces);
+        match self.pinned_movement_in_direction(
+            square,
+            king,
+            enemy_queens_and_bishops,
+            Direction::TopLeft,
+        ) {
+            Some(moves) => return moves,
+            None => {}
         }
 
-        let is_pinned_from_east = (first_piece_to_west == king)
-            && (!(first_piece_to_east & enemy_queens_and_rooks).is_empty());
-        if is_pinned_from_east {
-            return first_piece_to_east
-                | *constants.east_moves.get(square).get(east_pieces)
-                | *constants.west_moves.get(square).get(west_pieces);
-        }
-
-        let north_west_pieces = *constants.north_west_ray.get(square) & self.all;
-        let south_east_pieces = *constants.south_east_ray.get(square) & self.all;
-        let first_piece_to_north_west = *constants
-            .north_west_attacks
-            .get(square)
-            .get(north_west_pieces);
-        let first_piece_to_south_east = *constants
-            .south_east_attacks
-            .get(square)
-            .get(south_east_pieces);
-
-        let is_pinned_from_north_west = (first_piece_to_south_east == king)
-            && (!(first_piece_to_north_west & enemy_queens_and_bishops).is_empty());
-        if is_pinned_from_north_west {
-            return first_piece_to_north_west
-                | *constants
-                    .north_west_moves
-                    .get(square)
-                    .get(north_west_pieces)
-                | *constants
-                    .south_east_moves
-                    .get(square)
-                    .get(south_east_pieces);
-        }
-
-        let is_pinned_from_south_east = (first_piece_to_north_west == king)
-            && (!(first_piece_to_south_east & enemy_queens_and_bishops).is_empty());
-        if is_pinned_from_south_east {
-            return first_piece_to_south_east
-                | *constants
-                    .south_east_moves
-                    .get(square)
-                    .get(south_east_pieces)
-                | *constants
-                    .north_west_moves
-                    .get(square)
-                    .get(north_west_pieces);
-        }
-
-        let north_east_pieces = *constants.north_east_ray.get(square) & self.all;
-        let south_west_pieces = *constants.south_west_ray.get(square) & self.all;
-        let first_piece_to_north_east = *constants
-            .north_east_attacks
-            .get(square)
-            .get(north_east_pieces);
-        let first_piece_to_south_west = *constants
-            .south_west_attacks
-            .get(square)
-            .get(south_west_pieces);
-
-        let is_pinned_from_north_east = (first_piece_to_south_west == king)
-            && (!(first_piece_to_north_east & enemy_queens_and_bishops).is_empty());
-        if is_pinned_from_north_east {
-            return first_piece_to_north_east
-                | *constants
-                    .north_east_moves
-                    .get(square)
-                    .get(north_east_pieces)
-                | *constants
-                    .south_west_moves
-                    .get(square)
-                    .get(south_west_pieces);
-        }
-
-        let is_pinned_from_south_west = (first_piece_to_north_east == king)
-            && (!(first_piece_to_south_west & enemy_queens_and_bishops).is_empty());
-        if is_pinned_from_south_west {
-            return first_piece_to_south_west
-                | *constants
-                    .south_west_moves
-                    .get(square)
-                    .get(south_west_pieces)
-                | *constants
-                    .north_east_moves
-                    .get(square)
-                    .get(north_east_pieces);
+        match self.pinned_movement_in_direction(
+            square,
+            king,
+            enemy_queens_and_bishops,
+            Direction::TopRight,
+        ) {
+            Some(moves) => return moves,
+            None => {}
         }
 
         Bitboard::new(0xFFFF_FFFF_FFFF_FFFF)
+    }
+
+    fn get_push_squares_in_direction(
+        self,
+        square: Bitboard,
+        attackers: Bitboard,
+        direction: Direction,
+    ) -> Bitboard {
+        let mut moves = Bitboard::new(0);
+        let mut running = square.get_square_in_direction(direction);
+
+        while !running.is_empty() {
+            if !(attackers & running).is_empty() {
+                return moves;
+            } else {
+                moves |= running;
+                running = running.get_square_in_direction(direction);
+            }
+        }
+
+        Bitboard::new(0)
     }
 
     fn is_dead(self) -> bool {
@@ -1029,6 +848,71 @@ impl Game {
         }
     }
 
+    fn legal_pawn_attack_moves(&self, from_square: Bitboard, to_square: Bitboard) -> Vec<Move> {
+        let mut result: Vec<Move> = vec![];
+
+        let promotion_squares = if self.player {
+            Bitboard::new(0xFF00_0000_0000_0000)
+        } else {
+            Bitboard::new(0x0000_0000_0000_00FF)
+        };
+        if !(to_square & promotion_squares).is_empty() {
+            result.push(Move {
+                player: self.player,
+                piece: Piece::Pawn,
+                from_square,
+                to_square,
+                en_passant_square: Bitboard::new(0),
+                is_capturing_en_passant: false,
+                is_castling: None,
+                is_promoting_to: Some(PromotionPiece::Queen),
+            });
+            result.push(Move {
+                player: self.player,
+                piece: Piece::Pawn,
+                from_square,
+                to_square,
+                en_passant_square: Bitboard::new(0),
+                is_capturing_en_passant: false,
+                is_castling: None,
+                is_promoting_to: Some(PromotionPiece::Rook),
+            });
+            result.push(Move {
+                player: self.player,
+                piece: Piece::Pawn,
+                from_square,
+                to_square,
+                en_passant_square: Bitboard::new(0),
+                is_capturing_en_passant: false,
+                is_castling: None,
+                is_promoting_to: Some(PromotionPiece::Bishop),
+            });
+            result.push(Move {
+                player: self.player,
+                piece: Piece::Pawn,
+                from_square,
+                to_square,
+                en_passant_square: Bitboard::new(0),
+                is_capturing_en_passant: false,
+                is_castling: None,
+                is_promoting_to: Some(PromotionPiece::Knight),
+            });
+        } else {
+            result.push(Move {
+                player: self.player,
+                piece: Piece::Pawn,
+                from_square,
+                to_square,
+                en_passant_square: Bitboard::new(0),
+                is_capturing_en_passant: false,
+                is_castling: None,
+                is_promoting_to: None,
+            });
+        };
+
+        result
+    }
+
     fn legal_moves(&self, constants: &Constants) -> Vec<Move> {
         let mut result: Vec<Move> = vec![];
 
@@ -1043,9 +927,7 @@ impl Game {
             self.position.white.all
         };
         let empty_squares = Bitboard::new(0xFFFF_FFFF_FFFF_FFFF) ^ self.position.all;
-        let attacked_squares = self
-            .position
-            .attacked_squares(!self.player, true, constants);
+        let attacked_squares = self.position.attacked_squares(!self.player, constants);
 
         let king = if self.player {
             self.position.white.king
@@ -1068,7 +950,7 @@ impl Game {
             })
         }
 
-        let attackers = self.position.checkers(!self.player, king, constants);
+        let attackers = self.position.attackers(!self.player, king, constants);
 
         let number_of_attackers = attackers.count_ones();
         if number_of_attackers > 1 {
@@ -1095,40 +977,44 @@ impl Game {
                 // checked by knight or pawn, this can't be blocked
                 push_mask = Bitboard::new(0);
             } else {
-                // checked by slider, this can be blocked
-                // 🦖 before this was ".getOrDefault(attacker, 0)"
-                push_mask = *constants
-                    .north_moves
-                    .get(king)
-                    .get_or_default(attackers, &Bitboard::new(0))
-                    | *constants
-                        .south_moves
-                        .get(king)
-                        .get_or_default(attackers, &Bitboard::new(0))
-                    | *constants
-                        .west_moves
-                        .get(king)
-                        .get_or_default(attackers, &Bitboard::new(0))
-                    | *constants
-                        .east_moves
-                        .get(king)
-                        .get_or_default(attackers, &Bitboard::new(0))
-                    | *constants
-                        .north_west_moves
-                        .get(king)
-                        .get_or_default(attackers, &Bitboard::new(0))
-                    | *constants
-                        .north_east_moves
-                        .get(king)
-                        .get_or_default(attackers, &Bitboard::new(0))
-                    | *constants
-                        .south_west_moves
-                        .get(king)
-                        .get_or_default(attackers, &Bitboard::new(0))
-                    | *constants
-                        .south_east_moves
-                        .get(king)
-                        .get_or_default(attackers, &Bitboard::new(0))
+                push_mask =
+                    self.position
+                        .get_push_squares_in_direction(king, attackers, Direction::Top)
+                        | self.position.get_push_squares_in_direction(
+                            king,
+                            attackers,
+                            Direction::Bottom,
+                        )
+                        | self.position.get_push_squares_in_direction(
+                            king,
+                            attackers,
+                            Direction::Left,
+                        )
+                        | self.position.get_push_squares_in_direction(
+                            king,
+                            attackers,
+                            Direction::Right,
+                        )
+                        | self.position.get_push_squares_in_direction(
+                            king,
+                            attackers,
+                            Direction::TopLeft,
+                        )
+                        | self.position.get_push_squares_in_direction(
+                            king,
+                            attackers,
+                            Direction::TopRight,
+                        )
+                        | self.position.get_push_squares_in_direction(
+                            king,
+                            attackers,
+                            Direction::BottomLeft,
+                        )
+                        | self.position.get_push_squares_in_direction(
+                            king,
+                            attackers,
+                            Direction::BottomRight,
+                        )
             }
         }
 
@@ -1159,18 +1045,13 @@ impl Game {
         };
         for from_square in queen.split() {
             let moveable_squares = capture_or_push_mask
-                & (get_rank_and_file_moves(
-                    self.position.all,
-                    enemy_pieces,
-                    from_square,
-                    constants,
-                ) | get_diagonal_moves(self.position.all, enemy_pieces, from_square, constants))
+                & (get_rank_and_file_moves(self.position.all, enemy_pieces, from_square)
+                    | get_diagonal_moves(self.position.all, enemy_pieces, from_square))
                 & self.position.pinned_movement(
                     from_square,
                     king,
                     enemy_queens_and_rooks,
                     enemy_queens_and_bishops,
-                    constants,
                 );
             for to_square in moveable_squares.split() {
                 result.push(Move {
@@ -1193,13 +1074,12 @@ impl Game {
         };
         for from_square in rook.split() {
             let moveable_squares = capture_or_push_mask
-                & get_rank_and_file_moves(self.position.all, enemy_pieces, from_square, constants)
+                & get_rank_and_file_moves(self.position.all, enemy_pieces, from_square)
                 & self.position.pinned_movement(
                     from_square,
                     king,
                     enemy_queens_and_rooks,
                     enemy_queens_and_bishops,
-                    constants,
                 );
             for to_square in moveable_squares.split() {
                 result.push(Move {
@@ -1222,13 +1102,12 @@ impl Game {
         };
         for from_square in bishop.split() {
             let moveable_squares = capture_or_push_mask
-                & get_diagonal_moves(self.position.all, enemy_pieces, from_square, constants)
+                & get_diagonal_moves(self.position.all, enemy_pieces, from_square)
                 & self.position.pinned_movement(
                     from_square,
                     king,
                     enemy_queens_and_rooks,
                     enemy_queens_and_bishops,
-                    constants,
                 );
             for to_square in moveable_squares.split() {
                 result.push(Move {
@@ -1258,7 +1137,6 @@ impl Game {
                     king,
                     enemy_queens_and_rooks,
                     enemy_queens_and_bishops,
-                    constants,
                 );
             for to_square in moveable_squares.split() {
                 result.push(Move {
@@ -1287,16 +1165,16 @@ impl Game {
                 king,
                 enemy_queens_and_rooks,
                 enemy_queens_and_bishops,
-                constants,
             );
-            to_square = *constants
-                .pawn_single_moves
-                .get(&self.player)
-                .unwrap()
-                .get(from_square)
-                & empty_squares
-                & pinned_movement
-                & push_mask;
+
+            let forward_square = if self.player {
+                from_square.get_top_square()
+            } else {
+                from_square.get_bottom_square()
+            };
+
+            // Pawn single moves
+            to_square = forward_square & empty_squares & pinned_movement & push_mask;
             if !to_square.is_empty() {
                 let promotion_squares = if self.player {
                     Bitboard::new(0xFF00_0000_0000_0000)
@@ -1358,82 +1236,25 @@ impl Game {
                 }
             }
 
-            let attacks = constants
-                .pawn_attack_moves
-                .get(&self.player)
-                .unwrap()
-                .get(from_square);
-            for p in attacks {
-                let to_square = *p & enemy_pieces & pinned_movement & capture_mask;
-                if to_square.is_empty() {
-                    continue;
-                }
-
-                let promotion_squares = if self.player {
-                    Bitboard::new(0xFF00_0000_0000_0000)
-                } else {
-                    Bitboard::new(0x0000_0000_0000_00FF)
-                };
-                if !(to_square & promotion_squares).is_empty() {
-                    result.push(Move {
-                        player: self.player,
-                        piece: Piece::Pawn,
-                        from_square,
-                        to_square,
-                        en_passant_square: Bitboard::new(0),
-                        is_capturing_en_passant: false,
-                        is_castling: None,
-                        is_promoting_to: Some(PromotionPiece::Queen),
-                    });
-                    result.push(Move {
-                        player: self.player,
-                        piece: Piece::Pawn,
-                        from_square,
-                        to_square,
-                        en_passant_square: Bitboard::new(0),
-                        is_capturing_en_passant: false,
-                        is_castling: None,
-                        is_promoting_to: Some(PromotionPiece::Rook),
-                    });
-                    result.push(Move {
-                        player: self.player,
-                        piece: Piece::Pawn,
-                        from_square,
-                        to_square,
-                        en_passant_square: Bitboard::new(0),
-                        is_capturing_en_passant: false,
-                        is_castling: None,
-                        is_promoting_to: Some(PromotionPiece::Bishop),
-                    });
-                    result.push(Move {
-                        player: self.player,
-                        piece: Piece::Pawn,
-                        from_square,
-                        to_square,
-                        en_passant_square: Bitboard::new(0),
-                        is_capturing_en_passant: false,
-                        is_castling: None,
-                        is_promoting_to: Some(PromotionPiece::Knight),
-                    });
-                } else {
-                    result.push(Move {
-                        player: self.player,
-                        piece: Piece::Pawn,
-                        from_square,
-                        to_square,
-                        en_passant_square: Bitboard::new(0),
-                        is_capturing_en_passant: false,
-                        is_castling: None,
-                        is_promoting_to: None,
-                    });
-                };
+            // Pawn attacks
+            let to_square_left =
+                forward_square.get_left_square() & enemy_pieces & pinned_movement & capture_mask;
+            if !to_square_left.is_empty() {
+                result.extend(self.legal_pawn_attack_moves(from_square, to_square_left));
+            }
+            let to_square_right =
+                forward_square.get_right_square() & enemy_pieces & pinned_movement & capture_mask;
+            if !to_square_right.is_empty() {
+                result.extend(self.legal_pawn_attack_moves(from_square, to_square_right));
             }
 
-            to_square = *constants
-                .pawn_double_moves
-                .get(&self.player)
-                .unwrap()
-                .get(from_square)
+            // Pawn double moves
+            let double_forward_square = if self.player {
+                (forward_square & Bitboard::new(0x0000_0000_00FF_0000)).get_top_square()
+            } else {
+                (forward_square & Bitboard::new(0x0000_FF00_0000_0000)).get_bottom_square()
+            };
+            to_square = double_forward_square
                 & empty_squares
                 & (if self.player {
                     empty_squares.get_top_square()
@@ -1459,11 +1280,14 @@ impl Game {
                 })
             }
 
-            to_square = *constants
-                .pawn_en_passant_captures
-                .get(&self.player)
-                .unwrap()
-                .get(from_square)
+            let forward_square = if self.player {
+                from_square.get_top_square()
+            } else {
+                from_square.get_bottom_square()
+            };
+            let en_passant_captures =
+                forward_square.get_left_square() | forward_square.get_right_square();
+            to_square = en_passant_captures
                 & self.en_passant_square
                 & pinned_movement
                 & (if self.player {
@@ -1639,7 +1463,8 @@ pub fn game_from_fen(fen: &str, constants: &Constants) -> Game {
             match piece.to_digit(10) {
                 Some(digit) => file_index += digit as usize,
                 None => {
-                    let square = constants.squares[rank_index * 8 + file_index];
+                    let square =
+                        Bitboard::new(1 << (63 - rank_index as u32 * 8 - file_index as u32));
                     match piece {
                         'K' => position.white.king |= square,
                         'Q' => position.white.queen |= square,
@@ -1667,9 +1492,72 @@ pub fn game_from_fen(fen: &str, constants: &Constants) -> Game {
         }
     }
 
-    let en_passant_square = match constants.human_to_squares.get(fen_parts[3]) {
-        Some(square) => *square,
-        None => Bitboard::new(0x0000_0000_0000_0000),
+    let en_passant_square = match fen_parts[3] {
+        "a8" => Bitboard::new(0x8000_0000_0000_0000),
+        "b8" => Bitboard::new(0x4000_0000_0000_0000),
+        "c8" => Bitboard::new(0x2000_0000_0000_0000),
+        "d8" => Bitboard::new(0x1000_0000_0000_0000),
+        "e8" => Bitboard::new(0x0800_0000_0000_0000),
+        "f8" => Bitboard::new(0x0400_0000_0000_0000),
+        "g8" => Bitboard::new(0x0200_0000_0000_0000),
+        "h8" => Bitboard::new(0x0100_0000_0000_0000),
+        "a7" => Bitboard::new(0x0080_0000_0000_0000),
+        "b7" => Bitboard::new(0x0040_0000_0000_0000),
+        "c7" => Bitboard::new(0x0020_0000_0000_0000),
+        "d7" => Bitboard::new(0x0010_0000_0000_0000),
+        "e7" => Bitboard::new(0x0008_0000_0000_0000),
+        "f7" => Bitboard::new(0x0004_0000_0000_0000),
+        "g7" => Bitboard::new(0x0002_0000_0000_0000),
+        "h7" => Bitboard::new(0x0001_0000_0000_0000),
+        "a6" => Bitboard::new(0x0000_8000_0000_0000),
+        "b6" => Bitboard::new(0x0000_4000_0000_0000),
+        "c6" => Bitboard::new(0x0000_2000_0000_0000),
+        "d6" => Bitboard::new(0x0000_1000_0000_0000),
+        "e6" => Bitboard::new(0x0000_0800_0000_0000),
+        "f6" => Bitboard::new(0x0000_0400_0000_0000),
+        "g6" => Bitboard::new(0x0000_0200_0000_0000),
+        "h6" => Bitboard::new(0x0000_0100_0000_0000),
+        "a5" => Bitboard::new(0x0000_0080_0000_0000),
+        "b5" => Bitboard::new(0x0000_0040_0000_0000),
+        "c5" => Bitboard::new(0x0000_0020_0000_0000),
+        "d5" => Bitboard::new(0x0000_0010_0000_0000),
+        "e5" => Bitboard::new(0x0000_0008_0000_0000),
+        "f5" => Bitboard::new(0x0000_0004_0000_0000),
+        "g5" => Bitboard::new(0x0000_0002_0000_0000),
+        "h5" => Bitboard::new(0x0000_0001_0000_0000),
+        "a4" => Bitboard::new(0x0000_0000_8000_0000),
+        "b4" => Bitboard::new(0x0000_0000_4000_0000),
+        "c4" => Bitboard::new(0x0000_0000_2000_0000),
+        "d4" => Bitboard::new(0x0000_0000_1000_0000),
+        "e4" => Bitboard::new(0x0000_0000_0800_0000),
+        "f4" => Bitboard::new(0x0000_0000_0400_0000),
+        "g4" => Bitboard::new(0x0000_0000_0200_0000),
+        "h4" => Bitboard::new(0x0000_0000_0100_0000),
+        "a3" => Bitboard::new(0x0000_0000_0080_0000),
+        "b3" => Bitboard::new(0x0000_0000_0040_0000),
+        "c3" => Bitboard::new(0x0000_0000_0020_0000),
+        "d3" => Bitboard::new(0x0000_0000_0010_0000),
+        "e3" => Bitboard::new(0x0000_0000_0008_0000),
+        "f3" => Bitboard::new(0x0000_0000_0004_0000),
+        "g3" => Bitboard::new(0x0000_0000_0002_0000),
+        "h3" => Bitboard::new(0x0000_0000_0001_0000),
+        "a2" => Bitboard::new(0x0000_0000_0000_8000),
+        "b2" => Bitboard::new(0x0000_0000_0000_4000),
+        "c2" => Bitboard::new(0x0000_0000_0000_2000),
+        "d2" => Bitboard::new(0x0000_0000_0000_1000),
+        "e2" => Bitboard::new(0x0000_0000_0000_0800),
+        "f2" => Bitboard::new(0x0000_0000_0000_0400),
+        "g2" => Bitboard::new(0x0000_0000_0000_0200),
+        "h2" => Bitboard::new(0x0000_0000_0000_0100),
+        "a1" => Bitboard::new(0x0000_0000_0000_0080),
+        "b1" => Bitboard::new(0x0000_0000_0000_0040),
+        "c1" => Bitboard::new(0x0000_0000_0000_0020),
+        "d1" => Bitboard::new(0x0000_0000_0000_0010),
+        "e1" => Bitboard::new(0x0000_0000_0000_0008),
+        "f1" => Bitboard::new(0x0000_0000_0000_0004),
+        "g1" => Bitboard::new(0x0000_0000_0000_0002),
+        "h1" => Bitboard::new(0x0000_0000_0000_0001),
+        _ => Bitboard::new(0x0000_0000_0000_0000),
     };
 
     return Game {
@@ -1719,6 +1607,7 @@ pub fn game_from_fen(fen: &str, constants: &Constants) -> Game {
 #[cfg(test)]
 mod lexer {
     use super::*;
+    use crate::constants;
 
     #[test]
     fn test_position_1() {

@@ -130,30 +130,6 @@ struct Move {
     is_promoting_to: Option<PromotionPiece>,
 }
 
-impl Move {
-    fn new(
-        player: bool,
-        piece: Piece,
-        from_square: Bitboard,
-        to_square: Bitboard,
-        en_passant_square: Bitboard,
-        is_capturing_en_passant: bool,
-        is_castling: Option<Castle>,
-        is_promoting_to: Option<PromotionPiece>,
-    ) -> Move {
-        Move {
-            player,
-            piece,
-            from_square,
-            to_square,
-            en_passant_square,
-            is_capturing_en_passant,
-            is_castling,
-            is_promoting_to,
-        }
-    }
-}
-
 #[derive(Clone, Copy)]
 struct Pieces {
     all: Bitboard,

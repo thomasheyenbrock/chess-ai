@@ -412,16 +412,16 @@ impl Position {
         } else {
             self.black.queen
         };
-        for queen in queen_pieces.split().iter() {
+        for queen in queen_pieces.into_iter() {
             attacked = attacked
-                | self.attacked_squares_in_direction(*queen, all_pieces, Direction::Top)
-                | self.attacked_squares_in_direction(*queen, all_pieces, Direction::Bottom)
-                | self.attacked_squares_in_direction(*queen, all_pieces, Direction::Left)
-                | self.attacked_squares_in_direction(*queen, all_pieces, Direction::Right)
-                | self.attacked_squares_in_direction(*queen, all_pieces, Direction::TopLeft)
-                | self.attacked_squares_in_direction(*queen, all_pieces, Direction::TopRight)
-                | self.attacked_squares_in_direction(*queen, all_pieces, Direction::BottomLeft)
-                | self.attacked_squares_in_direction(*queen, all_pieces, Direction::BottomRight);
+                | self.attacked_squares_in_direction(queen, all_pieces, Direction::Top)
+                | self.attacked_squares_in_direction(queen, all_pieces, Direction::Bottom)
+                | self.attacked_squares_in_direction(queen, all_pieces, Direction::Left)
+                | self.attacked_squares_in_direction(queen, all_pieces, Direction::Right)
+                | self.attacked_squares_in_direction(queen, all_pieces, Direction::TopLeft)
+                | self.attacked_squares_in_direction(queen, all_pieces, Direction::TopRight)
+                | self.attacked_squares_in_direction(queen, all_pieces, Direction::BottomLeft)
+                | self.attacked_squares_in_direction(queen, all_pieces, Direction::BottomRight);
         }
 
         let rook_pieces = if player {
@@ -429,12 +429,12 @@ impl Position {
         } else {
             self.black.rook
         };
-        for rook in rook_pieces.split().iter() {
+        for rook in rook_pieces.into_iter() {
             attacked = attacked
-                | self.attacked_squares_in_direction(*rook, all_pieces, Direction::Top)
-                | self.attacked_squares_in_direction(*rook, all_pieces, Direction::Bottom)
-                | self.attacked_squares_in_direction(*rook, all_pieces, Direction::Left)
-                | self.attacked_squares_in_direction(*rook, all_pieces, Direction::Right);
+                | self.attacked_squares_in_direction(rook, all_pieces, Direction::Top)
+                | self.attacked_squares_in_direction(rook, all_pieces, Direction::Bottom)
+                | self.attacked_squares_in_direction(rook, all_pieces, Direction::Left)
+                | self.attacked_squares_in_direction(rook, all_pieces, Direction::Right);
         }
 
         let bishop_pieces = if player {
@@ -442,12 +442,12 @@ impl Position {
         } else {
             self.black.bishop
         };
-        for bishop in bishop_pieces.split().iter() {
+        for bishop in bishop_pieces.into_iter() {
             attacked = attacked
-                | self.attacked_squares_in_direction(*bishop, all_pieces, Direction::TopLeft)
-                | self.attacked_squares_in_direction(*bishop, all_pieces, Direction::TopRight)
-                | self.attacked_squares_in_direction(*bishop, all_pieces, Direction::BottomLeft)
-                | self.attacked_squares_in_direction(*bishop, all_pieces, Direction::BottomRight);
+                | self.attacked_squares_in_direction(bishop, all_pieces, Direction::TopLeft)
+                | self.attacked_squares_in_direction(bishop, all_pieces, Direction::TopRight)
+                | self.attacked_squares_in_direction(bishop, all_pieces, Direction::BottomLeft)
+                | self.attacked_squares_in_direction(bishop, all_pieces, Direction::BottomRight);
         }
 
         let knight_pieces = if player {
@@ -455,7 +455,7 @@ impl Position {
         } else {
             self.black.knight
         };
-        for knight in knight_pieces.split().iter() {
+        for knight in knight_pieces.into_iter() {
             attacked |= knight.knight_moves();
         }
 
@@ -464,7 +464,7 @@ impl Position {
         } else {
             self.black.pawn
         };
-        for pawn in pawn_pieces.split().iter() {
+        for pawn in pawn_pieces.into_iter() {
             let forward_square = if player {
                 pawn.get_top_square()
             } else {
@@ -936,7 +936,7 @@ impl Game {
         let mut king_moves =
             king.king_moves() & (Bitboard::new(0xFFFF_FFFF_FFFF_FFFF) ^ attacked_squares);
         king_moves = king_moves ^ (king_moves & friendly_pieces);
-        for to_square in king_moves.split() {
+        for to_square in king_moves.into_iter() {
             result.push(Move {
                 player: self.player,
                 piece: Piece::King,
@@ -1042,7 +1042,7 @@ impl Game {
         } else {
             self.position.black.queen
         };
-        for from_square in queen.split() {
+        for from_square in queen.into_iter() {
             let moveable_squares = capture_or_push_mask
                 & (get_rank_and_file_moves(self.position.all, enemy_pieces, from_square)
                     | get_diagonal_moves(self.position.all, enemy_pieces, from_square))
@@ -1052,7 +1052,7 @@ impl Game {
                     enemy_queens_and_rooks,
                     enemy_queens_and_bishops,
                 );
-            for to_square in moveable_squares.split() {
+            for to_square in moveable_squares.into_iter() {
                 result.push(Move {
                     player: self.player,
                     piece: Piece::Queen,
@@ -1071,7 +1071,7 @@ impl Game {
         } else {
             self.position.black.rook
         };
-        for from_square in rook.split() {
+        for from_square in rook.into_iter() {
             let moveable_squares = capture_or_push_mask
                 & get_rank_and_file_moves(self.position.all, enemy_pieces, from_square)
                 & self.position.pinned_movement(
@@ -1080,7 +1080,7 @@ impl Game {
                     enemy_queens_and_rooks,
                     enemy_queens_and_bishops,
                 );
-            for to_square in moveable_squares.split() {
+            for to_square in moveable_squares.into_iter() {
                 result.push(Move {
                     player: self.player,
                     piece: Piece::Rook,
@@ -1099,7 +1099,7 @@ impl Game {
         } else {
             self.position.black.bishop
         };
-        for from_square in bishop.split() {
+        for from_square in bishop.into_iter() {
             let moveable_squares = capture_or_push_mask
                 & get_diagonal_moves(self.position.all, enemy_pieces, from_square)
                 & self.position.pinned_movement(
@@ -1108,7 +1108,7 @@ impl Game {
                     enemy_queens_and_rooks,
                     enemy_queens_and_bishops,
                 );
-            for to_square in moveable_squares.split() {
+            for to_square in moveable_squares.into_iter() {
                 result.push(Move {
                     player: self.player,
                     piece: Piece::Bishop,
@@ -1127,7 +1127,7 @@ impl Game {
         } else {
             self.position.black.knight
         };
-        for from_square in knight.split() {
+        for from_square in knight.into_iter() {
             let knight_moves = from_square.knight_moves();
             let moveable_squares = capture_or_push_mask
                 & knight_moves
@@ -1138,7 +1138,7 @@ impl Game {
                     enemy_queens_and_rooks,
                     enemy_queens_and_bishops,
                 );
-            for to_square in moveable_squares.split() {
+            for to_square in moveable_squares.into_iter() {
                 result.push(Move {
                     player: self.player,
                     piece: Piece::Knight,
@@ -1157,7 +1157,7 @@ impl Game {
         } else {
             self.position.black.pawn
         };
-        for from_square in pawn.split() {
+        for from_square in pawn.into_iter() {
             let mut to_square: Bitboard;
 
             let pinned_movement = self.position.pinned_movement(

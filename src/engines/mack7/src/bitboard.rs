@@ -169,6 +169,31 @@ impl ops::BitXorAssign for Bitboard {
     }
 }
 
+pub struct BitboardIter {
+    n: u64,
+    c: u32,
+}
+
+impl Iterator for BitboardIter {
+    type Item = Bitboard;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.n == 0 {
+            return None;
+        }
+
+        let mut m = self.n >> self.c;
+        while m & 1 == 0 {
+            m >>= 1;
+            self.c += 1;
+        }
+        let pow_of_2 = 1 << self.c;
+        self.n ^= pow_of_2;
+
+        Some(Bitboard { n: pow_of_2 })
+    }
+}
+
 impl Bitboard {
     pub fn new(n: u64) -> Bitboard {
         Bitboard { n }
@@ -182,33 +207,8 @@ impl Bitboard {
         self.n == 0
     }
 
-    fn subtract(self, s: u64) -> Bitboard {
-        Bitboard { n: self.n - s }
-    }
-
-    pub fn split(self) -> Vec<Bitboard> {
-        let mut result: Vec<Bitboard> = vec![];
-        if self.is_empty() {
-            return result;
-        }
-
-        if (self & self.subtract(1)).is_empty() {
-            // It's a power of two
-            result.push(self);
-            return result;
-        }
-
-        let mut c = 0;
-        let mut bb = self.n;
-        while bb != 0 {
-            let bit = bb & 0x0000_0000_0000_0001;
-            if bit != 0 {
-                result.push(Bitboard::new(bit << c));
-            }
-            c += 1;
-            bb = bb >> 1;
-        }
-        result
+    pub fn into_iter(self) -> BitboardIter {
+        BitboardIter { n: self.n, c: 0 }
     }
 
     pub fn get_left_square(self) -> Bitboard {

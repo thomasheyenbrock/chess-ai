@@ -116,47 +116,6 @@ struct Position {
 }
 
 impl Position {
-    fn new(
-        white_king: Bitboard,
-        white_queen: Bitboard,
-        white_rook: Bitboard,
-        white_bishop: Bitboard,
-        white_knight: Bitboard,
-        white_pawn: Bitboard,
-        black_king: Bitboard,
-        black_queen: Bitboard,
-        black_rook: Bitboard,
-        black_bishop: Bitboard,
-        black_knight: Bitboard,
-        black_pawn: Bitboard,
-    ) -> Position {
-        let white_pieces =
-            white_king | white_queen | white_rook | white_bishop | white_knight | white_pawn;
-        let black_pieces =
-            black_king | black_queen | black_rook | black_bishop | black_knight | black_pawn;
-        Position {
-            all: white_pieces | black_pieces,
-            white: Pieces {
-                all: white_pieces,
-                king: white_king,
-                queen: white_queen,
-                rook: white_rook,
-                bishop: white_bishop,
-                knight: white_knight,
-                pawn: white_pawn,
-            },
-            black: Pieces {
-                all: black_pieces,
-                king: black_king,
-                queen: black_queen,
-                rook: black_rook,
-                bishop: black_bishop,
-                knight: black_knight,
-                pawn: black_pawn,
-            },
-        }
-    }
-
     fn make_move(self, m: &Move) -> (Position, CapturedPiece) {
         let mut next = self.clone();
 
@@ -1448,20 +1407,27 @@ impl Game {
 
 pub fn game_from_fen(fen: &str) -> Game {
     let fen_parts: Vec<&str> = fen.split(" ").collect();
-    let mut position = Position::new(
-        Bitboard::new(0),
-        Bitboard::new(0),
-        Bitboard::new(0),
-        Bitboard::new(0),
-        Bitboard::new(0),
-        Bitboard::new(0),
-        Bitboard::new(0),
-        Bitboard::new(0),
-        Bitboard::new(0),
-        Bitboard::new(0),
-        Bitboard::new(0),
-        Bitboard::new(0),
-    );
+    let mut position = Position {
+        all: Bitboard::new(0),
+        white: Pieces {
+            all: Bitboard::new(0),
+            king: Bitboard::new(0),
+            queen: Bitboard::new(0),
+            rook: Bitboard::new(0),
+            bishop: Bitboard::new(0),
+            knight: Bitboard::new(0),
+            pawn: Bitboard::new(0),
+        },
+        black: Pieces {
+            all: Bitboard::new(0),
+            king: Bitboard::new(0),
+            queen: Bitboard::new(0),
+            rook: Bitboard::new(0),
+            bishop: Bitboard::new(0),
+            knight: Bitboard::new(0),
+            pawn: Bitboard::new(0),
+        },
+    };
 
     for (rank_index, rank) in fen_parts[0].split("/").into_iter().enumerate() {
         let mut file_index = 0;

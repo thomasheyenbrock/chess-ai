@@ -2,7 +2,6 @@
 
 use crate::bitboard::{Bitboard, Direction};
 use rayon::prelude::*;
-use std::collections::HashMap;
 
 enum Result {
     White,
@@ -726,7 +725,7 @@ pub struct Game {
     // last_move: Move,
     possible_castles: PossibleCastles,
     en_passant_square: Bitboard,
-    position_counts: HashMap<String, i32>,
+    position_counts: Vec<String>,
     move_counter: i32,
     fifty_move_counter: i32,
 }
@@ -822,17 +821,15 @@ impl Game {
             self.fifty_move_counter + 1
         };
 
-        let mut position_counts: HashMap<String, i32>;
+        let mut position_counts: Vec<String>;
         if !(is_capturing != CapturedPiece::None
             || m.is_promoting_to.is_some()
             || m.is_castling.is_some())
         {
-            position_counts = HashMap::new();
+            position_counts = vec![];
         } else {
-            let key = self.id();
-            let current = self.position_counts.get(&key).unwrap_or(&0);
             position_counts = self.position_counts.clone();
-            position_counts.insert(key, current + 1);
+            position_counts.push(self.id());
         }
 
         Game {
@@ -1410,7 +1407,7 @@ impl Game {
             .sum()
     }
 
-    fn result(&self, legal_moves: u64) -> Option<Result> {
+    fn result(&mut self, legal_moves: u64) -> Option<Result> {
         if legal_moves == 0 {
             if self.position.is_check(self.player) {
                 return if self.player {
@@ -1426,8 +1423,17 @@ impl Game {
             return Some(Result::FiftyMoveRule);
         }
 
-        for count in self.position_counts.values() {
-            if *count >= 3 {
+        self.position_counts.sort();
+        let mut count = 1;
+        let mut prev = "";
+        for id in self.position_counts.iter() {
+            if prev == id {
+                count += 1;
+            } else {
+                count = 1;
+                prev = id;
+            }
+            if count >= 3 {
                 return Some(Result::Repitition);
             }
         }
@@ -1580,7 +1586,7 @@ pub fn game_from_fen(fen: &str) -> Game {
             black_queenside: fen_parts[2].contains("q"),
         },
         en_passant_square,
-        position_counts: HashMap::new(),
+        position_counts: vec![],
         move_counter: fen_parts[5]
             .chars()
             .next()

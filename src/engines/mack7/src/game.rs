@@ -2,6 +2,7 @@
 
 use crate::bitboard::{Bitboard, Direction};
 use rayon::prelude::*;
+use std::cmp::Ordering;
 
 enum Result {
     White,
@@ -678,58 +679,198 @@ struct PossibleCastles {
     black_queenside: bool,
 }
 
+#[derive(Clone, Copy)]
+struct PositionWithMeta {
+    white_king: Bitboard,
+    white_queen: Bitboard,
+    white_rook: Bitboard,
+    white_bishop: Bitboard,
+    white_knight: Bitboard,
+    white_pawn: Bitboard,
+    black_king: Bitboard,
+    black_queen: Bitboard,
+    black_rook: Bitboard,
+    black_bishop: Bitboard,
+    black_knight: Bitboard,
+    black_pawn: Bitboard,
+    player: bool,
+    castle_white_kingside: bool,
+    castle_white_queenside: bool,
+    castle_black_kingside: bool,
+    castle_black_queenside: bool,
+    en_passant_square: Bitboard,
+}
+
+impl Ord for PositionWithMeta {
+    fn cmp(&self, other: &Self) -> Ordering {
+        let mut o: Ordering;
+
+        o = self.player.cmp(&other.player);
+        if o != Ordering::Equal {
+            return o;
+        }
+
+        o = self.white_king.cmp(&other.white_king);
+        if o != Ordering::Equal {
+            return o;
+        }
+
+        o = self.black_king.cmp(&other.black_king);
+        if o != Ordering::Equal {
+            return o;
+        }
+
+        o = self.white_queen.cmp(&other.white_queen);
+        if o != Ordering::Equal {
+            return o;
+        }
+
+        o = self.black_queen.cmp(&other.black_queen);
+        if o != Ordering::Equal {
+            return o;
+        }
+
+        o = self.white_rook.cmp(&other.white_rook);
+        if o != Ordering::Equal {
+            return o;
+        }
+
+        o = self.black_rook.cmp(&other.black_rook);
+        if o != Ordering::Equal {
+            return o;
+        }
+
+        o = self.white_bishop.cmp(&other.white_bishop);
+        if o != Ordering::Equal {
+            return o;
+        }
+
+        o = self.black_bishop.cmp(&other.black_bishop);
+        if o != Ordering::Equal {
+            return o;
+        }
+
+        o = self.white_knight.cmp(&other.white_knight);
+        if o != Ordering::Equal {
+            return o;
+        }
+
+        o = self.black_knight.cmp(&other.black_knight);
+        if o != Ordering::Equal {
+            return o;
+        }
+
+        o = self.white_pawn.cmp(&other.white_pawn);
+        if o != Ordering::Equal {
+            return o;
+        }
+
+        o = self.black_pawn.cmp(&other.black_pawn);
+        if o != Ordering::Equal {
+            return o;
+        }
+
+        o = self.castle_white_kingside.cmp(&other.castle_white_kingside);
+        if o != Ordering::Equal {
+            return o;
+        }
+
+        o = self
+            .castle_white_queenside
+            .cmp(&other.castle_white_queenside);
+        if o != Ordering::Equal {
+            return o;
+        }
+
+        o = self.castle_black_kingside.cmp(&other.castle_black_kingside);
+        if o != Ordering::Equal {
+            return o;
+        }
+
+        o = self
+            .castle_black_queenside
+            .cmp(&other.castle_black_queenside);
+        if o != Ordering::Equal {
+            return o;
+        }
+
+        o = self.en_passant_square.cmp(&other.en_passant_square);
+        if o != Ordering::Equal {
+            return o;
+        }
+
+        Ordering::Equal
+    }
+}
+
+impl PartialOrd for PositionWithMeta {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for PositionWithMeta {
+    fn eq(&self, other: &Self) -> bool {
+        self.white_king == other.white_king
+            && self.white_queen == other.white_queen
+            && self.white_rook == other.white_rook
+            && self.white_bishop == other.white_bishop
+            && self.white_knight == other.white_knight
+            && self.white_pawn == other.white_king
+            && self.black_king == other.black_king
+            && self.black_queen == other.black_queen
+            && self.black_rook == other.black_rook
+            && self.black_bishop == other.black_bishop
+            && self.black_knight == other.black_knight
+            && self.black_pawn == other.black_king
+            && self.player == other.player
+            && self.castle_white_kingside == other.castle_white_kingside
+            && self.castle_white_queenside == other.castle_white_queenside
+            && self.castle_black_kingside == other.castle_black_kingside
+            && self.castle_black_queenside == other.castle_black_queenside
+            && self.en_passant_square == other.en_passant_square
+    }
+}
+
+impl Eq for PositionWithMeta {}
+
+impl PositionWithMeta {
+    fn empty() -> PositionWithMeta {
+        PositionWithMeta {
+            white_king: Bitboard::new(0),
+            white_queen: Bitboard::new(0),
+            white_rook: Bitboard::new(0),
+            white_bishop: Bitboard::new(0),
+            white_knight: Bitboard::new(0),
+            white_pawn: Bitboard::new(0),
+            black_king: Bitboard::new(0),
+            black_queen: Bitboard::new(0),
+            black_rook: Bitboard::new(0),
+            black_bishop: Bitboard::new(0),
+            black_knight: Bitboard::new(0),
+            black_pawn: Bitboard::new(0),
+            player: true,
+            castle_white_kingside: true,
+            castle_white_queenside: true,
+            castle_black_kingside: true,
+            castle_black_queenside: true,
+            en_passant_square: Bitboard::new(0),
+        }
+    }
+}
+
 pub struct Game {
     position: Position,
     player: bool,
     // last_move: Move,
     possible_castles: PossibleCastles,
     en_passant_square: Bitboard,
-    position_counts: Vec<String>,
+    previous_positions: Vec<PositionWithMeta>,
     move_counter: i32,
     fifty_move_counter: i32,
 }
 
 impl Game {
-    fn id(&self) -> String {
-        format!(
-            "{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}-{}",
-            self.position.white.king.str(),
-            self.position.white.queen.str(),
-            self.position.white.rook.str(),
-            self.position.white.bishop.str(),
-            self.position.white.knight.str(),
-            self.position.white.pawn.str(),
-            self.position.black.king.str(),
-            self.position.black.queen.str(),
-            self.position.black.rook.str(),
-            self.position.black.bishop.str(),
-            self.position.black.knight.str(),
-            self.position.black.pawn.str(),
-            self.player.to_string(),
-            if self.possible_castles.white_kingside {
-                "K"
-            } else {
-                ""
-            },
-            if self.possible_castles.white_queenside {
-                "Q"
-            } else {
-                ""
-            },
-            if self.possible_castles.black_kingside {
-                "k"
-            } else {
-                ""
-            },
-            if self.possible_castles.black_queenside {
-                "q"
-            } else {
-                ""
-            },
-            self.en_passant_square.str()
-        )
-    }
-
     fn make_move(&self, m: &Move) -> Game {
         let (new_position, is_capturing) = self.position.make_move(&m);
 
@@ -780,15 +921,34 @@ impl Game {
             self.fifty_move_counter + 1
         };
 
-        let mut position_counts: Vec<String>;
+        let mut previous_positions: Vec<PositionWithMeta>;
         if !(is_capturing != CapturedPiece::None
             || m.is_promoting_to.is_some()
             || m.is_castling.is_some())
         {
-            position_counts = vec![];
+            previous_positions = vec![];
         } else {
-            position_counts = self.position_counts.clone();
-            position_counts.push(self.id());
+            previous_positions = self.previous_positions.clone();
+            previous_positions.push(PositionWithMeta {
+                white_king: self.position.white.king,
+                white_queen: self.position.white.queen,
+                white_rook: self.position.white.rook,
+                white_bishop: self.position.white.bishop,
+                white_knight: self.position.white.knight,
+                white_pawn: self.position.white.pawn,
+                black_king: self.position.black.king,
+                black_queen: self.position.black.queen,
+                black_rook: self.position.black.rook,
+                black_bishop: self.position.black.bishop,
+                black_knight: self.position.black.knight,
+                black_pawn: self.position.black.pawn,
+                player: self.player,
+                castle_white_kingside: self.possible_castles.white_kingside,
+                castle_white_queenside: self.possible_castles.white_queenside,
+                castle_black_kingside: self.possible_castles.black_kingside,
+                castle_black_queenside: self.possible_castles.black_queenside,
+                en_passant_square: self.en_passant_square,
+            });
         }
 
         Game {
@@ -797,7 +957,7 @@ impl Game {
             // last_move: m,
             possible_castles,
             en_passant_square,
-            position_counts,
+            previous_positions,
             move_counter,
             fifty_move_counter,
         }
@@ -1382,15 +1542,15 @@ impl Game {
             return Some(Result::FiftyMoveRule);
         }
 
-        self.position_counts.sort();
+        self.previous_positions.sort();
         let mut count = 1;
-        let mut prev = "";
-        for id in self.position_counts.iter() {
-            if prev == id {
+        let mut prev = PositionWithMeta::empty();
+        for id in self.previous_positions.iter() {
+            if prev == *id {
                 count += 1;
             } else {
                 count = 1;
-                prev = id;
+                prev = *id;
             }
             if count >= 3 {
                 return Some(Result::Repitition);
@@ -1552,7 +1712,7 @@ pub fn game_from_fen(fen: &str) -> Game {
             black_queenside: fen_parts[2].contains("q"),
         },
         en_passant_square,
-        position_counts: vec![],
+        previous_positions: vec![],
         move_counter: fen_parts[5]
             .chars()
             .next()

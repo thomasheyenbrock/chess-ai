@@ -1,5 +1,5 @@
+use std::cmp::Ordering;
 use std::fmt;
-use std::hash;
 use std::ops;
 
 #[derive(Clone, Copy)]
@@ -124,9 +124,15 @@ impl PartialEq for Bitboard {
 
 impl Eq for Bitboard {}
 
-impl hash::Hash for Bitboard {
-    fn hash<H: hash::Hasher>(&self, state: &mut H) {
-        self.n.hash(state);
+impl Ord for Bitboard {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.n.cmp(&other.n)
+    }
+}
+
+impl PartialOrd for Bitboard {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 

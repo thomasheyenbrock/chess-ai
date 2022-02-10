@@ -1,12 +1,13 @@
+use ndarray::{Array1, Array2, Axis, ShapeError};
+use rand::Rng;
+use std::fs::File;
+use std::io::Write;
+
 use crate::{
     game::{Game, GameResult},
     policy_network::{self, PolicyNetwork},
     value_network::{self, ValueNetwork},
 };
-use ndarray::{Array1, Array2, Axis, ShapeError};
-use rand::Rng;
-use std::fs::File;
-use std::io::Write;
 
 #[derive(Debug)]
 struct Node {
@@ -104,6 +105,7 @@ fn expand(
     }
 
     let all_priors_diff = policy_nn.forward(neuronika::from_ndarray(inputs));
+    all_priors_diff.forward();
     let all_priors = all_priors_diff.data();
 
     for (i, node) in nodes.iter_mut().enumerate() {
@@ -190,6 +192,7 @@ fn iteration(
     }
 
     let values_diff = value_nn.forward(neuronika::from_ndarray(inputs));
+    values_diff.forward();
     let predicted_values = values_diff.data();
 
     let mut values: Vec<f32> = vec![];

@@ -1,14 +1,15 @@
 // TODO: calculate pinned pieces once based on the king position instead of redoing it for every piece
 
+use ndarray::{array, Array1};
+use rayon::prelude::*;
+use std::cmp::Ordering;
+
 use crate::{
     bitboard::{Bitboard, Direction},
     chess_move::{Castle, Move, MoveIndex},
     piece::{CapturedPiece, Piece, PromotionPiece},
     position::{Pieces, Position},
 };
-use ndarray::{array, Array1};
-use rayon::prelude::*;
-use std::cmp::Ordering;
 
 pub enum GameResult {
     White,

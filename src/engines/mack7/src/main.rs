@@ -5,11 +5,13 @@ mod mcts;
 mod piece;
 mod policy_network;
 mod position;
+mod train;
 mod value_network;
 
-use crate::game::Game;
 use clap::{App, Arg};
 use std::time::Instant;
+
+use crate::game::Game;
 
 fn main() {
     let matches = App::new("cheers")
@@ -37,7 +39,20 @@ fn main() {
                             Ok(_) => Ok(()),
                         })
                         .required(true),
-                ),
+                )
+        )
+        .subcommand(
+            App::new("train")
+                .about("Train value and policy networks using training data generated during self-play")
+                .arg(
+                    Arg::new("IDX")
+                        .short('i')
+                        .long("index")
+                        .help("The indices under which the training data is stores")
+                        .takes_value(true)
+                        .multiple_values(true)
+                        .required(true),
+                )
         )
         .get_matches();
 
@@ -79,6 +94,13 @@ fn main() {
 
             match mcts::run(run_index, parallel_games) {
                 Err(err) => panic!("Running MCTS failed: {:?}", err),
+                Ok(_) => {}
+            }
+        }
+        Some(("train", sub_matches)) => {
+            let run_indices: Vec<&str> = sub_matches.values_of("IDX").unwrap().collect();
+            match train::run(run_indices) {
+                Err(err) => panic!("Training failed: {:?}", err),
                 Ok(_) => {}
             }
         }

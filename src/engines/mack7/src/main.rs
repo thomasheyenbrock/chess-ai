@@ -1,8 +1,11 @@
 mod bitboard;
 mod chess_move;
 mod game;
+mod mcts;
 mod piece;
+mod policy_network;
 mod position;
+mod value_network;
 
 use crate::game::Game;
 use clap::{App, Arg};
@@ -12,6 +15,30 @@ fn main() {
     let matches = App::new("cheers")
         .about("A chess engine built in Rust that uses AI")
         .subcommand(App::new("perft").about("Run performance tests for move generation"))
+        .subcommand(
+            App::new("mcts")
+                .about("Generate training data using self-play with Monte-Carlo Tree Search")
+                .arg(
+                    Arg::new("IDX")
+                        .short('i')
+                        .long("index")
+                        .help("The index under which to store the training data")
+                        .takes_value(true)
+                        .required(true),
+                )
+                .arg(
+                    Arg::new("GAMES")
+                        .short('g')
+                        .long("games")
+                        .help("The number of parallel games to simulate")
+                        .takes_value(true)
+                        .validator(|value| match value.parse::<u8>() {
+                            Err(_) => Err("Must be an integer"),
+                            Ok(_) => Ok(()),
+                        })
+                        .required(true),
+                ),
+        )
         .get_matches();
 
     match matches.subcommand() {
@@ -41,6 +68,19 @@ fn main() {
 
             println!("Average NPS: {}", (total_nps / runs as f64) as u64);
             // To beat: 68_485_356
+        }
+        Some(("mcts", sub_matches)) => {
+            let run_index = sub_matches.value_of("IDX").unwrap().to_owned();
+            let parallel_games = sub_matches
+                .value_of("GAMES")
+                .unwrap()
+                .parse::<usize>()
+                .unwrap();
+
+            match mcts::run(run_index, parallel_games) {
+                Err(err) => panic!("Running MCTS failed: {:?}", err),
+                Ok(_) => {}
+            }
         }
         _ => unreachable!(),
     };

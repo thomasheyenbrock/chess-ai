@@ -205,10 +205,6 @@ impl Bitboard {
         Bitboard { n }
     }
 
-    pub fn str(self) -> String {
-        self.n.to_string()
-    }
-
     pub fn is_empty(self) -> bool {
         self.n == 0
     }
@@ -299,5 +295,75 @@ impl Bitboard {
             | left.get_bottom_square()
             | right.get_top_square()
             | right.get_bottom_square()
+    }
+
+    pub fn to_human(self) -> String {
+        match self.n {
+            0x8000_0000_0000_0000 => String::from("a8"),
+            0x4000_0000_0000_0000 => String::from("b8"),
+            0x2000_0000_0000_0000 => String::from("c8"),
+            0x1000_0000_0000_0000 => String::from("d8"),
+            0x0800_0000_0000_0000 => String::from("e8"),
+            0x0400_0000_0000_0000 => String::from("f8"),
+            0x0200_0000_0000_0000 => String::from("g8"),
+            0x0100_0000_0000_0000 => String::from("h8"),
+            0x0080_0000_0000_0000 => String::from("a7"),
+            0x0040_0000_0000_0000 => String::from("b7"),
+            0x0020_0000_0000_0000 => String::from("c7"),
+            0x0010_0000_0000_0000 => String::from("d7"),
+            0x0008_0000_0000_0000 => String::from("e7"),
+            0x0004_0000_0000_0000 => String::from("f7"),
+            0x0002_0000_0000_0000 => String::from("g7"),
+            0x0001_0000_0000_0000 => String::from("h7"),
+            0x0000_8000_0000_0000 => String::from("a6"),
+            0x0000_4000_0000_0000 => String::from("b6"),
+            0x0000_2000_0000_0000 => String::from("c6"),
+            0x0000_1000_0000_0000 => String::from("d6"),
+            0x0000_0800_0000_0000 => String::from("e6"),
+            0x0000_0400_0000_0000 => String::from("f6"),
+            0x0000_0200_0000_0000 => String::from("g6"),
+            0x0000_0100_0000_0000 => String::from("h6"),
+            0x0000_0080_0000_0000 => String::from("a5"),
+            0x0000_0040_0000_0000 => String::from("b5"),
+            0x0000_0020_0000_0000 => String::from("c5"),
+            0x0000_0010_0000_0000 => String::from("d5"),
+            0x0000_0008_0000_0000 => String::from("e5"),
+            0x0000_0004_0000_0000 => String::from("f5"),
+            0x0000_0002_0000_0000 => String::from("g5"),
+            0x0000_0001_0000_0000 => String::from("h5"),
+            0x0000_0000_8000_0000 => String::from("a4"),
+            0x0000_0000_4000_0000 => String::from("b4"),
+            0x0000_0000_2000_0000 => String::from("c4"),
+            0x0000_0000_1000_0000 => String::from("d4"),
+            0x0000_0000_0800_0000 => String::from("e4"),
+            0x0000_0000_0400_0000 => String::from("f4"),
+            0x0000_0000_0200_0000 => String::from("g4"),
+            0x0000_0000_0100_0000 => String::from("h4"),
+            0x0000_0000_0080_0000 => String::from("a3"),
+            0x0000_0000_0040_0000 => String::from("b3"),
+            0x0000_0000_0020_0000 => String::from("c3"),
+            0x0000_0000_0010_0000 => String::from("d3"),
+            0x0000_0000_0008_0000 => String::from("e3"),
+            0x0000_0000_0004_0000 => String::from("f3"),
+            0x0000_0000_0002_0000 => String::from("g3"),
+            0x0000_0000_0001_0000 => String::from("h3"),
+            0x0000_0000_0000_8000 => String::from("a2"),
+            0x0000_0000_0000_4000 => String::from("b2"),
+            0x0000_0000_0000_2000 => String::from("c2"),
+            0x0000_0000_0000_1000 => String::from("d2"),
+            0x0000_0000_0000_0800 => String::from("e2"),
+            0x0000_0000_0000_0400 => String::from("f2"),
+            0x0000_0000_0000_0200 => String::from("g2"),
+            0x0000_0000_0000_0100 => String::from("h2"),
+            0x0000_0000_0000_0080 => String::from("a1"),
+            0x0000_0000_0000_0040 => String::from("b1"),
+            0x0000_0000_0000_0020 => String::from("c1"),
+            0x0000_0000_0000_0010 => String::from("d1"),
+            0x0000_0000_0000_0008 => String::from("e1"),
+            0x0000_0000_0000_0004 => String::from("f1"),
+            0x0000_0000_0000_0002 => String::from("g1"),
+            0x0000_0000_0000_0001 => String::from("h1"),
+            _ => unreachable!("Bitboard contains multiple squares"),
+        }
     }
 }

@@ -4,7 +4,7 @@ use crate::{
     piece::{CapturedPiece, Piece, PromotionPiece},
 };
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Pieces {
     pub all: Bitboard,
     pub king: Bitboard,
@@ -15,7 +15,7 @@ pub struct Pieces {
     pub pawn: Bitboard,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Position {
     pub all: Bitboard,
     pub white: Pieces,

@@ -5,8 +5,9 @@ use rayon::prelude::*;
 use std::cmp::Ordering;
 
 use crate::{
-    bitboard::{Bitboard, Direction},
+    bitboard::Bitboard,
     chess_move::{Castle, Move, MoveIndex},
+    direction::Direction,
     piece::{CapturedPiece, Piece, PromotionPiece},
     position::{Pieces, Position},
 };

@@ -1,6 +1,7 @@
 use crate::{
-    bitboard::{Bitboard, Direction},
+    bitboard::Bitboard,
     chess_move::{Castle, Move},
+    direction::Direction,
     piece::{CapturedPiece, Piece, PromotionPiece},
 };
 

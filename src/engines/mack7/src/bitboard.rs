@@ -2,17 +2,7 @@ use std::cmp::Ordering;
 use std::fmt;
 use std::ops;
 
-#[derive(Clone, Copy)]
-pub enum Direction {
-    Top,
-    Bottom,
-    Left,
-    Right,
-    TopLeft,
-    TopRight,
-    BottomLeft,
-    BottomRight,
-}
+use crate::direction::Direction;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Bitboard(u64);

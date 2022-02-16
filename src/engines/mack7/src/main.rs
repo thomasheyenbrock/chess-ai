@@ -1,5 +1,6 @@
 mod bitboard;
 mod chess_move;
+mod direction;
 mod game;
 mod mcts;
 mod piece;

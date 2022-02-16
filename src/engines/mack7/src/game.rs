@@ -979,11 +979,6 @@ impl Game {
                 })
             }
 
-            let forward_square = if self.player {
-                from_square.get_top_square()
-            } else {
-                from_square.get_bottom_square()
-            };
             let en_passant_captures =
                 forward_square.get_left_square() | forward_square.get_right_square();
             to_square = en_passant_captures

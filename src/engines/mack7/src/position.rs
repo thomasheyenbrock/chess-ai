@@ -320,23 +320,19 @@ impl Position {
         } else {
             self.black.knight
         };
-        for knight in knight_pieces.into_iter() {
-            attacked |= knight.knight_moves();
-        }
+        attacked |= knight_pieces.knight_moves();
 
         let pawn_pieces = if player {
             self.white.pawn
         } else {
             self.black.pawn
         };
-        for pawn in pawn_pieces.into_iter() {
-            let forward_square = if player {
-                pawn.get_top_square()
-            } else {
-                pawn.get_bottom_square()
-            };
-            attacked |= forward_square.get_left_square() | forward_square.get_right_square();
-        }
+        let forward_square = if player {
+            pawn_pieces.get_top_square()
+        } else {
+            pawn_pieces.get_bottom_square()
+        };
+        attacked |= forward_square.get_left_square() | forward_square.get_right_square();
 
         attacked
     }

@@ -82,7 +82,7 @@ fn main() {
             }
 
             println!("Average NPS: {}", (total_nps / runs as f64) as u64);
-            // To beat: 68_485_356
+            // To beat: 148_463_968
         }
         Some(("mcts", sub_matches)) => {
             let run_index = sub_matches.value_of("IDX").unwrap().to_owned();

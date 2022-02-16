@@ -15,9 +15,7 @@ pub enum Direction {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub struct Bitboard {
-    n: u64,
-}
+pub struct Bitboard(u64);
 
 impl fmt::Display for Bitboard {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -48,89 +46,92 @@ impl fmt::Display for Bitboard {
 ┃ {} ┃ {} ┃ {} ┃ {} ┃ {} ┃ {} ┃ {} ┃ {} ┃ 1
 ┗━━━┻━━━┻━━━┻━━━┻━━━┻━━━┻━━━┻━━━┛
   A   B   C   D   E   F   G   H",
-            number_to_string(self.n & 0x8000_0000_0000_0000),
-            number_to_string(self.n & 0x4000_0000_0000_0000),
-            number_to_string(self.n & 0x2000_0000_0000_0000),
-            number_to_string(self.n & 0x1000_0000_0000_0000),
-            number_to_string(self.n & 0x0800_0000_0000_0000),
-            number_to_string(self.n & 0x0400_0000_0000_0000),
-            number_to_string(self.n & 0x0200_0000_0000_0000),
-            number_to_string(self.n & 0x0100_0000_0000_0000),
-            number_to_string(self.n & 0x0080_0000_0000_0000),
-            number_to_string(self.n & 0x0040_0000_0000_0000),
-            number_to_string(self.n & 0x0020_0000_0000_0000),
-            number_to_string(self.n & 0x0010_0000_0000_0000),
-            number_to_string(self.n & 0x0008_0000_0000_0000),
-            number_to_string(self.n & 0x0004_0000_0000_0000),
-            number_to_string(self.n & 0x0002_0000_0000_0000),
-            number_to_string(self.n & 0x0001_0000_0000_0000),
-            number_to_string(self.n & 0x0000_8000_0000_0000),
-            number_to_string(self.n & 0x0000_4000_0000_0000),
-            number_to_string(self.n & 0x0000_2000_0000_0000),
-            number_to_string(self.n & 0x0000_1000_0000_0000),
-            number_to_string(self.n & 0x0000_0800_0000_0000),
-            number_to_string(self.n & 0x0000_0400_0000_0000),
-            number_to_string(self.n & 0x0000_0200_0000_0000),
-            number_to_string(self.n & 0x0000_0100_0000_0000),
-            number_to_string(self.n & 0x0000_0080_0000_0000),
-            number_to_string(self.n & 0x0000_0040_0000_0000),
-            number_to_string(self.n & 0x0000_0020_0000_0000),
-            number_to_string(self.n & 0x0000_0010_0000_0000),
-            number_to_string(self.n & 0x0000_0008_0000_0000),
-            number_to_string(self.n & 0x0000_0004_0000_0000),
-            number_to_string(self.n & 0x0000_0002_0000_0000),
-            number_to_string(self.n & 0x0000_0001_0000_0000),
-            number_to_string(self.n & 0x0000_0000_8000_0000),
-            number_to_string(self.n & 0x0000_0000_4000_0000),
-            number_to_string(self.n & 0x0000_0000_2000_0000),
-            number_to_string(self.n & 0x0000_0000_1000_0000),
-            number_to_string(self.n & 0x0000_0000_0800_0000),
-            number_to_string(self.n & 0x0000_0000_0400_0000),
-            number_to_string(self.n & 0x0000_0000_0200_0000),
-            number_to_string(self.n & 0x0000_0000_0100_0000),
-            number_to_string(self.n & 0x0000_0000_0080_0000),
-            number_to_string(self.n & 0x0000_0000_0040_0000),
-            number_to_string(self.n & 0x0000_0000_0020_0000),
-            number_to_string(self.n & 0x0000_0000_0010_0000),
-            number_to_string(self.n & 0x0000_0000_0008_0000),
-            number_to_string(self.n & 0x0000_0000_0004_0000),
-            number_to_string(self.n & 0x0000_0000_0002_0000),
-            number_to_string(self.n & 0x0000_0000_0001_0000),
-            number_to_string(self.n & 0x0000_0000_0000_8000),
-            number_to_string(self.n & 0x0000_0000_0000_4000),
-            number_to_string(self.n & 0x0000_0000_0000_2000),
-            number_to_string(self.n & 0x0000_0000_0000_1000),
-            number_to_string(self.n & 0x0000_0000_0000_0800),
-            number_to_string(self.n & 0x0000_0000_0000_0400),
-            number_to_string(self.n & 0x0000_0000_0000_0200),
-            number_to_string(self.n & 0x0000_0000_0000_0100),
-            number_to_string(self.n & 0x0000_0000_0000_0080),
-            number_to_string(self.n & 0x0000_0000_0000_0040),
-            number_to_string(self.n & 0x0000_0000_0000_0020),
-            number_to_string(self.n & 0x0000_0000_0000_0010),
-            number_to_string(self.n & 0x0000_0000_0000_0008),
-            number_to_string(self.n & 0x0000_0000_0000_0004),
-            number_to_string(self.n & 0x0000_0000_0000_0002),
-            number_to_string(self.n & 0x0000_0000_0000_0001),
+            number_to_string(self.0 & 0x8000_0000_0000_0000),
+            number_to_string(self.0 & 0x4000_0000_0000_0000),
+            number_to_string(self.0 & 0x2000_0000_0000_0000),
+            number_to_string(self.0 & 0x1000_0000_0000_0000),
+            number_to_string(self.0 & 0x0800_0000_0000_0000),
+            number_to_string(self.0 & 0x0400_0000_0000_0000),
+            number_to_string(self.0 & 0x0200_0000_0000_0000),
+            number_to_string(self.0 & 0x0100_0000_0000_0000),
+            number_to_string(self.0 & 0x0080_0000_0000_0000),
+            number_to_string(self.0 & 0x0040_0000_0000_0000),
+            number_to_string(self.0 & 0x0020_0000_0000_0000),
+            number_to_string(self.0 & 0x0010_0000_0000_0000),
+            number_to_string(self.0 & 0x0008_0000_0000_0000),
+            number_to_string(self.0 & 0x0004_0000_0000_0000),
+            number_to_string(self.0 & 0x0002_0000_0000_0000),
+            number_to_string(self.0 & 0x0001_0000_0000_0000),
+            number_to_string(self.0 & 0x0000_8000_0000_0000),
+            number_to_string(self.0 & 0x0000_4000_0000_0000),
+            number_to_string(self.0 & 0x0000_2000_0000_0000),
+            number_to_string(self.0 & 0x0000_1000_0000_0000),
+            number_to_string(self.0 & 0x0000_0800_0000_0000),
+            number_to_string(self.0 & 0x0000_0400_0000_0000),
+            number_to_string(self.0 & 0x0000_0200_0000_0000),
+            number_to_string(self.0 & 0x0000_0100_0000_0000),
+            number_to_string(self.0 & 0x0000_0080_0000_0000),
+            number_to_string(self.0 & 0x0000_0040_0000_0000),
+            number_to_string(self.0 & 0x0000_0020_0000_0000),
+            number_to_string(self.0 & 0x0000_0010_0000_0000),
+            number_to_string(self.0 & 0x0000_0008_0000_0000),
+            number_to_string(self.0 & 0x0000_0004_0000_0000),
+            number_to_string(self.0 & 0x0000_0002_0000_0000),
+            number_to_string(self.0 & 0x0000_0001_0000_0000),
+            number_to_string(self.0 & 0x0000_0000_8000_0000),
+            number_to_string(self.0 & 0x0000_0000_4000_0000),
+            number_to_string(self.0 & 0x0000_0000_2000_0000),
+            number_to_string(self.0 & 0x0000_0000_1000_0000),
+            number_to_string(self.0 & 0x0000_0000_0800_0000),
+            number_to_string(self.0 & 0x0000_0000_0400_0000),
+            number_to_string(self.0 & 0x0000_0000_0200_0000),
+            number_to_string(self.0 & 0x0000_0000_0100_0000),
+            number_to_string(self.0 & 0x0000_0000_0080_0000),
+            number_to_string(self.0 & 0x0000_0000_0040_0000),
+            number_to_string(self.0 & 0x0000_0000_0020_0000),
+            number_to_string(self.0 & 0x0000_0000_0010_0000),
+            number_to_string(self.0 & 0x0000_0000_0008_0000),
+            number_to_string(self.0 & 0x0000_0000_0004_0000),
+            number_to_string(self.0 & 0x0000_0000_0002_0000),
+            number_to_string(self.0 & 0x0000_0000_0001_0000),
+            number_to_string(self.0 & 0x0000_0000_0000_8000),
+            number_to_string(self.0 & 0x0000_0000_0000_4000),
+            number_to_string(self.0 & 0x0000_0000_0000_2000),
+            number_to_string(self.0 & 0x0000_0000_0000_1000),
+            number_to_string(self.0 & 0x0000_0000_0000_0800),
+            number_to_string(self.0 & 0x0000_0000_0000_0400),
+            number_to_string(self.0 & 0x0000_0000_0000_0200),
+            number_to_string(self.0 & 0x0000_0000_0000_0100),
+            number_to_string(self.0 & 0x0000_0000_0000_0080),
+            number_to_string(self.0 & 0x0000_0000_0000_0040),
+            number_to_string(self.0 & 0x0000_0000_0000_0020),
+            number_to_string(self.0 & 0x0000_0000_0000_0010),
+            number_to_string(self.0 & 0x0000_0000_0000_0008),
+            number_to_string(self.0 & 0x0000_0000_0000_0004),
+            number_to_string(self.0 & 0x0000_0000_0000_0002),
+            number_to_string(self.0 & 0x0000_0000_0000_0001),
         )
     }
 }
 
 impl PartialEq for Bitboard {
+    #[inline]
     fn eq(&self, other: &Self) -> bool {
-        self.n == other.n
+        self.0 == other.0
     }
 }
 
 impl Eq for Bitboard {}
 
 impl Ord for Bitboard {
+    #[inline]
     fn cmp(&self, other: &Self) -> Ordering {
-        self.n.cmp(&other.n)
+        self.0.cmp(&other.0)
     }
 }
 
 impl PartialOrd for Bitboard {
+    #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
@@ -139,8 +140,9 @@ impl PartialOrd for Bitboard {
 impl ops::BitAnd for Bitboard {
     type Output = Self;
 
+    #[inline]
     fn bitand(mut self, rhs: Self) -> Self::Output {
-        self.n &= rhs.n;
+        self.0 &= rhs.0;
         self
     }
 }
@@ -148,8 +150,9 @@ impl ops::BitAnd for Bitboard {
 impl ops::BitOr for Bitboard {
     type Output = Self;
 
+    #[inline]
     fn bitor(mut self, rhs: Self) -> Self::Output {
-        self.n |= rhs.n;
+        self.0 |= rhs.0;
         self
     }
 }
@@ -157,21 +160,24 @@ impl ops::BitOr for Bitboard {
 impl ops::BitXor for Bitboard {
     type Output = Self;
 
+    #[inline]
     fn bitxor(mut self, rhs: Self) -> Self::Output {
-        self.n ^= rhs.n;
+        self.0 ^= rhs.0;
         self
     }
 }
 
 impl ops::BitOrAssign for Bitboard {
+    #[inline]
     fn bitor_assign(&mut self, rhs: Self) {
-        self.n |= rhs.n;
+        self.0 |= rhs.0;
     }
 }
 
 impl ops::BitXorAssign for Bitboard {
+    #[inline]
     fn bitxor_assign(&mut self, rhs: Self) {
-        self.n ^= rhs.n;
+        self.0 ^= rhs.0;
     }
 }
 
@@ -183,6 +189,7 @@ pub struct BitboardIter {
 impl Iterator for BitboardIter {
     type Item = Bitboard;
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         if self.n == 0 {
             return None;
@@ -196,61 +203,67 @@ impl Iterator for BitboardIter {
         let pow_of_2 = 1 << self.c;
         self.n ^= pow_of_2;
 
-        Some(Bitboard { n: pow_of_2 })
+        Some(Bitboard(pow_of_2))
     }
 }
 
 impl Bitboard {
+    #[inline]
     pub fn new(n: u64) -> Bitboard {
-        Bitboard { n }
+        Bitboard(n)
     }
 
+    #[inline]
     pub fn is_empty(self) -> bool {
-        self.n == 0
+        self.0 == 0
     }
 
+    #[inline]
     pub fn into_iter(self) -> BitboardIter {
-        BitboardIter { n: self.n, c: 0 }
+        BitboardIter { n: self.0, c: 0 }
     }
 
+    #[inline]
     pub fn get_left_square(self) -> Bitboard {
-        Bitboard {
-            n: (self.n & 0x7F7F_7F7F_7F7F_7F7F) << 1,
-        }
+        Bitboard((self.0 & 0x7F7F_7F7F_7F7F_7F7F) << 1)
     }
 
+    #[inline]
     pub fn get_right_square(self) -> Bitboard {
-        Bitboard {
-            n: (self.n & 0xFEFE_FEFE_FEFE_FEFE) >> 1,
-        }
+        Bitboard((self.0 & 0xFEFE_FEFE_FEFE_FEFE) >> 1)
     }
 
+    #[inline]
     pub fn get_top_square(self) -> Bitboard {
-        Bitboard {
-            n: (self.n << 8) & 0xFFFF_FFFF_FFFF_FFFF,
-        }
+        Bitboard((self.0 << 8) & 0xFFFF_FFFF_FFFF_FFFF)
     }
 
+    #[inline]
     pub fn get_bottom_square(self) -> Bitboard {
-        Bitboard { n: self.n >> 8 }
+        Bitboard(self.0 >> 8)
     }
 
+    #[inline]
     pub fn get_top_left_square(self) -> Bitboard {
         self.get_top_square().get_left_square()
     }
 
+    #[inline]
     pub fn get_top_right_square(self) -> Bitboard {
         self.get_top_square().get_right_square()
     }
 
+    #[inline]
     pub fn get_bottom_left_square(self) -> Bitboard {
         self.get_bottom_square().get_left_square()
     }
 
+    #[inline]
     pub fn get_bottom_right_square(self) -> Bitboard {
         self.get_bottom_square().get_right_square()
     }
 
+    #[inline]
     pub fn get_square_in_direction(self, direction: Direction) -> Bitboard {
         match direction {
             Direction::Top => self.get_top_square(),
@@ -264,10 +277,12 @@ impl Bitboard {
         }
     }
 
+    #[inline]
     pub fn count_ones(self) -> u32 {
-        self.n.count_ones()
+        self.0.count_ones()
     }
 
+    #[inline]
     pub fn king_moves(self) -> Bitboard {
         let top = self.get_top_square();
         let bottom = self.get_bottom_square();
@@ -282,6 +297,7 @@ impl Bitboard {
             | right
     }
 
+    #[inline]
     pub fn knight_moves(self) -> Bitboard {
         let top = self.get_top_square().get_top_square();
         let bottom = self.get_bottom_square().get_bottom_square();
@@ -297,8 +313,9 @@ impl Bitboard {
             | right.get_bottom_square()
     }
 
+    #[inline]
     pub fn to_human(self) -> String {
-        match self.n {
+        match self.0 {
             0x8000_0000_0000_0000 => String::from("a8"),
             0x4000_0000_0000_0000 => String::from("b8"),
             0x2000_0000_0000_0000 => String::from("c8"),

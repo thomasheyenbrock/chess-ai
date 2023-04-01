@@ -263,43 +263,6 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn from_game(game: &Game) -> Game {
-        let mut previous_positions = vec![];
-        for position in &game.previous_positions {
-            previous_positions.push(position.clone());
-        }
-        Game {
-            position: Position {
-                all: game.position.all,
-                white: Pieces {
-                    all: game.position.white.all,
-                    king: game.position.white.king,
-                    queen: game.position.white.queen,
-                    rook: game.position.white.rook,
-                    bishop: game.position.white.bishop,
-                    knight: game.position.white.knight,
-                    pawn: game.position.white.pawn,
-                },
-                black: Pieces {
-                    all: game.position.black.all,
-                    king: game.position.black.king,
-                    queen: game.position.black.queen,
-                    rook: game.position.black.rook,
-                    bishop: game.position.black.bishop,
-                    knight: game.position.black.knight,
-                    pawn: game.position.black.pawn,
-                },
-            },
-            player: game.player,
-            last_move: game.last_move,
-            possible_castles: game.possible_castles,
-            en_passant_square: game.en_passant_square,
-            previous_positions,
-            move_counter: game.move_counter,
-            fifty_move_counter: game.fifty_move_counter,
-        }
-    }
-
     pub fn from_fen(fen: &str) -> Game {
         let fen_parts: Vec<&str> = fen.split(" ").collect();
         let mut position = Position {

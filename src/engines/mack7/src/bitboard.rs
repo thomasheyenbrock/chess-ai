@@ -267,6 +267,10 @@ impl Bitboard {
         }
     }
 
+    pub const EMPTY: Bitboard = Bitboard(0);
+
+    pub const ALL: Bitboard = Bitboard(0xFFFF_FFFF_FFFF_FFFF);
+
     #[inline]
     pub fn count_ones(self) -> u32 {
         self.0.count_ones()

@@ -26,7 +26,7 @@ fn get_moves_in_direction(
     square: Bitboard,
     direction: Direction,
 ) -> Bitboard {
-    let mut moves = Bitboard::new(0);
+    let mut moves = Bitboard::EMPTY;
     let mut running = square.get_square_in_direction(direction);
 
     while !running.is_empty() {
@@ -35,9 +35,9 @@ fn get_moves_in_direction(
             running = running.get_square_in_direction(direction);
         } else if !(enemy_pieces & running).is_empty() {
             moves |= running;
-            running = Bitboard::new(0);
+            running = Bitboard::EMPTY;
         } else {
-            running = Bitboard::new(0);
+            running = Bitboard::EMPTY;
         }
     }
 
@@ -228,24 +228,24 @@ impl Eq for PositionWithMeta {}
 impl PositionWithMeta {
     fn empty() -> PositionWithMeta {
         PositionWithMeta {
-            white_king: Bitboard::new(0),
-            white_queen: Bitboard::new(0),
-            white_rook: Bitboard::new(0),
-            white_bishop: Bitboard::new(0),
-            white_knight: Bitboard::new(0),
-            white_pawn: Bitboard::new(0),
-            black_king: Bitboard::new(0),
-            black_queen: Bitboard::new(0),
-            black_rook: Bitboard::new(0),
-            black_bishop: Bitboard::new(0),
-            black_knight: Bitboard::new(0),
-            black_pawn: Bitboard::new(0),
+            white_king: Bitboard::EMPTY,
+            white_queen: Bitboard::EMPTY,
+            white_rook: Bitboard::EMPTY,
+            white_bishop: Bitboard::EMPTY,
+            white_knight: Bitboard::EMPTY,
+            white_pawn: Bitboard::EMPTY,
+            black_king: Bitboard::EMPTY,
+            black_queen: Bitboard::EMPTY,
+            black_rook: Bitboard::EMPTY,
+            black_bishop: Bitboard::EMPTY,
+            black_knight: Bitboard::EMPTY,
+            black_pawn: Bitboard::EMPTY,
             player: true,
             castle_white_kingside: true,
             castle_white_queenside: true,
             castle_black_kingside: true,
             castle_black_queenside: true,
-            en_passant_square: Bitboard::new(0),
+            en_passant_square: Bitboard::EMPTY,
         }
     }
 }
@@ -266,24 +266,24 @@ impl Game {
     pub fn from_fen(fen: &str) -> Game {
         let fen_parts: Vec<&str> = fen.split(" ").collect();
         let mut position = Position {
-            all: Bitboard::new(0),
+            all: Bitboard::EMPTY,
             white: Pieces {
-                all: Bitboard::new(0),
-                king: Bitboard::new(0),
-                queen: Bitboard::new(0),
-                rook: Bitboard::new(0),
-                bishop: Bitboard::new(0),
-                knight: Bitboard::new(0),
-                pawn: Bitboard::new(0),
+                all: Bitboard::EMPTY,
+                king: Bitboard::EMPTY,
+                queen: Bitboard::EMPTY,
+                rook: Bitboard::EMPTY,
+                bishop: Bitboard::EMPTY,
+                knight: Bitboard::EMPTY,
+                pawn: Bitboard::EMPTY,
             },
             black: Pieces {
-                all: Bitboard::new(0),
-                king: Bitboard::new(0),
-                queen: Bitboard::new(0),
-                rook: Bitboard::new(0),
-                bishop: Bitboard::new(0),
-                knight: Bitboard::new(0),
-                pawn: Bitboard::new(0),
+                all: Bitboard::EMPTY,
+                king: Bitboard::EMPTY,
+                queen: Bitboard::EMPTY,
+                rook: Bitboard::EMPTY,
+                bishop: Bitboard::EMPTY,
+                knight: Bitboard::EMPTY,
+                pawn: Bitboard::EMPTY,
             },
         };
 
@@ -387,7 +387,7 @@ impl Game {
             "f1" => Bitboard::new(0x0000_0000_0000_0004),
             "g1" => Bitboard::new(0x0000_0000_0000_0002),
             "h1" => Bitboard::new(0x0000_0000_0000_0001),
-            _ => Bitboard::new(0x0000_0000_0000_0000),
+            _ => Bitboard::EMPTY,
         };
 
         return Game {
@@ -523,7 +523,7 @@ impl Game {
                 piece: Piece::Pawn,
                 from_square,
                 to_square,
-                en_passant_square: Bitboard::new(0),
+                en_passant_square: Bitboard::EMPTY,
                 is_capturing_en_passant: false,
                 is_castling: None,
                 is_promoting_to: Some(PromotionPiece::Queen),
@@ -533,7 +533,7 @@ impl Game {
                 piece: Piece::Pawn,
                 from_square,
                 to_square,
-                en_passant_square: Bitboard::new(0),
+                en_passant_square: Bitboard::EMPTY,
                 is_capturing_en_passant: false,
                 is_castling: None,
                 is_promoting_to: Some(PromotionPiece::Rook),
@@ -543,7 +543,7 @@ impl Game {
                 piece: Piece::Pawn,
                 from_square,
                 to_square,
-                en_passant_square: Bitboard::new(0),
+                en_passant_square: Bitboard::EMPTY,
                 is_capturing_en_passant: false,
                 is_castling: None,
                 is_promoting_to: Some(PromotionPiece::Bishop),
@@ -553,7 +553,7 @@ impl Game {
                 piece: Piece::Pawn,
                 from_square,
                 to_square,
-                en_passant_square: Bitboard::new(0),
+                en_passant_square: Bitboard::EMPTY,
                 is_capturing_en_passant: false,
                 is_castling: None,
                 is_promoting_to: Some(PromotionPiece::Knight),
@@ -564,7 +564,7 @@ impl Game {
                 piece: Piece::Pawn,
                 from_square,
                 to_square,
-                en_passant_square: Bitboard::new(0),
+                en_passant_square: Bitboard::EMPTY,
                 is_capturing_en_passant: false,
                 is_castling: None,
                 is_promoting_to: None,
@@ -587,7 +587,7 @@ impl Game {
         } else {
             self.position.white.all
         };
-        let empty_squares = Bitboard::new(0xFFFF_FFFF_FFFF_FFFF) ^ self.position.all;
+        let empty_squares = Bitboard::ALL ^ self.position.all;
         let attacked_squares = self.position.attacked_squares(!self.player);
 
         let king = if self.player {
@@ -595,8 +595,7 @@ impl Game {
         } else {
             self.position.black.king
         };
-        let mut king_moves =
-            king.king_moves() & (Bitboard::new(0xFFFF_FFFF_FFFF_FFFF) ^ attacked_squares);
+        let mut king_moves = king.king_moves() & (Bitboard::ALL ^ attacked_squares);
         king_moves = king_moves ^ (king_moves & friendly_pieces);
         for to_square in king_moves.into_iter() {
             result.push(Move {
@@ -604,7 +603,7 @@ impl Game {
                 piece: Piece::King,
                 from_square: king,
                 to_square,
-                en_passant_square: Bitboard::new(0),
+                en_passant_square: Bitboard::EMPTY,
                 is_capturing_en_passant: false,
                 is_castling: None,
                 is_promoting_to: None,
@@ -619,8 +618,8 @@ impl Game {
             return result;
         }
 
-        let mut capture_mask = Bitboard::new(0xFFFF_FFFF_FFFF_FFFF);
-        let mut push_mask = Bitboard::new(0xFFFF_FFFF_FFFF_FFFF);
+        let mut capture_mask = Bitboard::ALL;
+        let mut push_mask = Bitboard::ALL;
         if number_of_attackers == 1 {
             capture_mask = attackers;
 
@@ -636,7 +635,7 @@ impl Game {
             };
             if (!(attackers & knight).is_empty()) || (!(attackers & pawn).is_empty()) {
                 // checked by knight or pawn, this can't be blocked
-                push_mask = Bitboard::new(0);
+                push_mask = Bitboard::EMPTY;
             } else {
                 push_mask =
                     self.position
@@ -720,7 +719,7 @@ impl Game {
                     piece: Piece::Queen,
                     from_square,
                     to_square,
-                    en_passant_square: Bitboard::new(0),
+                    en_passant_square: Bitboard::EMPTY,
                     is_capturing_en_passant: false,
                     is_castling: None,
                     is_promoting_to: None,
@@ -748,7 +747,7 @@ impl Game {
                     piece: Piece::Rook,
                     from_square,
                     to_square,
-                    en_passant_square: Bitboard::new(0),
+                    en_passant_square: Bitboard::EMPTY,
                     is_capturing_en_passant: false,
                     is_castling: None,
                     is_promoting_to: None,
@@ -776,7 +775,7 @@ impl Game {
                     piece: Piece::Bishop,
                     from_square,
                     to_square,
-                    en_passant_square: Bitboard::new(0),
+                    en_passant_square: Bitboard::EMPTY,
                     is_capturing_en_passant: false,
                     is_castling: None,
                     is_promoting_to: None,
@@ -806,7 +805,7 @@ impl Game {
                     piece: Piece::Knight,
                     from_square,
                     to_square,
-                    en_passant_square: Bitboard::new(0),
+                    en_passant_square: Bitboard::EMPTY,
                     is_capturing_en_passant: false,
                     is_castling: None,
                     is_promoting_to: None,
@@ -849,7 +848,7 @@ impl Game {
                         piece: Piece::Pawn,
                         from_square,
                         to_square,
-                        en_passant_square: Bitboard::new(0),
+                        en_passant_square: Bitboard::EMPTY,
                         is_capturing_en_passant: false,
                         is_castling: None,
                         is_promoting_to: Some(PromotionPiece::Queen),
@@ -859,7 +858,7 @@ impl Game {
                         piece: Piece::Pawn,
                         from_square,
                         to_square,
-                        en_passant_square: Bitboard::new(0),
+                        en_passant_square: Bitboard::EMPTY,
                         is_capturing_en_passant: false,
                         is_castling: None,
                         is_promoting_to: Some(PromotionPiece::Rook),
@@ -869,7 +868,7 @@ impl Game {
                         piece: Piece::Pawn,
                         from_square,
                         to_square,
-                        en_passant_square: Bitboard::new(0),
+                        en_passant_square: Bitboard::EMPTY,
                         is_capturing_en_passant: false,
                         is_castling: None,
                         is_promoting_to: Some(PromotionPiece::Bishop),
@@ -879,7 +878,7 @@ impl Game {
                         piece: Piece::Pawn,
                         from_square,
                         to_square,
-                        en_passant_square: Bitboard::new(0),
+                        en_passant_square: Bitboard::EMPTY,
                         is_capturing_en_passant: false,
                         is_castling: None,
                         is_promoting_to: Some(PromotionPiece::Knight),
@@ -890,7 +889,7 @@ impl Game {
                         piece: Piece::Pawn,
                         from_square,
                         to_square,
-                        en_passant_square: Bitboard::new(0),
+                        en_passant_square: Bitboard::EMPTY,
                         is_capturing_en_passant: false,
                         is_castling: None,
                         is_promoting_to: None,
@@ -958,7 +957,7 @@ impl Game {
                     piece: Piece::Pawn,
                     from_square,
                     to_square,
-                    en_passant_square: Bitboard::new(0),
+                    en_passant_square: Bitboard::EMPTY,
                     is_capturing_en_passant: true,
                     is_castling: None,
                     is_promoting_to: None,
@@ -1004,7 +1003,7 @@ impl Game {
                 } else {
                     Bitboard::new(0x0200_0000_0000_0000)
                 },
-                en_passant_square: Bitboard::new(0),
+                en_passant_square: Bitboard::EMPTY,
                 is_capturing_en_passant: false,
                 is_castling: Some(Castle::Kingside),
                 is_promoting_to: None,
@@ -1046,7 +1045,7 @@ impl Game {
                 } else {
                     Bitboard::new(0x2000_0000_0000_0000)
                 },
-                en_passant_square: Bitboard::new(0),
+                en_passant_square: Bitboard::EMPTY,
                 is_capturing_en_passant: false,
                 is_castling: Some(Castle::Queenside),
                 is_promoting_to: None,

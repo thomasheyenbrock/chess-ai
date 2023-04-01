@@ -193,17 +193,17 @@ impl Position {
         pieces: Bitboard,
         direction: Direction,
     ) -> Bitboard {
-        let mut attackers = Bitboard::new(0);
+        let mut attackers = Bitboard::EMPTY;
         let mut running = square.get_square_in_direction(direction);
 
         while !running.is_empty() {
             if !(pieces & running).is_empty() {
                 attackers |= running;
-                running = Bitboard::new(0);
+                running = Bitboard::EMPTY;
             } else if (self.all & running).is_empty() {
                 running = running.get_square_in_direction(direction);
             } else {
-                running = Bitboard::new(0);
+                running = Bitboard::EMPTY;
             }
         }
 
@@ -244,7 +244,7 @@ impl Position {
         all_pieces: Bitboard,
         direction: Direction,
     ) -> Bitboard {
-        let mut attacked_squares = Bitboard::new(0);
+        let mut attacked_squares = Bitboard::EMPTY;
         let mut running = square.get_square_in_direction(direction);
 
         while !running.is_empty() {
@@ -252,7 +252,7 @@ impl Position {
             running = if (all_pieces & running).is_empty() {
                 running.get_square_in_direction(direction)
             } else {
-                Bitboard::new(0)
+                Bitboard::EMPTY
             };
         }
 
@@ -364,7 +364,7 @@ impl Position {
             Direction::BottomLeft => Direction::TopRight,
             Direction::BottomRight => Direction::TopLeft,
         };
-        let mut moves = Bitboard::new(0);
+        let mut moves = Bitboard::EMPTY;
         let mut running = square.get_square_in_direction(direction);
         let mut found_king = false;
         let mut found_attacker = false;
@@ -372,11 +372,11 @@ impl Position {
         while !running.is_empty() {
             if !(king & running).is_empty() {
                 found_king = true;
-                running = Bitboard::new(0);
+                running = Bitboard::EMPTY;
             } else if !(attackers & running).is_empty() {
                 found_attacker = true;
                 moves |= running;
-                running = Bitboard::new(0);
+                running = Bitboard::EMPTY;
             } else if (self.all & running).is_empty() {
                 moves |= running;
                 running = running.get_square_in_direction(direction);
@@ -457,7 +457,7 @@ impl Position {
             None => {}
         }
 
-        Bitboard::new(0xFFFF_FFFF_FFFF_FFFF)
+        Bitboard::ALL
     }
 
     pub fn get_push_squares_in_direction(
@@ -466,7 +466,7 @@ impl Position {
         attackers: Bitboard,
         direction: Direction,
     ) -> Bitboard {
-        let mut moves = Bitboard::new(0);
+        let mut moves = Bitboard::EMPTY;
         let mut running = square.get_square_in_direction(direction);
 
         while !running.is_empty() {
@@ -478,7 +478,7 @@ impl Position {
             }
         }
 
-        Bitboard::new(0)
+        Bitboard::EMPTY
     }
 
     pub fn is_dead(self) -> bool {

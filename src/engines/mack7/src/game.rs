@@ -819,8 +819,6 @@ impl Game {
             self.position.black.pawn
         };
         for from_square in pawn.into_iter() {
-            let mut to_square: Bitboard;
-
             let pinned_movement = self.position.pinned_movement(
                 from_square,
                 king,
@@ -835,7 +833,7 @@ impl Game {
             };
 
             // Pawn single moves
-            to_square = forward_square & empty_squares & pinned_movement & push_mask;
+            let to_square = forward_square & empty_squares & pinned_movement & push_mask;
             if !to_square.is_empty() {
                 let promotion_squares = if player {
                     Bitboard::new(0xFF00_0000_0000_0000)
@@ -915,7 +913,7 @@ impl Game {
             } else {
                 (forward_square & Bitboard::new(0x0000_FF00_0000_0000)).get_bottom_square()
             };
-            to_square = double_forward_square
+            let to_square = double_forward_square
                 & empty_squares
                 & (if player {
                     empty_squares.get_top_square()
@@ -943,7 +941,7 @@ impl Game {
 
             let en_passant_captures =
                 forward_square.get_left_square() | forward_square.get_right_square();
-            to_square = en_passant_captures
+            let to_square = en_passant_captures
                 & self.en_passant_square
                 & pinned_movement
                 & (if player {

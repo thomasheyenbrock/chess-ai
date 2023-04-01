@@ -2011,7 +2011,7 @@ impl Game {
 }
 
 #[cfg(test)]
-mod lexer {
+mod tests {
     use super::*;
 
     #[test]

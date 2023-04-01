@@ -574,23 +574,23 @@ impl Game {
         result
     }
 
-    pub fn legal_moves(&self) -> Vec<Move> {
+    pub fn legal_moves(&self, player: bool) -> Vec<Move> {
         let mut result: Vec<Move> = vec![];
 
-        let friendly_pieces = if self.player {
+        let friendly_pieces = if player {
             self.position.white.all
         } else {
             self.position.black.all
         };
-        let enemy_pieces = if self.player {
+        let enemy_pieces = if player {
             self.position.black.all
         } else {
             self.position.white.all
         };
         let empty_squares = Bitboard::ALL ^ self.position.all;
-        let attacked_squares = self.position.attacked_squares(!self.player);
+        let attacked_squares = self.position.attacked_squares(!player);
 
-        let king = if self.player {
+        let king = if player {
             self.position.white.king
         } else {
             self.position.black.king
@@ -599,7 +599,7 @@ impl Game {
         king_moves = king_moves ^ (king_moves & friendly_pieces);
         for to_square in king_moves.into_iter() {
             result.push(Move {
-                player: self.player,
+                player,
                 piece: Piece::King,
                 from_square: king,
                 to_square,
@@ -610,7 +610,7 @@ impl Game {
             })
         }
 
-        let attackers = self.position.attackers(!self.player, king);
+        let attackers = self.position.attackers(!player, king);
 
         let number_of_attackers = attackers.count_ones();
         if number_of_attackers > 1 {
@@ -623,12 +623,12 @@ impl Game {
         if number_of_attackers == 1 {
             capture_mask = attackers;
 
-            let knight = if self.player {
+            let knight = if player {
                 self.position.black.knight
             } else {
                 self.position.white.knight
             };
-            let pawn = if self.player {
+            let pawn = if player {
                 self.position.black.pawn
             } else {
                 self.position.white.pawn
@@ -680,25 +680,25 @@ impl Game {
 
         let capture_or_push_mask = capture_mask | push_mask;
 
-        let enemy_queens = if self.player {
+        let enemy_queens = if player {
             self.position.black.queen
         } else {
             self.position.white.queen
         };
         let enemy_queens_and_rooks = enemy_queens
-            | (if self.player {
+            | (if player {
                 self.position.black.rook
             } else {
                 self.position.white.rook
             });
         let enemy_queens_and_bishops = enemy_queens
-            | (if self.player {
+            | (if player {
                 self.position.black.bishop
             } else {
                 self.position.white.bishop
             });
 
-        let queen = if self.player {
+        let queen = if player {
             self.position.white.queen
         } else {
             self.position.black.queen
@@ -715,7 +715,7 @@ impl Game {
                 );
             for to_square in moveable_squares.into_iter() {
                 result.push(Move {
-                    player: self.player,
+                    player,
                     piece: Piece::Queen,
                     from_square,
                     to_square,
@@ -727,7 +727,7 @@ impl Game {
             }
         }
 
-        let rook = if self.player {
+        let rook = if player {
             self.position.white.rook
         } else {
             self.position.black.rook
@@ -743,7 +743,7 @@ impl Game {
                 );
             for to_square in moveable_squares.into_iter() {
                 result.push(Move {
-                    player: self.player,
+                    player,
                     piece: Piece::Rook,
                     from_square,
                     to_square,
@@ -755,7 +755,7 @@ impl Game {
             }
         }
 
-        let bishop = if self.player {
+        let bishop = if player {
             self.position.white.bishop
         } else {
             self.position.black.bishop
@@ -771,7 +771,7 @@ impl Game {
                 );
             for to_square in moveable_squares.into_iter() {
                 result.push(Move {
-                    player: self.player,
+                    player,
                     piece: Piece::Bishop,
                     from_square,
                     to_square,
@@ -783,7 +783,7 @@ impl Game {
             }
         }
 
-        let knight = if self.player {
+        let knight = if player {
             self.position.white.knight
         } else {
             self.position.black.knight
@@ -801,7 +801,7 @@ impl Game {
                 );
             for to_square in moveable_squares.into_iter() {
                 result.push(Move {
-                    player: self.player,
+                    player,
                     piece: Piece::Knight,
                     from_square,
                     to_square,
@@ -813,7 +813,7 @@ impl Game {
             }
         }
 
-        let pawn = if self.player {
+        let pawn = if player {
             self.position.white.pawn
         } else {
             self.position.black.pawn
@@ -828,7 +828,7 @@ impl Game {
                 enemy_queens_and_bishops,
             );
 
-            let forward_square = if self.player {
+            let forward_square = if player {
                 from_square.get_top_square()
             } else {
                 from_square.get_bottom_square()
@@ -837,14 +837,14 @@ impl Game {
             // Pawn single moves
             to_square = forward_square & empty_squares & pinned_movement & push_mask;
             if !to_square.is_empty() {
-                let promotion_squares = if self.player {
+                let promotion_squares = if player {
                     Bitboard::new(0xFF00_0000_0000_0000)
                 } else {
                     Bitboard::new(0x0000_0000_0000_00FF)
                 };
                 if !(to_square & promotion_squares).is_empty() {
                     result.push(Move {
-                        player: self.player,
+                        player,
                         piece: Piece::Pawn,
                         from_square,
                         to_square,
@@ -854,7 +854,7 @@ impl Game {
                         is_promoting_to: Some(PromotionPiece::Queen),
                     });
                     result.push(Move {
-                        player: self.player,
+                        player,
                         piece: Piece::Pawn,
                         from_square,
                         to_square,
@@ -864,7 +864,7 @@ impl Game {
                         is_promoting_to: Some(PromotionPiece::Rook),
                     });
                     result.push(Move {
-                        player: self.player,
+                        player,
                         piece: Piece::Pawn,
                         from_square,
                         to_square,
@@ -874,7 +874,7 @@ impl Game {
                         is_promoting_to: Some(PromotionPiece::Bishop),
                     });
                     result.push(Move {
-                        player: self.player,
+                        player,
                         piece: Piece::Pawn,
                         from_square,
                         to_square,
@@ -885,7 +885,7 @@ impl Game {
                     });
                 } else {
                     result.push(Move {
-                        player: self.player,
+                        player,
                         piece: Piece::Pawn,
                         from_square,
                         to_square,
@@ -910,14 +910,14 @@ impl Game {
             }
 
             // Pawn double moves
-            let double_forward_square = if self.player {
+            let double_forward_square = if player {
                 (forward_square & Bitboard::new(0x0000_0000_00FF_0000)).get_top_square()
             } else {
                 (forward_square & Bitboard::new(0x0000_FF00_0000_0000)).get_bottom_square()
             };
             to_square = double_forward_square
                 & empty_squares
-                & (if self.player {
+                & (if player {
                     empty_squares.get_top_square()
                 } else {
                     empty_squares.get_bottom_square()
@@ -926,11 +926,11 @@ impl Game {
                 & push_mask;
             if !to_square.is_empty() {
                 result.push(Move {
-                    player: self.player,
+                    player,
                     piece: Piece::Pawn,
                     from_square,
                     to_square,
-                    en_passant_square: (if self.player {
+                    en_passant_square: (if player {
                         to_square.get_bottom_square()
                     } else {
                         to_square.get_top_square()
@@ -946,14 +946,14 @@ impl Game {
             to_square = en_passant_captures
                 & self.en_passant_square
                 & pinned_movement
-                & (if self.player {
+                & (if player {
                     capture_mask.get_top_square()
                 } else {
                     capture_mask.get_bottom_square()
                 });
             if !to_square.is_empty() {
                 let m = Move {
-                    player: self.player,
+                    player,
                     piece: Piece::Pawn,
                     from_square,
                     to_square,
@@ -963,25 +963,25 @@ impl Game {
                     is_promoting_to: None,
                 };
                 let position = self.position.make_move(&m).0;
-                if !position.is_check(self.player) {
+                if !position.is_check(player) {
                     result.push(m);
                 }
             }
         }
 
-        let kingside_castle = if self.player {
+        let kingside_castle = if player {
             self.possible_castles.white_kingside
         } else {
             self.possible_castles.black_kingside
         };
         let kingside_squares_between = self.position.all
-            & (if self.player {
+            & (if player {
                 Bitboard::new(0x0000_0000_0000_0006)
             } else {
                 Bitboard::new(0x0600_0000_0000_0000)
             });
         let kingside_attacks = attacked_squares
-            & (if self.player {
+            & (if player {
                 Bitboard::new(0x0000_0000_0000_000E)
             } else {
                 Bitboard::new(0x0E00_0000_0000_0000)
@@ -991,14 +991,14 @@ impl Game {
 
         if can_castle_kingside {
             result.push(Move {
-                player: self.player,
+                player,
                 piece: Piece::King,
-                from_square: if self.player {
+                from_square: if player {
                     Bitboard::new(0x0000_0000_0000_0008)
                 } else {
                     Bitboard::new(0x0800_0000_0000_0000)
                 },
-                to_square: if self.player {
+                to_square: if player {
                     Bitboard::new(0x0000_0000_0000_0002)
                 } else {
                     Bitboard::new(0x0200_0000_0000_0000)
@@ -1010,19 +1010,19 @@ impl Game {
             })
         }
 
-        let queenside_castle = if self.player {
+        let queenside_castle = if player {
             self.possible_castles.white_queenside
         } else {
             self.possible_castles.black_queenside
         };
         let queenside_squares_between = self.position.all
-            & (if self.player {
+            & (if player {
                 Bitboard::new(0x0000_0000_0000_0070)
             } else {
                 Bitboard::new(0x7000_0000_0000_0000)
             });
         let queenside_attacks = attacked_squares
-            & (if self.player {
+            & (if player {
                 Bitboard::new(0x0000_0000_0000_0038)
             } else {
                 Bitboard::new(0x3800_0000_0000_0000)
@@ -1033,14 +1033,14 @@ impl Game {
 
         if can_castle_queenside {
             result.push(Move {
-                player: self.player,
+                player,
                 piece: Piece::King,
-                from_square: if self.player {
+                from_square: if player {
                     Bitboard::new(0x0000_0000_0000_0008)
                 } else {
                     Bitboard::new(0x0800_0000_0000_0000)
                 },
-                to_square: if self.player {
+                to_square: if player {
                     Bitboard::new(0x0000_0000_0000_0020)
                 } else {
                     Bitboard::new(0x2000_0000_0000_0000)
@@ -1060,14 +1060,14 @@ impl Game {
             return 1;
         }
 
-        self.legal_moves()
+        self.legal_moves(self.player)
             .par_iter()
             .map(|m| self.make_move(m, false).count_legal_moves(depth - 1))
             .sum()
     }
 
     pub fn result(&mut self) -> Option<GameResult> {
-        let legal_moves = self.legal_moves().len();
+        let legal_moves = self.legal_moves(self.player).len();
         if legal_moves == 0 {
             if self.position.is_check(self.player) {
                 return if self.player {

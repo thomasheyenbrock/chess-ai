@@ -1,10 +1,11 @@
 use std::cmp::Ordering;
 use std::fmt;
 use std::ops;
+use std::ops::Shl;
 
 use crate::direction::Direction;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Bitboard(u64);
 
 impl fmt::Display for Bitboard {
@@ -104,15 +105,6 @@ impl fmt::Display for Bitboard {
     }
 }
 
-impl PartialEq for Bitboard {
-    #[inline]
-    fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0
-    }
-}
-
-impl Eq for Bitboard {}
-
 impl Ord for Bitboard {
     #[inline]
     fn cmp(&self, other: &Self) -> Ordering {
@@ -168,6 +160,28 @@ impl ops::BitXorAssign for Bitboard {
     #[inline]
     fn bitxor_assign(&mut self, rhs: Self) {
         self.0 ^= rhs.0;
+    }
+}
+
+impl Shl for Bitboard {
+    type Output = Self;
+
+    fn shl(self, rhs: Self) -> Self::Output {
+        Bitboard(self.0 << rhs.0)
+    }
+}
+
+impl ops::ShlAssign for Bitboard {
+    #[inline]
+    fn shl_assign(&mut self, rhs: Self) {
+        self.0 <<= rhs.0;
+    }
+}
+
+impl ops::ShrAssign for Bitboard {
+    #[inline]
+    fn shr_assign(&mut self, rhs: Self) {
+        self.0 >>= rhs.0;
     }
 }
 

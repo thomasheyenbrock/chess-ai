@@ -18,7 +18,7 @@ pub enum CapturedPiece {
     None,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum PromotionPiece {
     Queen,
     Rook,

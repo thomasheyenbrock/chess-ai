@@ -1064,6 +1064,17 @@ impl Game {
             .sum()
     }
 
+    pub fn count_legal_moves2(&self, depth: u64) -> u64 {
+        if depth == 0 {
+            return 1;
+        }
+
+        LegalMoves::new(self)
+            .par_bridge()
+            .map(|m| self.make_move(&m, false).count_legal_moves2(depth - 1))
+            .sum()
+    }
+
     pub fn result(&mut self) -> Option<GameResult> {
         let legal_moves = self.legal_moves(self.player).len();
         if legal_moves == 0 {
@@ -1104,6 +1115,635 @@ impl Game {
     }
 }
 
+#[derive(Clone, Eq, PartialEq)]
+enum PieceMove {
+    King,
+    Queen,
+    Rook,
+    Bishop,
+    Knight,
+    PawnSingleMove,
+    PawnAttack,
+    PawnDoubleMove,
+    PawnEnPassant,
+    KingsideCastle,
+    QueensideCastle,
+}
+
+impl Into<Piece> for PieceMove {
+    fn into(self) -> Piece {
+        match self {
+            PieceMove::King | PieceMove::KingsideCastle | PieceMove::QueensideCastle => Piece::King,
+            PieceMove::Queen => Piece::Queen,
+            PieceMove::Rook => Piece::Rook,
+            PieceMove::Bishop => Piece::Bishop,
+            PieceMove::Knight => Piece::Knight,
+            PieceMove::PawnSingleMove
+            | PieceMove::PawnAttack
+            | PieceMove::PawnDoubleMove
+            | PieceMove::PawnEnPassant => Piece::Pawn,
+        }
+    }
+}
+
+impl Into<Option<Castle>> for PieceMove {
+    fn into(self) -> Option<Castle> {
+        match self {
+            PieceMove::KingsideCastle => Some(Castle::Kingside),
+            PieceMove::QueensideCastle => Some(Castle::Queenside),
+            _ => None,
+        }
+    }
+}
+
+struct LegalMoves {
+    player: bool,
+    position: Position,
+    en_passant_square: Bitboard,
+    possible_castles: PossibleCastles,
+
+    friendly_pieces: Bitboard,
+    enemy_pieces: Bitboard,
+    empty_squares: Bitboard,
+    attacked_squares: Bitboard,
+    attackers: Bitboard,
+    capture_mask: Bitboard,
+    push_mask: Bitboard,
+    capture_or_push_mask: Bitboard,
+    king: Bitboard,
+    enemy_queens_and_rooks: Bitboard,
+    enemy_queens_and_bishops: Bitboard,
+
+    current_piece: (Bitboard, u8, PieceMove),
+    current_from: Bitboard,
+
+    current_moves: (Bitboard, u8),
+
+    promotion_squares: Bitboard,
+    last_promotion: Option<PromotionPiece>,
+}
+
+impl LegalMoves {
+    fn new(game: &Game) -> Self {
+        let king = if game.player {
+            game.position.white.king
+        } else {
+            game.position.black.king
+        };
+
+        let friendly_pieces = if game.player {
+            game.position.white.all
+        } else {
+            game.position.black.all
+        };
+        let enemy_pieces = if game.player {
+            game.position.black.all
+        } else {
+            game.position.white.all
+        };
+        let empty_squares = Bitboard::ALL ^ game.position.all;
+        let attacked_squares = game.position.attacked_squares(!game.player);
+        let attackers = game.position.attackers(!game.player, king);
+
+        let mut king_moves = king.king_moves() & (Bitboard::ALL ^ attacked_squares);
+        king_moves = king_moves ^ (king_moves & friendly_pieces);
+
+        LegalMoves {
+            position: game.position,
+            player: game.player,
+            en_passant_square: game.en_passant_square,
+            possible_castles: game.possible_castles,
+
+            friendly_pieces,
+            enemy_pieces,
+            empty_squares,
+            attacked_squares,
+            attackers,
+            capture_mask: Bitboard::ALL,
+            push_mask: Bitboard::ALL,
+            capture_or_push_mask: Bitboard::ALL,
+            king,
+            enemy_queens_and_rooks: Bitboard::EMPTY,
+            enemy_queens_and_bishops: Bitboard::EMPTY,
+
+            current_piece: (Bitboard::EMPTY, 0, PieceMove::King),
+            current_from: king,
+
+            current_moves: (king_moves, 0),
+
+            promotion_squares: if game.player {
+                Bitboard::new(0xFF00_0000_0000_0000)
+            } else {
+                Bitboard::new(0x0000_0000_0000_00FF)
+            },
+            last_promotion: None,
+        }
+    }
+
+    pub fn get_push_squares_in_direction(
+        &self,
+        square: Bitboard,
+        attackers: Bitboard,
+        direction: Direction,
+    ) -> Bitboard {
+        let mut moves = Bitboard::EMPTY;
+        let mut running = square.get_square_in_direction(direction);
+
+        while !running.is_empty() {
+            if !(attackers & running).is_empty() {
+                return moves;
+            } else {
+                moves |= running;
+                running = running.get_square_in_direction(direction);
+            }
+        }
+
+        Bitboard::EMPTY
+    }
+
+    fn calcualte_capture_and_push_mask(&mut self) {
+        self.capture_mask = self.attackers;
+
+        let knight = if self.player {
+            self.position.black.knight
+        } else {
+            self.position.white.knight
+        };
+        let pawn = if self.player {
+            self.position.black.pawn
+        } else {
+            self.position.white.pawn
+        };
+        if (!(self.attackers & knight).is_empty()) || (!(self.attackers & pawn).is_empty()) {
+            // checked by knight or pawn, this can't be blocked
+            self.push_mask = Bitboard::EMPTY;
+        } else {
+            let king = if self.player {
+                self.position.white.king
+            } else {
+                self.position.black.king
+            };
+            self.push_mask =
+                self.get_push_squares_in_direction(king, self.attackers, Direction::Top)
+                    | self.get_push_squares_in_direction(king, self.attackers, Direction::Bottom)
+                    | self.get_push_squares_in_direction(king, self.attackers, Direction::Left)
+                    | self.get_push_squares_in_direction(king, self.attackers, Direction::Right)
+                    | self.get_push_squares_in_direction(king, self.attackers, Direction::TopLeft)
+                    | self.get_push_squares_in_direction(king, self.attackers, Direction::TopRight)
+                    | self.get_push_squares_in_direction(
+                        king,
+                        self.attackers,
+                        Direction::BottomLeft,
+                    )
+                    | self.get_push_squares_in_direction(
+                        king,
+                        self.attackers,
+                        Direction::BottomRight,
+                    )
+        }
+
+        self.capture_or_push_mask = self.capture_mask | self.push_mask;
+    }
+
+    fn calculate_enemy_pieces(&mut self) {
+        let enemy_queens = if self.player {
+            self.position.black.queen
+        } else {
+            self.position.white.queen
+        };
+        self.enemy_queens_and_rooks = enemy_queens
+            | (if self.player {
+                self.position.black.rook
+            } else {
+                self.position.white.rook
+            });
+        self.enemy_queens_and_bishops = enemy_queens
+            | (if self.player {
+                self.position.black.bishop
+            } else {
+                self.position.white.bishop
+            });
+    }
+
+    fn queen_moves(&self, from_square: Bitboard) -> Bitboard {
+        self.capture_or_push_mask
+            & (get_rank_and_file_moves(self.position.all, self.enemy_pieces, from_square)
+                | get_diagonal_moves(self.position.all, self.enemy_pieces, from_square))
+            & self.position.pinned_movement(
+                from_square,
+                self.king,
+                self.enemy_queens_and_rooks,
+                self.enemy_queens_and_bishops,
+            )
+    }
+
+    fn rook_moves(&self, from_square: Bitboard) -> Bitboard {
+        self.capture_or_push_mask
+            & get_rank_and_file_moves(self.position.all, self.enemy_pieces, from_square)
+            & self.position.pinned_movement(
+                from_square,
+                self.king,
+                self.enemy_queens_and_rooks,
+                self.enemy_queens_and_bishops,
+            )
+    }
+
+    fn bishop_moves(&self, from_square: Bitboard) -> Bitboard {
+        self.capture_or_push_mask
+            & get_diagonal_moves(self.position.all, self.enemy_pieces, from_square)
+            & self.position.pinned_movement(
+                from_square,
+                self.king,
+                self.enemy_queens_and_rooks,
+                self.enemy_queens_and_bishops,
+            )
+    }
+
+    fn knight_moves(&self, from_square: Bitboard) -> Bitboard {
+        let knight_moves = from_square.knight_moves();
+        self.capture_or_push_mask
+            & knight_moves
+            & (knight_moves ^ self.friendly_pieces)
+            & self.position.pinned_movement(
+                from_square,
+                self.king,
+                self.enemy_queens_and_rooks,
+                self.enemy_queens_and_bishops,
+            )
+    }
+
+    fn pawn_single_moves(&self, from_square: Bitboard) -> Bitboard {
+        let pinned_movement = self.position.pinned_movement(
+            from_square,
+            self.king,
+            self.enemy_queens_and_rooks,
+            self.enemy_queens_and_bishops,
+        );
+
+        let forward_square = if self.player {
+            from_square.get_top_square()
+        } else {
+            from_square.get_bottom_square()
+        };
+
+        forward_square & self.empty_squares & pinned_movement & self.push_mask
+    }
+
+    fn pawn_attack_moves(&self, from_square: Bitboard) -> Bitboard {
+        let forward_square = if self.player {
+            from_square.get_top_square()
+        } else {
+            from_square.get_bottom_square()
+        };
+
+        let pinned_movement = self.position.pinned_movement(
+            from_square,
+            self.king,
+            self.enemy_queens_and_rooks,
+            self.enemy_queens_and_bishops,
+        );
+
+        (forward_square.get_left_square() | forward_square.get_right_square())
+            & self.enemy_pieces
+            & pinned_movement
+            & self.capture_mask
+    }
+
+    fn pawn_double_moves(&self, from_square: Bitboard) -> Bitboard {
+        let forward_square = if self.player {
+            from_square.get_top_square()
+        } else {
+            from_square.get_bottom_square()
+        };
+
+        let pinned_movement = self.position.pinned_movement(
+            from_square,
+            self.king,
+            self.enemy_queens_and_rooks,
+            self.enemy_queens_and_bishops,
+        );
+
+        let double_forward_square = if self.player {
+            (forward_square & Bitboard::new(0x0000_0000_00FF_0000)).get_top_square()
+        } else {
+            (forward_square & Bitboard::new(0x0000_FF00_0000_0000)).get_bottom_square()
+        };
+        double_forward_square
+            & self.empty_squares
+            & (if self.player {
+                self.empty_squares.get_top_square()
+            } else {
+                self.empty_squares.get_bottom_square()
+            })
+            & pinned_movement
+            & self.push_mask
+    }
+
+    fn pawn_en_passant_moves(&self, from_square: Bitboard) -> Bitboard {
+        let forward_square = if self.player {
+            from_square.get_top_square()
+        } else {
+            from_square.get_bottom_square()
+        };
+
+        let pinned_movement = self.position.pinned_movement(
+            from_square,
+            self.king,
+            self.enemy_queens_and_rooks,
+            self.enemy_queens_and_bishops,
+        );
+
+        let en_passant_captures =
+            forward_square.get_left_square() | forward_square.get_right_square();
+        let to_square = en_passant_captures
+            & self.en_passant_square
+            & pinned_movement
+            & (if self.player {
+                self.capture_mask.get_top_square()
+            } else {
+                self.capture_mask.get_bottom_square()
+            });
+
+        let m = Move {
+            player: self.player,
+            piece: Piece::Pawn,
+            from_square,
+            to_square,
+            en_passant_square: Bitboard::EMPTY,
+            is_capturing_en_passant: true,
+            is_castling: None,
+            is_promoting_to: None,
+        };
+
+        let position = self.position.make_move(&m).0;
+        if position.is_check(self.player) {
+            Bitboard::EMPTY
+        } else {
+            to_square
+        }
+    }
+
+    fn kingside_castle_moves(&self) -> Bitboard {
+        let kingside_castle = if self.player {
+            self.possible_castles.white_kingside
+        } else {
+            self.possible_castles.black_kingside
+        };
+        let kingside_squares_between = self.position.all
+            & (if self.player {
+                Bitboard::new(0x0000_0000_0000_0006)
+            } else {
+                Bitboard::new(0x0600_0000_0000_0000)
+            });
+        let kingside_attacks = self.attacked_squares
+            & (if self.player {
+                Bitboard::new(0x0000_0000_0000_000E)
+            } else {
+                Bitboard::new(0x0E00_0000_0000_0000)
+            });
+        let can_castle_kingside =
+            kingside_castle && kingside_squares_between.is_empty() && kingside_attacks.is_empty();
+
+        match (can_castle_kingside, self.player) {
+            (true, true) => Bitboard::new(0x0000_0000_0000_0002),
+            (true, false) => Bitboard::new(0x0200_0000_0000_0000),
+            _ => Bitboard::EMPTY,
+        }
+    }
+
+    fn queenside_castle_moves(&self) -> Bitboard {
+        let queenside_castle = if self.player {
+            self.possible_castles.white_queenside
+        } else {
+            self.possible_castles.black_queenside
+        };
+        let queenside_squares_between = self.position.all
+            & (if self.player {
+                Bitboard::new(0x0000_0000_0000_0070)
+            } else {
+                Bitboard::new(0x7000_0000_0000_0000)
+            });
+        let queenside_attacks = self.attacked_squares
+            & (if self.player {
+                Bitboard::new(0x0000_0000_0000_0038)
+            } else {
+                Bitboard::new(0x3800_0000_0000_0000)
+            });
+        let can_castle_queenside = queenside_castle
+            && queenside_squares_between.is_empty()
+            && queenside_attacks.is_empty();
+
+        match (can_castle_queenside, self.player) {
+            (true, true) => Bitboard::new(0x0000_0000_0000_0020),
+            (true, false) => Bitboard::new(0x2000_0000_0000_0000),
+            _ => Bitboard::EMPTY,
+        }
+    }
+}
+
+impl Iterator for LegalMoves {
+    type Item = Move;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while self.current_moves.0.is_empty() {
+            while self.current_piece.0.is_empty() {
+                // Select the next kind of piece once we handled all pieces of the current kind.
+                self.current_piece = match self.current_piece.2 {
+                    // Multiple pieces are giving check, so the king has to move.
+                    // We don't need to check moves for other pieces.
+                    PieceMove::King if self.attackers.count_ones() > 1 => return None,
+                    PieceMove::King => {
+                        // We only calculate capture and push mask here because we don't need to
+                        // do that if we return early because of double-check.
+                        if self.attackers.count_ones() == 1 {
+                            self.calcualte_capture_and_push_mask();
+                        }
+                        self.calculate_enemy_pieces();
+
+                        (
+                            if self.player {
+                                self.position.white.queen
+                            } else {
+                                self.position.black.queen
+                            },
+                            0,
+                            PieceMove::Queen,
+                        )
+                    }
+                    PieceMove::Queen => (
+                        if self.player {
+                            self.position.white.rook
+                        } else {
+                            self.position.black.rook
+                        },
+                        0,
+                        PieceMove::Rook,
+                    ),
+                    PieceMove::Rook => (
+                        if self.player {
+                            self.position.white.bishop
+                        } else {
+                            self.position.black.bishop
+                        },
+                        0,
+                        PieceMove::Bishop,
+                    ),
+                    PieceMove::Bishop => (
+                        if self.player {
+                            self.position.white.knight
+                        } else {
+                            self.position.black.knight
+                        },
+                        0,
+                        PieceMove::Knight,
+                    ),
+                    PieceMove::Knight => (
+                        if self.player {
+                            self.position.white.pawn
+                        } else {
+                            self.position.black.pawn
+                        },
+                        0,
+                        PieceMove::PawnSingleMove,
+                    ),
+                    PieceMove::PawnSingleMove => (
+                        if self.player {
+                            self.position.white.pawn
+                        } else {
+                            self.position.black.pawn
+                        },
+                        0,
+                        PieceMove::PawnAttack,
+                    ),
+                    PieceMove::PawnAttack => (
+                        if self.player {
+                            self.position.white.pawn
+                        } else {
+                            self.position.black.pawn
+                        },
+                        0,
+                        PieceMove::PawnDoubleMove,
+                    ),
+                    PieceMove::PawnDoubleMove => (
+                        if self.player {
+                            self.position.white.pawn
+                        } else {
+                            self.position.black.pawn
+                        },
+                        0,
+                        PieceMove::PawnEnPassant,
+                    ),
+                    PieceMove::PawnEnPassant => (
+                        if self.player {
+                            self.position.white.king
+                        } else {
+                            self.position.black.king
+                        },
+                        0,
+                        PieceMove::KingsideCastle,
+                    ),
+                    PieceMove::KingsideCastle => (
+                        if self.player {
+                            self.position.white.king
+                        } else {
+                            self.position.black.king
+                        },
+                        0,
+                        PieceMove::QueensideCastle,
+                    ),
+                    // Moves for all pieces have been handled
+                    PieceMove::QueensideCastle => return None,
+                }
+            }
+
+            while (self.current_piece.0 & Bitboard::new(1)).is_empty() {
+                self.current_piece.0 >>= Bitboard::new(1);
+                self.current_piece.1 += 1;
+            }
+            self.current_piece.0 >>= Bitboard::new(1);
+            self.current_piece.1 += 1;
+            self.current_from = Bitboard::new(1 << self.current_piece.1 - 1);
+
+            self.current_moves = (
+                match self.current_piece.2 {
+                    // This is unreachable because we start with the king and there can be only one
+                    PieceMove::King => unreachable!(),
+                    PieceMove::Queen => self.queen_moves(self.current_from),
+                    PieceMove::Rook => self.rook_moves(self.current_from),
+                    PieceMove::Bishop => self.bishop_moves(self.current_from),
+                    PieceMove::Knight => self.knight_moves(self.current_from),
+                    PieceMove::PawnSingleMove => self.pawn_single_moves(self.current_from),
+                    PieceMove::PawnAttack => self.pawn_attack_moves(self.current_from),
+                    PieceMove::PawnDoubleMove => self.pawn_double_moves(self.current_from),
+                    PieceMove::PawnEnPassant => self.pawn_en_passant_moves(self.current_from),
+                    PieceMove::KingsideCastle => self.kingside_castle_moves(),
+                    PieceMove::QueensideCastle => self.queenside_castle_moves(),
+                },
+                0,
+            );
+        }
+
+        while (self.current_moves.0 & Bitboard::new(1)).is_empty() {
+            self.current_moves.0 >>= Bitboard::new(1);
+            self.current_moves.1 += 1;
+        }
+        self.current_moves.0 >>= Bitboard::new(1);
+        self.current_moves.1 += 1;
+
+        let to_square = Bitboard::new(1 << self.current_moves.1 - 1);
+
+        // Note that double moves can't promote, so we can ignore that here
+        let is_pawn = self.current_piece.2 == PieceMove::PawnSingleMove
+            || self.current_piece.2 == PieceMove::PawnAttack;
+        let will_promote = !(to_square & self.promotion_squares).is_empty();
+        if self.last_promotion == Some(PromotionPiece::Knight) {
+            self.last_promotion = None;
+        }
+        if is_pawn && will_promote && self.last_promotion != Some(PromotionPiece::Knight) {
+            match self.last_promotion {
+                None => self.last_promotion = Some(PromotionPiece::Queen),
+                Some(PromotionPiece::Queen) => self.last_promotion = Some(PromotionPiece::Rook),
+                Some(PromotionPiece::Rook) => self.last_promotion = Some(PromotionPiece::Bishop),
+                Some(PromotionPiece::Bishop) => self.last_promotion = Some(PromotionPiece::Knight),
+                Some(PromotionPiece::Knight) => unreachable!(),
+            };
+
+            if self.last_promotion != Some(PromotionPiece::Knight) {
+                self.current_moves.0 =
+                    (self.current_moves.0 << Bitboard::new(1)) | Bitboard::new(1);
+                self.current_moves.1 -= 1;
+            }
+
+            Some(Move {
+                player: self.player,
+                piece: self.current_piece.2.clone().into(),
+                from_square: self.current_from,
+                to_square,
+                en_passant_square: Bitboard::EMPTY,
+                is_capturing_en_passant: false,
+                is_castling: None,
+                is_promoting_to: self.last_promotion.clone(),
+            })
+        } else {
+            let en_passant_square = match (&self.current_piece.2, self.player) {
+                (PieceMove::PawnDoubleMove, true) => to_square.get_bottom_square(),
+                (PieceMove::PawnDoubleMove, false) => to_square.get_top_square(),
+                _ => Bitboard::EMPTY,
+            };
+            Some(Move {
+                player: self.player,
+                piece: self.current_piece.2.clone().into(),
+                from_square: self.current_from,
+                to_square,
+                en_passant_square,
+                is_capturing_en_passant: self.current_piece.2 == PieceMove::PawnEnPassant,
+                is_castling: self.current_piece.2.clone().into(),
+                is_promoting_to: None,
+            })
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1114,6 +1754,7 @@ mod tests {
         for (depth, moves) in cases {
             let game = Game::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
             assert_eq!(game.count_legal_moves(depth,), moves);
+            assert_eq!(game.count_legal_moves2(depth,), moves);
         }
     }
 
@@ -1124,7 +1765,8 @@ mod tests {
             let game = Game::from_fen(
                 "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
             );
-            assert_eq!(game.count_legal_moves(depth,), moves)
+            assert_eq!(game.count_legal_moves(depth,), moves);
+            assert_eq!(game.count_legal_moves2(depth,), moves);
         }
     }
 
@@ -1133,7 +1775,8 @@ mod tests {
         let cases = [(1, 14), (2, 191), (3, 2812), (4, 43238), (5, 674624)];
         for (depth, moves) in cases {
             let game = Game::from_fen("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1");
-            assert_eq!(game.count_legal_moves(depth,), moves)
+            assert_eq!(game.count_legal_moves(depth,), moves);
+            assert_eq!(game.count_legal_moves2(depth,), moves);
         }
     }
 
@@ -1143,7 +1786,8 @@ mod tests {
         for (depth, moves) in cases {
             let game =
                 Game::from_fen("r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1");
-            assert_eq!(game.count_legal_moves(depth,), moves)
+            assert_eq!(game.count_legal_moves(depth,), moves);
+            assert_eq!(game.count_legal_moves2(depth,), moves);
         }
     }
 
@@ -1152,7 +1796,8 @@ mod tests {
         let cases = [(1, 44), (2, 1486), (3, 62379), (4, 2103487)];
         for (depth, moves) in cases {
             let game = Game::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8");
-            assert_eq!(game.count_legal_moves(depth,), moves)
+            assert_eq!(game.count_legal_moves(depth,), moves);
+            assert_eq!(game.count_legal_moves2(depth,), moves);
         }
     }
 
@@ -1163,7 +1808,8 @@ mod tests {
             let game = Game::from_fen(
                 "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10",
             );
-            assert_eq!(game.count_legal_moves(depth,), moves)
+            assert_eq!(game.count_legal_moves(depth,), moves);
+            assert_eq!(game.count_legal_moves2(depth,), moves);
         }
     }
 }

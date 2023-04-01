@@ -417,47 +417,26 @@ impl Position {
         enemy_queens_and_rooks: Bitboard,
         enemy_queens_and_bishops: Bitboard,
     ) -> Bitboard {
-        match self.pinned_movement_in_direction(
-            square,
-            king,
-            enemy_queens_and_rooks,
-            Direction::Top,
-        ) {
-            Some(moves) => return moves,
-            None => {}
-        }
-
-        match self.pinned_movement_in_direction(
-            square,
-            king,
-            enemy_queens_and_rooks,
-            Direction::Left,
-        ) {
-            Some(moves) => return moves,
-            None => {}
-        }
-
-        match self.pinned_movement_in_direction(
-            square,
-            king,
-            enemy_queens_and_bishops,
-            Direction::TopLeft,
-        ) {
-            Some(moves) => return moves,
-            None => {}
-        }
-
-        match self.pinned_movement_in_direction(
-            square,
-            king,
-            enemy_queens_and_bishops,
-            Direction::TopRight,
-        ) {
-            Some(moves) => return moves,
-            None => {}
-        }
-
-        Bitboard::ALL
+        self.pinned_movement_in_direction(square, king, enemy_queens_and_rooks, Direction::Top)
+            .or(self.pinned_movement_in_direction(
+                square,
+                king,
+                enemy_queens_and_rooks,
+                Direction::Left,
+            ))
+            .or(self.pinned_movement_in_direction(
+                square,
+                king,
+                enemy_queens_and_bishops,
+                Direction::TopLeft,
+            ))
+            .or(self.pinned_movement_in_direction(
+                square,
+                king,
+                enemy_queens_and_bishops,
+                Direction::TopRight,
+            ))
+            .unwrap_or(Bitboard::ALL)
     }
 
     pub fn get_push_squares_in_direction(

@@ -2,12 +2,12 @@ mod bitboard;
 mod chess_move;
 mod direction;
 mod game;
-mod mcts;
+// mod mcts;
 mod piece;
-mod policy_network;
+// mod policy_network;
 mod position;
-mod train;
-mod value_network;
+// mod train;
+// mod value_network;
 
 use clap::{App, Arg};
 use std::time::Instant;
@@ -85,26 +85,26 @@ fn main() {
             println!("Average NPS: {}", (total_nps / runs as f64) as u64);
             // To beat: 148_463_968
         }
-        Some(("mcts", sub_matches)) => {
-            let run_index = sub_matches.value_of("IDX").unwrap().to_owned();
-            let parallel_games = sub_matches
-                .value_of("GAMES")
-                .unwrap()
-                .parse::<usize>()
-                .unwrap();
+        // Some(("mcts", sub_matches)) => {
+        //     let run_index = sub_matches.value_of("IDX").unwrap().to_owned();
+        //     let parallel_games = sub_matches
+        //         .value_of("GAMES")
+        //         .unwrap()
+        //         .parse::<usize>()
+        //         .unwrap();
 
-            match mcts::run(run_index, parallel_games) {
-                Err(err) => panic!("Running MCTS failed: {:?}", err),
-                Ok(_) => {}
-            }
-        }
-        Some(("train", sub_matches)) => {
-            let run_indices: Vec<&str> = sub_matches.values_of("IDX").unwrap().collect();
-            match train::run(run_indices) {
-                Err(err) => panic!("Training failed: {:?}", err),
-                Ok(_) => {}
-            }
-        }
+        //     match mcts::run(run_index, parallel_games) {
+        //         Err(err) => panic!("Running MCTS failed: {:?}", err),
+        //         Ok(_) => {}
+        //     }
+        // }
+        // Some(("train", sub_matches)) => {
+        //     let run_indices: Vec<&str> = sub_matches.values_of("IDX").unwrap().collect();
+        //     match train::run(run_indices) {
+        //         Err(err) => panic!("Training failed: {:?}", err),
+        //         Ok(_) => {}
+        //     }
+        // }
         _ => unreachable!(),
     };
 }

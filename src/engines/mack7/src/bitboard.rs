@@ -166,8 +166,9 @@ impl ops::BitXorAssign for Bitboard {
 impl Shl for Bitboard {
     type Output = Self;
 
-    fn shl(self, rhs: Self) -> Self::Output {
-        Bitboard(self.0 << rhs.0)
+    fn shl(mut self, rhs: Self) -> Self::Output {
+        self.0 <<= rhs.0;
+        self
     }
 }
 

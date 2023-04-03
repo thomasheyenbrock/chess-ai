@@ -59,28 +59,21 @@ impl Position {
             None => {}
         }
 
-        let is_capturing = if !(m.to_square & next.white.pawn).is_empty() {
-            CapturedPiece::Pawn
-        } else if !(m.to_square & next.black.pawn).is_empty() {
-            CapturedPiece::Pawn
-        } else if !(m.to_square & next.white.knight).is_empty() {
-            CapturedPiece::Knight
-        } else if !(m.to_square & next.black.knight).is_empty() {
-            CapturedPiece::Knight
-        } else if !(m.to_square & next.white.bishop).is_empty() {
-            CapturedPiece::Bishop
-        } else if !(m.to_square & next.black.bishop).is_empty() {
-            CapturedPiece::Bishop
-        } else if !(m.to_square & next.white.rook).is_empty() {
-            CapturedPiece::Rook
-        } else if !(m.to_square & next.black.rook).is_empty() {
-            CapturedPiece::Rook
-        } else if !(m.to_square & next.white.queen).is_empty() {
-            CapturedPiece::Queen
-        } else if !(m.to_square & next.black.queen).is_empty() {
-            CapturedPiece::Queen
-        } else {
-            CapturedPiece::None
+        let is_capturing = match m.to_square & next.all {
+            Bitboard::EMPTY => CapturedPiece::None,
+            _ => {
+                if !(m.to_square & (next.white.pawn | next.black.pawn)).is_empty() {
+                    CapturedPiece::Pawn
+                } else if !(m.to_square & (next.white.knight | next.black.knight)).is_empty() {
+                    CapturedPiece::Knight
+                } else if !(m.to_square & (next.white.bishop | next.black.bishop)).is_empty() {
+                    CapturedPiece::Bishop
+                } else if !(m.to_square & (next.white.rook | next.black.rook)).is_empty() {
+                    CapturedPiece::Rook
+                } else {
+                    CapturedPiece::Queen
+                }
+            }
         };
 
         match (m.player, &m.piece) {
@@ -130,17 +123,17 @@ impl Position {
         next.all = (next.all ^ m.from_square) | m.to_square;
 
         match (m.player, &is_capturing) {
-            (true, CapturedPiece::Queen) => next.black.queen ^= m.to_square,
-            (true, CapturedPiece::Rook) => next.black.rook ^= m.to_square,
-            (true, CapturedPiece::Bishop) => next.black.bishop ^= m.to_square,
-            (true, CapturedPiece::Knight) => next.black.knight ^= m.to_square,
-            (true, CapturedPiece::Pawn) => next.black.pawn ^= m.to_square,
-            (false, CapturedPiece::Queen) => next.white.queen ^= m.to_square,
-            (false, CapturedPiece::Rook) => next.white.rook ^= m.to_square,
-            (false, CapturedPiece::Bishop) => next.white.bishop ^= m.to_square,
-            (false, CapturedPiece::Knight) => next.white.knight ^= m.to_square,
-            (false, CapturedPiece::Pawn) => next.white.pawn ^= m.to_square,
             (_, CapturedPiece::None) => {}
+            (true, CapturedPiece::Pawn) => next.black.pawn ^= m.to_square,
+            (false, CapturedPiece::Pawn) => next.white.pawn ^= m.to_square,
+            (true, CapturedPiece::Knight) => next.black.knight ^= m.to_square,
+            (false, CapturedPiece::Knight) => next.white.knight ^= m.to_square,
+            (true, CapturedPiece::Bishop) => next.black.bishop ^= m.to_square,
+            (false, CapturedPiece::Bishop) => next.white.bishop ^= m.to_square,
+            (true, CapturedPiece::Rook) => next.black.rook ^= m.to_square,
+            (false, CapturedPiece::Rook) => next.white.rook ^= m.to_square,
+            (true, CapturedPiece::Queen) => next.black.queen ^= m.to_square,
+            (false, CapturedPiece::Queen) => next.white.queen ^= m.to_square,
         }
 
         match (m.player, &is_capturing) {

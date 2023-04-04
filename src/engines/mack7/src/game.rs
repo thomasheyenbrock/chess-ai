@@ -510,7 +510,7 @@ impl Game {
     }
 
     fn legal_pawn_attack_moves(&self, from_square: Bitboard, to_square: Bitboard) -> Vec<Move> {
-        let mut result: Vec<Move> = vec![];
+        let mut result = Vec::with_capacity(4);
 
         let promotion_squares = if self.player {
             Bitboard::new(0xFF00_0000_0000_0000)
@@ -575,7 +575,7 @@ impl Game {
     }
 
     pub fn legal_moves(&self, player: bool) -> Vec<Move> {
-        let mut result: Vec<Move> = vec![];
+        let mut result = Vec::with_capacity(109);
 
         let friendly_pieces = if player {
             self.position.white.all

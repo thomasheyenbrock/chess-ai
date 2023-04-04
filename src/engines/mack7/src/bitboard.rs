@@ -240,7 +240,7 @@ impl Bitboard {
 
     #[inline]
     pub fn get_top_square(self) -> Bitboard {
-        Bitboard((self.0 << 8) & 0xFFFF_FFFF_FFFF_FFFF)
+        Bitboard(self.0 << 8)
     }
 
     #[inline]

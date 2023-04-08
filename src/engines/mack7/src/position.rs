@@ -30,29 +30,29 @@ impl Position {
         match m.is_castling {
             Some(Castle::Kingside) => {
                 if m.player {
-                    next.white.king = Bitboard::new(0x0000_0000_0000_0002);
-                    next.white.rook ^= Bitboard::new(0x0000_0000_0000_0005);
-                    next.white.all ^= Bitboard::new(0x0000_0000_0000_000F);
-                    next.all ^= Bitboard::new(0x0000_0000_0000_000F);
+                    next.white.king = Bitboard::new(0x0000_0000_0000_0040);
+                    next.white.rook ^= Bitboard::new(0x0000_0000_0000_00A0);
+                    next.white.all ^= Bitboard::new(0x0000_0000_0000_00F0);
+                    next.all ^= Bitboard::new(0x0000_0000_0000_00F0);
                 } else {
-                    next.black.king = Bitboard::new(0x0200_0000_0000_0000);
-                    next.black.rook ^= Bitboard::new(0x0500_0000_0000_0000);
-                    next.black.all ^= Bitboard::new(0x0F00_0000_0000_0000);
-                    next.all ^= Bitboard::new(0x0F00_0000_0000_0000);
+                    next.black.king = Bitboard::new(0x4000_0000_0000_0000);
+                    next.black.rook ^= Bitboard::new(0xA000_0000_0000_0000);
+                    next.black.all ^= Bitboard::new(0xF000_0000_0000_0000);
+                    next.all ^= Bitboard::new(0xF000_0000_0000_0000);
                 }
                 return (next, CapturedPiece::None);
             }
             Some(Castle::Queenside) => {
                 if m.player {
-                    next.white.king = Bitboard::new(0x0000_0000_0000_0020);
-                    next.white.rook ^= Bitboard::new(0x0000_0000_0000_0090);
-                    next.white.all ^= Bitboard::new(0x0000_0000_0000_00B8);
-                    next.all ^= Bitboard::new(0x0000_0000_0000_00B8);
+                    next.white.king = Bitboard::new(0x0000_0000_0000_0004);
+                    next.white.rook ^= Bitboard::new(0x0000_0000_0000_0009);
+                    next.white.all ^= Bitboard::new(0x0000_0000_0000_001D);
+                    next.all ^= Bitboard::new(0x0000_0000_0000_001D);
                 } else {
-                    next.black.king = Bitboard::new(0x2000_0000_0000_0000);
-                    next.black.rook ^= Bitboard::new(0x9000_0000_0000_0000);
-                    next.black.all ^= Bitboard::new(0xB800_0000_0000_0000);
-                    next.all ^= Bitboard::new(0xB800_0000_0000_0000);
+                    next.black.king = Bitboard::new(0x0400_0000_0000_0000);
+                    next.black.rook ^= Bitboard::new(0x0900_0000_0000_0000);
+                    next.black.all ^= Bitboard::new(0x1D00_0000_0000_0000);
+                    next.all ^= Bitboard::new(0x1D00_0000_0000_0000);
                 }
                 return (next, CapturedPiece::None);
             }
@@ -537,9 +537,9 @@ impl Position {
             && black_bishops == 1
         {
             let is_white_bishop_on_white_square =
-                (self.white.bishop & Bitboard::new(0xAA55_AA55_AA55_AA55)).is_empty();
+                (self.white.bishop & Bitboard::new(0x55AA_55AA_55AA_55AA)).is_empty();
             let is_black_bishop_on_white_square =
-                (self.black.bishop & Bitboard::new(0xAA55_AA55_AA55_AA55)).is_empty();
+                (self.black.bishop & Bitboard::new(0x55AA_55AA_55AA_55AA)).is_empty();
             return is_white_bishop_on_white_square == is_black_bishop_on_white_square;
         }
 

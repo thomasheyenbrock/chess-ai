@@ -294,7 +294,7 @@ impl Game {
                     Some(digit) => file_index += digit as usize,
                     None => {
                         let square =
-                            Bitboard::new(1 << (63 - rank_index as u32 * 8 - file_index as u32));
+                            Bitboard::new(1 << (56 - rank_index as u32 * 8 + file_index as u32));
                         match piece {
                             'K' => position.white.king |= square,
                             'Q' => position.white.queen |= square,
@@ -323,70 +323,70 @@ impl Game {
         }
 
         let en_passant_square = match fen_parts[3] {
-            "a8" => Bitboard::new(0x8000_0000_0000_0000),
-            "b8" => Bitboard::new(0x4000_0000_0000_0000),
-            "c8" => Bitboard::new(0x2000_0000_0000_0000),
-            "d8" => Bitboard::new(0x1000_0000_0000_0000),
-            "e8" => Bitboard::new(0x0800_0000_0000_0000),
-            "f8" => Bitboard::new(0x0400_0000_0000_0000),
-            "g8" => Bitboard::new(0x0200_0000_0000_0000),
-            "h8" => Bitboard::new(0x0100_0000_0000_0000),
-            "a7" => Bitboard::new(0x0080_0000_0000_0000),
-            "b7" => Bitboard::new(0x0040_0000_0000_0000),
-            "c7" => Bitboard::new(0x0020_0000_0000_0000),
-            "d7" => Bitboard::new(0x0010_0000_0000_0000),
-            "e7" => Bitboard::new(0x0008_0000_0000_0000),
-            "f7" => Bitboard::new(0x0004_0000_0000_0000),
-            "g7" => Bitboard::new(0x0002_0000_0000_0000),
-            "h7" => Bitboard::new(0x0001_0000_0000_0000),
-            "a6" => Bitboard::new(0x0000_8000_0000_0000),
-            "b6" => Bitboard::new(0x0000_4000_0000_0000),
-            "c6" => Bitboard::new(0x0000_2000_0000_0000),
-            "d6" => Bitboard::new(0x0000_1000_0000_0000),
-            "e6" => Bitboard::new(0x0000_0800_0000_0000),
-            "f6" => Bitboard::new(0x0000_0400_0000_0000),
-            "g6" => Bitboard::new(0x0000_0200_0000_0000),
-            "h6" => Bitboard::new(0x0000_0100_0000_0000),
-            "a5" => Bitboard::new(0x0000_0080_0000_0000),
-            "b5" => Bitboard::new(0x0000_0040_0000_0000),
-            "c5" => Bitboard::new(0x0000_0020_0000_0000),
-            "d5" => Bitboard::new(0x0000_0010_0000_0000),
-            "e5" => Bitboard::new(0x0000_0008_0000_0000),
-            "f5" => Bitboard::new(0x0000_0004_0000_0000),
-            "g5" => Bitboard::new(0x0000_0002_0000_0000),
-            "h5" => Bitboard::new(0x0000_0001_0000_0000),
-            "a4" => Bitboard::new(0x0000_0000_8000_0000),
-            "b4" => Bitboard::new(0x0000_0000_4000_0000),
-            "c4" => Bitboard::new(0x0000_0000_2000_0000),
-            "d4" => Bitboard::new(0x0000_0000_1000_0000),
-            "e4" => Bitboard::new(0x0000_0000_0800_0000),
-            "f4" => Bitboard::new(0x0000_0000_0400_0000),
-            "g4" => Bitboard::new(0x0000_0000_0200_0000),
-            "h4" => Bitboard::new(0x0000_0000_0100_0000),
-            "a3" => Bitboard::new(0x0000_0000_0080_0000),
-            "b3" => Bitboard::new(0x0000_0000_0040_0000),
-            "c3" => Bitboard::new(0x0000_0000_0020_0000),
-            "d3" => Bitboard::new(0x0000_0000_0010_0000),
-            "e3" => Bitboard::new(0x0000_0000_0008_0000),
-            "f3" => Bitboard::new(0x0000_0000_0004_0000),
-            "g3" => Bitboard::new(0x0000_0000_0002_0000),
-            "h3" => Bitboard::new(0x0000_0000_0001_0000),
-            "a2" => Bitboard::new(0x0000_0000_0000_8000),
-            "b2" => Bitboard::new(0x0000_0000_0000_4000),
-            "c2" => Bitboard::new(0x0000_0000_0000_2000),
-            "d2" => Bitboard::new(0x0000_0000_0000_1000),
-            "e2" => Bitboard::new(0x0000_0000_0000_0800),
-            "f2" => Bitboard::new(0x0000_0000_0000_0400),
-            "g2" => Bitboard::new(0x0000_0000_0000_0200),
-            "h2" => Bitboard::new(0x0000_0000_0000_0100),
-            "a1" => Bitboard::new(0x0000_0000_0000_0080),
-            "b1" => Bitboard::new(0x0000_0000_0000_0040),
-            "c1" => Bitboard::new(0x0000_0000_0000_0020),
-            "d1" => Bitboard::new(0x0000_0000_0000_0010),
-            "e1" => Bitboard::new(0x0000_0000_0000_0008),
-            "f1" => Bitboard::new(0x0000_0000_0000_0004),
-            "g1" => Bitboard::new(0x0000_0000_0000_0002),
-            "h1" => Bitboard::new(0x0000_0000_0000_0001),
+            "a1" => Bitboard::new(0x0000_0000_0000_0001),
+            "b1" => Bitboard::new(0x0000_0000_0000_0002),
+            "c1" => Bitboard::new(0x0000_0000_0000_0004),
+            "d1" => Bitboard::new(0x0000_0000_0000_0008),
+            "e1" => Bitboard::new(0x0000_0000_0000_0010),
+            "f1" => Bitboard::new(0x0000_0000_0000_0020),
+            "g1" => Bitboard::new(0x0000_0000_0000_0040),
+            "h1" => Bitboard::new(0x0000_0000_0000_0080),
+            "a2" => Bitboard::new(0x0000_0000_0000_0100),
+            "b2" => Bitboard::new(0x0000_0000_0000_0200),
+            "c2" => Bitboard::new(0x0000_0000_0000_0400),
+            "d2" => Bitboard::new(0x0000_0000_0000_0800),
+            "e2" => Bitboard::new(0x0000_0000_0000_1000),
+            "f2" => Bitboard::new(0x0000_0000_0000_2000),
+            "g2" => Bitboard::new(0x0000_0000_0000_4000),
+            "h2" => Bitboard::new(0x0000_0000_0000_8000),
+            "a3" => Bitboard::new(0x0000_0000_0001_0000),
+            "b3" => Bitboard::new(0x0000_0000_0002_0000),
+            "c3" => Bitboard::new(0x0000_0000_0004_0000),
+            "d3" => Bitboard::new(0x0000_0000_0008_0000),
+            "e3" => Bitboard::new(0x0000_0000_0010_0000),
+            "f3" => Bitboard::new(0x0000_0000_0020_0000),
+            "g3" => Bitboard::new(0x0000_0000_0040_0000),
+            "h3" => Bitboard::new(0x0000_0000_0080_0000),
+            "a4" => Bitboard::new(0x0000_0000_0100_0000),
+            "b4" => Bitboard::new(0x0000_0000_0200_0000),
+            "c4" => Bitboard::new(0x0000_0000_0400_0000),
+            "d4" => Bitboard::new(0x0000_0000_0800_0000),
+            "e4" => Bitboard::new(0x0000_0000_1000_0000),
+            "f4" => Bitboard::new(0x0000_0000_2000_0000),
+            "g4" => Bitboard::new(0x0000_0000_4000_0000),
+            "h4" => Bitboard::new(0x0000_0000_8000_0000),
+            "a5" => Bitboard::new(0x0000_0001_0000_0000),
+            "b5" => Bitboard::new(0x0000_0002_0000_0000),
+            "c5" => Bitboard::new(0x0000_0004_0000_0000),
+            "d5" => Bitboard::new(0x0000_0008_0000_0000),
+            "e5" => Bitboard::new(0x0000_0010_0000_0000),
+            "f5" => Bitboard::new(0x0000_0020_0000_0000),
+            "g5" => Bitboard::new(0x0000_0040_0000_0000),
+            "h5" => Bitboard::new(0x0000_0080_0000_0000),
+            "a6" => Bitboard::new(0x0000_0100_0000_0000),
+            "b6" => Bitboard::new(0x0000_0200_0000_0000),
+            "c6" => Bitboard::new(0x0000_0400_0000_0000),
+            "d6" => Bitboard::new(0x0000_0800_0000_0000),
+            "e6" => Bitboard::new(0x0000_1000_0000_0000),
+            "f6" => Bitboard::new(0x0000_2000_0000_0000),
+            "g6" => Bitboard::new(0x0000_4000_0000_0000),
+            "h6" => Bitboard::new(0x0000_8000_0000_0000),
+            "a7" => Bitboard::new(0x0001_0000_0000_0000),
+            "b7" => Bitboard::new(0x0002_0000_0000_0000),
+            "c7" => Bitboard::new(0x0004_0000_0000_0000),
+            "d7" => Bitboard::new(0x0008_0000_0000_0000),
+            "e7" => Bitboard::new(0x0010_0000_0000_0000),
+            "f7" => Bitboard::new(0x0020_0000_0000_0000),
+            "g7" => Bitboard::new(0x0040_0000_0000_0000),
+            "h7" => Bitboard::new(0x0080_0000_0000_0000),
+            "a8" => Bitboard::new(0x0100_0000_0000_0000),
+            "b8" => Bitboard::new(0x0200_0000_0000_0000),
+            "c8" => Bitboard::new(0x0400_0000_0000_0000),
+            "d8" => Bitboard::new(0x0800_0000_0000_0000),
+            "e8" => Bitboard::new(0x1000_0000_0000_0000),
+            "f8" => Bitboard::new(0x2000_0000_0000_0000),
+            "g8" => Bitboard::new(0x4000_0000_0000_0000),
+            "h8" => Bitboard::new(0x8000_0000_0000_0000),
             _ => Bitboard::EMPTY,
         };
 
@@ -425,27 +425,19 @@ impl Game {
                 && !(self.player && m.piece == Piece::King)
                 && !(self.player
                     && m.piece == Piece::Rook
-                    && m.from_square == Bitboard::new(0x0000_0000_0000_0001))
-                && !(!self.player
-                    && is_capturing == CapturedPiece::Rook
-                    && m.to_square == Bitboard::new(0x0000_0000_0000_0001)),
-            white_queenside: self.possible_castles.white_queenside
-                && !(self.player && m.piece == Piece::King)
-                && !(self.player
-                    && m.piece == Piece::Rook
                     && m.from_square == Bitboard::new(0x0000_0000_0000_0080))
                 && !(!self.player
                     && is_capturing == CapturedPiece::Rook
                     && m.to_square == Bitboard::new(0x0000_0000_0000_0080)),
-            black_kingside: self.possible_castles.black_kingside
-                && !(!self.player && m.piece == Piece::King)
-                && !(!self.player
-                    && m.piece == Piece::Rook
-                    && m.from_square == Bitboard::new(0x0100_0000_0000_0000))
+            white_queenside: self.possible_castles.white_queenside
+                && !(self.player && m.piece == Piece::King)
                 && !(self.player
+                    && m.piece == Piece::Rook
+                    && m.from_square == Bitboard::new(0x0000_0000_0000_0001))
+                && !(!self.player
                     && is_capturing == CapturedPiece::Rook
-                    && m.to_square == Bitboard::new(0x0100_0000_0000_0000)),
-            black_queenside: self.possible_castles.black_queenside
+                    && m.to_square == Bitboard::new(0x0000_0000_0000_0001)),
+            black_kingside: self.possible_castles.black_kingside
                 && !(!self.player && m.piece == Piece::King)
                 && !(!self.player
                     && m.piece == Piece::Rook
@@ -453,6 +445,14 @@ impl Game {
                 && !(self.player
                     && is_capturing == CapturedPiece::Rook
                     && m.to_square == Bitboard::new(0x8000_0000_0000_0000)),
+            black_queenside: self.possible_castles.black_queenside
+                && !(!self.player && m.piece == Piece::King)
+                && !(!self.player
+                    && m.piece == Piece::Rook
+                    && m.from_square == Bitboard::new(0x0100_0000_0000_0000))
+                && !(self.player
+                    && is_capturing == CapturedPiece::Rook
+                    && m.to_square == Bitboard::new(0x0100_0000_0000_0000)),
         };
 
         let player = !self.player;
@@ -974,15 +974,15 @@ impl Game {
         };
         let kingside_squares_between = self.position.all
             & (if player {
-                Bitboard::new(0x0000_0000_0000_0006)
+                Bitboard::new(0x0000_0000_0000_0060)
             } else {
-                Bitboard::new(0x0600_0000_0000_0000)
+                Bitboard::new(0x6000_0000_0000_0000)
             });
         let kingside_attacks = attacked_squares
             & (if player {
-                Bitboard::new(0x0000_0000_0000_000E)
+                Bitboard::new(0x0000_0000_0000_0070)
             } else {
-                Bitboard::new(0x0E00_0000_0000_0000)
+                Bitboard::new(0x7000_0000_0000_0000)
             });
         let can_castle_kingside =
             kingside_castle && kingside_squares_between.is_empty() && kingside_attacks.is_empty();
@@ -992,14 +992,14 @@ impl Game {
                 player,
                 piece: Piece::King,
                 from_square: if player {
-                    Bitboard::new(0x0000_0000_0000_0008)
+                    Bitboard::new(0x0000_0000_0000_0010)
                 } else {
-                    Bitboard::new(0x0800_0000_0000_0000)
+                    Bitboard::new(0x1000_0000_0000_0000)
                 },
                 to_square: if player {
-                    Bitboard::new(0x0000_0000_0000_0002)
+                    Bitboard::new(0x0000_0000_0000_0040)
                 } else {
-                    Bitboard::new(0x0200_0000_0000_0000)
+                    Bitboard::new(0x4000_0000_0000_0000)
                 },
                 en_passant_square: Bitboard::EMPTY,
                 is_capturing_en_passant: false,
@@ -1015,15 +1015,15 @@ impl Game {
         };
         let queenside_squares_between = self.position.all
             & (if player {
-                Bitboard::new(0x0000_0000_0000_0070)
+                Bitboard::new(0x0000_0000_0000_000E)
             } else {
-                Bitboard::new(0x7000_0000_0000_0000)
+                Bitboard::new(0x0E00_0000_0000_0000)
             });
         let queenside_attacks = attacked_squares
             & (if player {
-                Bitboard::new(0x0000_0000_0000_0038)
+                Bitboard::new(0x0000_0000_0000_001C)
             } else {
-                Bitboard::new(0x3800_0000_0000_0000)
+                Bitboard::new(0x1C00_0000_0000_0000)
             });
         let can_castle_queenside = queenside_castle
             && queenside_squares_between.is_empty()
@@ -1034,14 +1034,14 @@ impl Game {
                 player,
                 piece: Piece::King,
                 from_square: if player {
-                    Bitboard::new(0x0000_0000_0000_0008)
+                    Bitboard::new(0x0000_0000_0000_0010)
                 } else {
-                    Bitboard::new(0x0800_0000_0000_0000)
+                    Bitboard::new(0x1000_0000_0000_0000)
                 },
                 to_square: if player {
-                    Bitboard::new(0x0000_0000_0000_0020)
+                    Bitboard::new(0x0000_0000_0000_0004)
                 } else {
-                    Bitboard::new(0x2000_0000_0000_0000)
+                    Bitboard::new(0x0400_0000_0000_0000)
                 },
                 en_passant_square: Bitboard::EMPTY,
                 is_capturing_en_passant: false,
@@ -1491,22 +1491,22 @@ impl LegalMoves {
         };
         let kingside_squares_between = self.position.all
             & (if self.player {
-                Bitboard::new(0x0000_0000_0000_0006)
+                Bitboard::new(0x0000_0000_0000_0060)
             } else {
-                Bitboard::new(0x0600_0000_0000_0000)
+                Bitboard::new(0x6000_0000_0000_0000)
             });
         let kingside_attacks = self.attacked_squares
             & (if self.player {
-                Bitboard::new(0x0000_0000_0000_000E)
+                Bitboard::new(0x0000_0000_0000_0070)
             } else {
-                Bitboard::new(0x0E00_0000_0000_0000)
+                Bitboard::new(0x7000_0000_0000_0000)
             });
         let can_castle_kingside =
             kingside_castle && kingside_squares_between.is_empty() && kingside_attacks.is_empty();
 
         match (can_castle_kingside, self.player) {
-            (true, true) => Bitboard::new(0x0000_0000_0000_0002),
-            (true, false) => Bitboard::new(0x0200_0000_0000_0000),
+            (true, true) => Bitboard::new(0x0000_0000_0000_0040),
+            (true, false) => Bitboard::new(0x4000_0000_0000_0000),
             _ => Bitboard::EMPTY,
         }
     }
@@ -1519,23 +1519,23 @@ impl LegalMoves {
         };
         let queenside_squares_between = self.position.all
             & (if self.player {
-                Bitboard::new(0x0000_0000_0000_0070)
+                Bitboard::new(0x0000_0000_0000_000E)
             } else {
-                Bitboard::new(0x7000_0000_0000_0000)
+                Bitboard::new(0x0E00_0000_0000_0000)
             });
         let queenside_attacks = self.attacked_squares
             & (if self.player {
-                Bitboard::new(0x0000_0000_0000_0038)
+                Bitboard::new(0x0000_0000_0000_001C)
             } else {
-                Bitboard::new(0x3800_0000_0000_0000)
+                Bitboard::new(0x1C00_0000_0000_0000)
             });
         let can_castle_queenside = queenside_castle
             && queenside_squares_between.is_empty()
             && queenside_attacks.is_empty();
 
         match (can_castle_queenside, self.player) {
-            (true, true) => Bitboard::new(0x0000_0000_0000_0020),
-            (true, false) => Bitboard::new(0x2000_0000_0000_0000),
+            (true, true) => Bitboard::new(0x0000_0000_0000_0004),
+            (true, false) => Bitboard::new(0x0400_0000_0000_0000),
             _ => Bitboard::EMPTY,
         }
     }
